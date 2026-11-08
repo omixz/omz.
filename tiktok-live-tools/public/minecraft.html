@@ -3,53 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kill Steve</title>
+<title>Can Steve Survive</title>
 <style>
-  /* The stream page: first-person camera through Steve's eyes + who's trying to kill him.
-     URL options: ?view=http://host:3007 (camera address)  ?title=KILL%20STEVE! */
+  /* The stream page: first-person camera through Steve's eyes + the survival challenge.
+     URL options: ?view=http://host:3007 (camera address)  ?title=CAN%20STEVE%20SURVIVE%3F */
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; color: #fff; }
   iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
   .shadow { text-shadow: 0 2px 3px #000, 0 0 2px #000; }
-  #top { position: fixed; top: 0; left: 0; right: 0; padding: 12px 16px 26px; background: linear-gradient(#000d, #0000); text-align: center; pointer-events: none; }
-  #title { font-size: 40px; font-weight: 900; letter-spacing: 1px; color: #ff3b3b; line-height: 1; }
-  #sub { font-size: 17px; font-weight: 800; margin-top: 6px; }
+  #top { position: fixed; top: 0; left: 0; right: 0; padding: 12px 16px 20px; background: linear-gradient(#000d, #0000); text-align: center; pointer-events: none; }
+  #title { font-size: 38px; font-weight: 900; letter-spacing: 1px; color: #ffd84d; line-height: 1; }
+  #sub { font-size: 18px; font-weight: 800; margin-top: 6px; }
   #timer { font-variant-numeric: tabular-nums; color: #7CFC6A; }
   #timer.danger { color: #ff4d4d; }
   .chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .chip { background: #0009; border-radius: 99px; padding: 4px 12px; font-weight: 800; font-size: 17px; }
+  .chip { background: #0009; border-radius: 99px; padding: 4px 12px; font-weight: 800; font-size: 16px; }
+  #level { background: #6b4bd8cc; }
   .bars { margin-top: 6px; font-size: 20px; letter-spacing: 1px; }
-  #board { position: fixed; right: 10px; top: 200px; min-width: 170px; background: #000a; border-radius: 12px; padding: 8px 12px; font-weight: 800; font-size: 16px; pointer-events: none; }
+  /* likes progress */
+  #likes { position: fixed; left: 50%; top: 190px; transform: translateX(-50%); width: 86%; pointer-events: none; }
+  #likes .lbl { display: flex; justify-content: space-between; font-weight: 900; font-size: 19px; margin-bottom: 4px; }
+  #likes .bar { height: 22px; border-radius: 11px; background: #000a; border: 2px solid #ffffff55; overflow: hidden; }
+  #likes .fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff2d6b, #ff7aa2); transition: width .4s ease; }
+  #likes.pop .fill { animation: flash .6s; }
+  @keyframes flash { 50% { filter: brightness(2); } }
+  #board { position: fixed; right: 10px; top: 262px; min-width: 170px; background: #000a; border-radius: 12px; padding: 8px 12px; font-weight: 800; font-size: 16px; pointer-events: none; }
   #board h3 { margin: 0 0 4px; font-size: 16px; color: #ffd84d; }
   #board .r { display: flex; justify-content: space-between; gap: 10px; }
-  #feed { position: fixed; left: 10px; top: 200px; width: 52%; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
-  .ev { background: #000a; border-left: 5px solid #ff4d4d; border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: 17px; animation: slide .35s ease-out; }
+  #feed { position: fixed; left: 10px; top: 262px; width: 54%; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .ev { display: flex; align-items: center; gap: 8px; background: #000a; border-left: 5px solid #ff7a1a; border-radius: 10px; padding: 5px 10px 5px 6px; font-weight: 800; font-size: 16px; animation: slide .35s ease-out; }
   .ev .who { color: #ffd84d; }
+  .av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid #ffd84d; }
+  .av-fallback { display: inline-grid; place-items: center; background: linear-gradient(135deg, #fe2c55, #25f4ee); font-size: 14px; }
   @keyframes slide { from { opacity: 0; transform: translateX(-30px); } }
   #legend { position: fixed; left: 0; right: 0; bottom: 0; padding: 26px 10px 12px; background: linear-gradient(#0000, #000d 30%); display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 15px; font-weight: 700; pointer-events: none; }
   #legend .t { color: #ffd84d; }
-  #legend .h { grid-column: 1 / -1; text-align: center; font-size: 18px; font-weight: 900; margin-bottom: 4px; color: #ff6b6b; }
+  #legend .h { grid-column: 1 / -1; text-align: center; font-size: 18px; font-weight: 900; margin-bottom: 4px; color: #ffd84d; }
   #offline { position: fixed; inset: 0; display: grid; place-items: center; background: #000c; font-size: 22px; font-weight: 800; text-align: center; padding: 20px; }
-  #death { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: radial-gradient(#b0000088, #3a0000ee); opacity: 0; transition: opacity .3s; pointer-events: none; }
-  #death.on { opacity: 1; }
-  #death .big { font-size: 58px; font-weight: 900; line-height: 1.05; }
-  #death .who { color: #ffd84d; font-size: 64px; font-weight: 900; animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
-  #death .small { font-size: 22px; font-weight: 800; margin-top: 12px; }
+  #round { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: radial-gradient(#ffb30066, #2a1a00ee); opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #round.on { opacity: 1; }
+  #round .big { font-size: 46px; font-weight: 900; line-height: 1.05; }
+  #round .who { color: #ffd84d; font-size: 66px; font-weight: 900; animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
+  #round .small { font-size: 22px; font-weight: 800; margin-top: 12px; }
+  #lvlup { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.6); background: #6b4bd8ee; border-radius: 18px; padding: 14px 24px; font-size: 30px; font-weight: 900; text-align: center; opacity: 0; transition: all .35s cubic-bezier(.2,1.6,.4,1); pointer-events: none; }
+  #lvlup.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   @keyframes pop { from { transform: scale(.3); } }
 </style>
 </head>
 <body>
 <iframe id="cam" allow="autoplay"></iframe>
 <div id="top" class="shadow">
-  <div id="title">KILL STEVE!</div>
-  <div id="sub">Steve has survived <span id="timer">0:00</span></div>
-  <div class="chips"><span class="chip" id="deaths">☠️ Killed 0x</span><span class="chip" id="best">🏆 Record 0:00</span><span class="chip" id="kills">⚔️ 0 mobs</span></div>
+  <div id="title">CAN STEVE SURVIVE?</div>
+  <div id="sub"><span id="roundNo">Round 1</span> · survived <span id="timer">0:00</span></div>
+  <div class="chips"><span class="chip" id="level">⭐ Level 1</span><span class="chip" id="best">🏆 Record 0:00</span><span class="chip" id="kills">⚔️ 0 mobs beaten</span></div>
   <div class="bars" id="hearts"></div>
 </div>
+<div id="likes" class="shadow" hidden><div class="lbl"><span id="likesTxt">❤️ TAP LIKES!</span><span id="likesNum">0 / 100</span></div><div class="bar"><div class="fill" id="likesFill"></div></div></div>
 <div id="feed" class="shadow"></div>
-<div id="board" class="shadow" hidden><h3>☠️ Top Steve killers</h3><div id="boardRows"></div></div>
+<div id="board" class="shadow" hidden><h3>🏆 Top challengers</h3><div id="boardRows"></div></div>
 <div id="legend" class="shadow"></div>
-<div id="death" class="shadow"><div class="who" id="killer"></div><div class="big">KILLED STEVE!</div><div class="small" id="deathSub"></div></div>
+<div id="round" class="shadow"><div class="big">ROUND WON BY</div><div class="who" id="winner"></div><div class="small" id="roundSub"></div></div>
+<div id="lvlup" class="shadow"></div>
 <div id="offline" class="shadow">⛏️ Connecting to the Minecraft world…</div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/shared/client.js"></script>
@@ -58,7 +72,9 @@
   const P = LT.params, $ = (id) => document.getElementById(id);
   const viewUrl = P.get('view') || `${location.protocol}//${location.hostname}:3007`;
   $('cam').src = viewUrl;
-  let botName = 'Steve', lastDeaths = null, lastSeen = 0;
+  const LEVEL_NAMES = ['', 'Iron', 'Diamond sword', 'Diamond armor', 'Full diamond', 'Netherite'];
+  let botName = 'Steve', lastRounds = null, lastLevel = null, lastSeen = 0;
+  let likeRule = null, sessionLikes = 0;
 
   const clock = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 
@@ -66,37 +82,63 @@
     if (!st) return;
     lastSeen = Date.now();
     botName = st.bot || botName;
-    $('title').textContent = P.get('title') || `KILL ${botName.toUpperCase()}!`;
-    $('sub').firstChild.textContent = `${botName} has survived `;
+    $('title').textContent = P.get('title') || `CAN ${botName.toUpperCase()} SURVIVE?`;
     $('offline').hidden = !!st.online;
+    $('roundNo').textContent = `Round ${(st.deaths || 0) + 1}`;
     $('timer').textContent = clock(st.alive || 0);
     $('timer').classList.toggle('danger', st.health > 0 && st.health <= 6);
-    $('deaths').textContent = `☠️ Killed ${st.deaths}x`;
+    $('level').textContent = `⭐ Level ${st.level || 1}`;
     $('best').textContent = `🏆 Record ${clock(st.best || 0)}`;
-    $('kills').textContent = `⚔️ ${st.kills} mobs`;
+    $('kills').textContent = `⚔️ ${st.kills} mobs beaten`;
     const hp = Math.max(0, Math.round(st.health || 0));
     $('hearts').textContent = '❤️'.repeat(Math.ceil(hp / 2)) + '🖤'.repeat(10 - Math.ceil(hp / 2));
     const top = st.top || [];
     $('board').hidden = !top.length;
-    $('boardRows').innerHTML = top.map((k, i) => `<div class="r"><span>${['🥇', '🥈', '🥉'][i] || '•'} ${LT.esc(k.name)}</span><span>${k.kills}</span></div>`).join('');
-    if (lastDeaths !== null && st.deaths > lastDeaths) killedBanner(st);
-    lastDeaths = st.deaths;
+    $('boardRows').innerHTML = top.map((k, i) => `<div class="r"><span>${['🥇', '🥈', '🥉'][i] || '•'} ${LT.esc(k.name)}</span><span>${k.kills} 🏆</span></div>`).join('');
+    if (lastRounds !== null && st.deaths > lastRounds) roundBanner(st);
+    if (lastLevel !== null && (st.level || 1) > lastLevel) levelToast(st.level);
+    lastRounds = st.deaths; lastLevel = st.level || 1;
   }
-  function killedBanner(st) {
-    const who = st.lastKiller && st.lastKiller !== 'the arena' ? st.lastKiller : 'The arena';
-    $('killer').textContent = who.toUpperCase();
+  function roundBanner(st) {
+    const who = st.lastKiller && st.lastKiller !== 'the arena' ? st.lastKiller : 'THE MOBS';
+    $('winner').textContent = who.toUpperCase();
     const mine = (st.top || []).find((k) => k.name === st.lastKiller);
-    $('deathSub').textContent = mine ? `${mine.kills} kill${mine.kills > 1 ? 's' : ''} today · Steve's death #${st.deaths}` : `Steve's death #${st.deaths}`;
-    $('death').classList.add('on'); setTimeout(() => $('death').classList.remove('on'), 4000);
+    $('roundSub').textContent = (mine ? `${mine.kills} round win${mine.kills > 1 ? 's' : ''} · ` : '') + `${botName} is back for round ${st.deaths + 1}!`;
+    $('lvlup').classList.remove('on');
+    $('round').classList.add('on'); setTimeout(() => $('round').classList.remove('on'), 4000);
     Sounds.play('fanfare');
+  }
+  function levelToast(level) {
+    if ($('round').classList.contains('on')) return; // the round banner has priority
+    $('lvlup').innerHTML = `⭐ ${LT.esc(botName.toUpperCase())} LEVELED UP!<br><span style="font-size:22px">${LT.esc(LEVEL_NAMES[level] || 'Level ' + level)}</span>`;
+    $('lvlup').classList.add('on'); setTimeout(() => $('lvlup').classList.remove('on'), 3000);
+    Sounds.play('levelup');
   }
   setInterval(() => { if (Date.now() - lastSeen > 8000) $('offline').hidden = false; }, 2000);
 
+  // ❤️ likes progress toward the next mob
+  function renderLikes() {
+    if (!likeRule) { $('likes').hidden = true; return; }
+    $('likes').hidden = false;
+    const n = likeRule.every, cur = sessionLikes % n;
+    $('likesTxt').textContent = `❤️ TAP LIKES! → ${likeRule.name.replace(/\s*\((help|hurt)\)/i, '')}`;
+    $('likesNum').textContent = `${cur} / ${n}`;
+    $('likesFill').style.width = (cur / n) * 100 + '%';
+  }
+  function onStats(s) {
+    const before = likeRule ? Math.floor(sessionLikes / likeRule.every) : 0;
+    sessionLikes = s.likes || 0;
+    if (likeRule && Math.floor(sessionLikes / likeRule.every) > before) { $('likes').classList.remove('pop'); void $('likes').offsetWidth; $('likes').classList.add('pop'); }
+    renderLikes();
+  }
+
   function renderLegend(list) {
+    likeRule = (list || []).filter((r) => r.type === 'likes' && r.every).sort((a, b) => a.every - b.every)[0] || null;
+    renderLikes();
     if (!list?.length) { $('legend').innerHTML = ''; return; }
     const order = { gift: 0, likes: 1, follow: 2, share: 3, command: 4, keyword: 5, join: 6 };
     const rows = list.slice().sort((a, b) => order[a.type] - order[b.type] || a.min - b.min).slice(0, 12);
-    $('legend').innerHTML = `<div class="h">🎁 Like, follow &amp; send gifts to KILL ${LT.esc(botName.toUpperCase())}!</div>` +
+    $('legend').innerHTML = `<div class="h">🎁 Like, follow &amp; send gifts to challenge ${LT.esc(botName.toUpperCase())}!</div>` +
       rows.map((r) => `<div><span class="t">${LT.esc(r.trigger)}</span> → ${LT.esc(r.name.replace(/\s*\((help|hurt)\)/i, ''))}</div>`).join('');
   }
 
@@ -105,7 +147,7 @@
     const d = document.createElement('div');
     d.className = 'ev';
     const times = a.repeat > 1 ? ` x${a.repeat}` : '';
-    d.innerHTML = `<span class="who">${LT.esc(a.user?.nickname || 'Someone')}</span> → ${LT.esc(a.ruleName.replace(/\s*\((help|hurt)\)/i, ''))}${times}`;
+    d.innerHTML = `${LT.avatar(a.user?.avatar, a.user?.nickname)}<span><span class="who">${LT.esc(a.user?.nickname || 'Someone')}</span> → ${LT.esc(a.ruleName.replace(/\s*\((help|hurt)\)/i, ''))}${times}</span>`;
     $('feed').prepend(d);
     while ($('feed').children.length > 5) $('feed').lastChild.remove();
     setTimeout(() => d.remove(), 15000);
@@ -113,9 +155,10 @@
   }
 
   const socket = io();
-  socket.on('connect', () => socket.emit('getState', (s) => { renderStatus(s.mc); renderLegend(s.legend); }));
+  socket.on('connect', () => socket.emit('getState', (s) => { renderLegend(s.legend); onStats(s.stats || {}); renderStatus(s.mc); }));
   socket.on('mcStatus', renderStatus);
   socket.on('legend', renderLegend);
+  socket.on('stats', onStats);
   socket.on('action', addFeed);
   // the camera reconnects by itself if the bridge restarts
   setInterval(() => { if (!$('offline').hidden) $('cam').src = viewUrl; }, 30000);
