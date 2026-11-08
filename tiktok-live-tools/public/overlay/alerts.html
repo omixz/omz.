@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerts overlay</title>
+<link rel="stylesheet" href="overlay.css">
+<style>
+  /* URL options: ?sound=0 (mute) ?tts=1 (speak in this browser) ?volume=0.6 ?scale=1.5 */
+  body { width: 100vw; height: 100vh; display: grid; place-items: center; }
+  #alert { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; opacity: 0; transform: scale(.6) translateY(30px); transition: opacity .35s, transform .45s cubic-bezier(.2,1.6,.4,1); max-width: 90vw; }
+  #alert.show { opacity: 1; transform: none; }
+  #alert img { width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,.6)); animation: bob 1.2s ease-in-out infinite; }
+  #alert .text { font-size: 44px; font-weight: 900; line-height: 1.15; padding: 12px 26px; border-radius: 18px; background: linear-gradient(135deg, rgba(254,44,85,.92), rgba(37,244,238,.85)); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  @keyframes bob { 50% { transform: translateY(-10px) rotate(-4deg); } }
+</style>
+</head>
+<body>
+<div id="alert"><img id="img" alt="" referrerpolicy="no-referrer" hidden><div class="text shadow" id="txt"></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script src="/shared/sounds.js"></script>
+<script src="/shared/tts.js"></script>
+<script>
+  const p = LT.params;
+  const soundOn = p.get('sound') !== '0';
+  Sounds.volume = Number(p.get('volume') || 1);
+  TTS.enabled = p.get('tts') === '1';
+  if (p.get('scale')) document.body.style.zoom = p.get('scale');
+  const el = document.getElementById('alert'), img = document.getElementById('img'), txt = document.getElementById('txt');
+  const queue = []; let busy = false, timer = null;
+
+  function next() {
+    if (busy || !queue.length) return;
+    busy = true;
+    const a = queue.shift();
+    if (soundOn) Sounds.play(a.sound);
+    if (a.speak) TTS.say(a.speak);
+    if (!a.alert) { busy = false; return setTimeout(next, 300); }
+    txt.textContent = a.alert.text;
+    img.hidden = !a.image; if (a.image) img.src = a.image;
+    el.classList.add('show');
+    timer = setTimeout(finish, a.alert.duration * 1000);
+  }
+  function finish() { clearTimeout(timer); el.classList.remove('show'); setTimeout(() => { busy = false; next(); }, 450); }
+
+  const socket = io();
+  socket.on('action', (a) => { queue.push(a); if (queue.length > 30) queue.shift(); next(); });
+  socket.on('tts', (t) => TTS.say(t.text));
+  socket.on('control', (c) => { if (c.cmd === 'skip' && busy) { TTS.skip(); finish(); } });
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# One-click deploy of tiktok-live-tools on Render's free plan.
+# Render dashboard -> New -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: tiktok-live-tools
+    runtime: node
+    plan: free
+    rootDir: tiktok-live-tools
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: TIKTOK_USERNAME
+        sync: false
+      - key: NODE_VERSION
+        value: "22"

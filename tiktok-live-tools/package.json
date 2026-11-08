@@ -1,0 +1,20 @@
+{
+  "name": "tiktok-live-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightweight, self-hosted TikTok LIVE interaction tool (alerts, TTS, goals, chat commands, OBS overlays). Runs on a free cloud host, an old laptop, a Raspberry Pi or an Android phone.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "tiktok-live-connector": "^2.5.0"
+  }
+}

@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121214">
+<title>LIVE Tools</title>
+<style>
+  :root { --bg: #121214; --card: #1c1c20; --card2: #26262c; --line: #33333b; --text: #f2f2f5; --mute: #9a9aa6; --pink: #fe2c55; --cyan: #25f4ee; --ok: #2ecc71; --warn: #f5a623; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 76px; }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(18,18,20,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 17px; margin: 0; flex: 1; } header h1 b { color: var(--pink); }
+  .pill { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--card2); color: var(--mute); white-space: nowrap; }
+  .pill.live { background: var(--pink); color: #fff; } .pill.connecting, .pill.reconnecting { background: var(--warn); color: #000; } .pill.offline { background: #444; color: #ddd; }
+  main { max-width: 900px; margin: 0 auto; padding: 12px 16px; }
+  nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; background: #18181b; border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; background: none; border: 0; color: var(--mute); padding: 10px 0 12px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+  nav button span { font-size: 20px; } nav button.on { color: var(--cyan); }
+  section { display: none; } section.on { display: block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; }
+  .muted { color: var(--mute); font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > .grow { flex: 1; min-width: 140px; }
+  label.f { display: block; font-size: 12px; color: var(--mute); margin: 8px 0 4px; }
+  input, select, textarea { width: 100%; background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 9px 11px; font: inherit; }
+  input[type=checkbox] { width: auto; accent-color: var(--pink); transform: scale(1.2); }
+  input[type=range] { padding: 0; }
+  button.b { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  button.b:active { transform: scale(.97); }
+  button.p { background: var(--pink); border-color: var(--pink); color: #fff; } button.c { background: var(--cyan); border-color: var(--cyan); color: #000; }
+  button.s { padding: 6px 10px; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--card2); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; } .stat small { color: var(--mute); font-size: 12px; }
+  #feed { max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 4px; }
+  .ev { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 10px; background: var(--card2); font-size: 14px; animation: in .25s; }
+  .ev .t { flex: 1; min-width: 0; overflow-wrap: anywhere; } .ev .n { font-weight: 700; color: var(--cyan); }
+  .ev.gift { background: #3a3220; } .ev.follow, .ev.share { background: #3a2029; } .ev.test { outline: 1px dashed var(--warn); }
+  .ev img.gi { height: 22px; vertical-align: middle; }
+  .av { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
+  .av-fallback { display: inline-grid; place-items: center; background: linear-gradient(135deg, var(--pink), var(--cyan)); font-weight: 700; font-size: 13px; color: #fff; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } }
+  .rule { background: var(--card2); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--line); }
+  .rule.off { opacity: .55; }
+  .rule .head { display: flex; gap: 8px; align-items: center; }
+  .rule .head input[type=text] { font-weight: 700; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .url { display: flex; gap: 6px; align-items: center; margin: 6px 0 12px; }
+  .url code { flex: 1; background: var(--card2); padding: 8px 10px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: nowrap; }
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #333; padding: 10px 16px; border-radius: 10px; z-index: 20; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 90vw; }
+  .toast.on { opacity: 1; }
+  .banner { background: #3a2a10; border: 1px solid var(--warn); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
+  .banner.floating { position: fixed; left: 12px; right: 12px; bottom: 84px; z-index: 15; margin: 0; background: #3a2a10f2; pointer-events: none; }
+  #saved { font-size: 12px; color: var(--ok); opacity: 0; transition: opacity .3s; } #saved.on { opacity: 1; }
+  details summary { cursor: pointer; color: var(--cyan); margin: 6px 0; }
+  @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } .stat b { font-size: 17px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><b>●</b> LIVE Tools</h1>
+  <span id="saved">Saved ✓</span>
+  <span class="pill" id="pill">idle</span>
+</header>
+
+<main>
+  <div class="banner floating" id="soundBanner" hidden>🔈 Tap anywhere to enable sound &amp; TTS on this device (browsers block audio until you tap).</div>
+  <div class="banner" id="authBanner" hidden>
+    🔒 This dashboard is protected. Enter your admin key:
+    <div class="row" style="margin-top:8px"><input class="grow" id="authKey" type="password" placeholder="Admin key"><button class="b p" id="authBtn">Unlock</button></div>
+  </div>
+
+  <!-- ======================================================== LIVE -->
+  <section id="tab-live" class="on">
+    <div class="card">
+      <div class="row">
+        <input class="grow" id="username" placeholder="Your TikTok username (without @)" autocomplete="off" autocapitalize="off">
+        <button class="b p" id="connectBtn">Connect</button>
+        <button class="b" id="disconnectBtn">Stop</button>
+      </div>
+      <p class="muted" id="statusMsg" style="margin:8px 0 0">Not connected.</p>
+    </div>
+
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><b id="s-viewers">0</b><small>👀 Viewers</small></div>
+        <div class="stat"><b id="s-likes">0</b><small>❤️ Likes</small></div>
+        <div class="stat"><b id="s-diamonds">0</b><small>🪙 Coins</small></div>
+        <div class="stat"><b id="s-follows">0</b><small>➕ Follows</small></div>
+        <div class="stat"><b id="s-shares">0</b><small>🔁 Shares</small></div>
+        <div class="stat"><b id="s-gifts">0</b><small>🎁 Gifts</small></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <h2 style="margin:0;flex:1">Live feed</h2>
+        <label class="muted"><input type="checkbox" id="showJoins"> joins</label>
+        <label class="muted"><input type="checkbox" id="showLikes"> likes</label>
+      </div>
+      <div id="feed"></div>
+    </div>
+
+    <div class="card">
+      <h2>Quick controls</h2>
+      <div class="row">
+        <input class="grow" id="sayText" placeholder="Type something to speak out loud…">
+        <button class="b c" id="sayBtn">Speak</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="b s" id="skipBtn">⏭ Skip alert / TTS</button>
+        <button class="b s" id="clearTtsBtn">🔇 Clear TTS queue</button>
+        <button class="b s" id="resetBtn">♻️ Reset stats</button>
+      </div>
+      <details>
+        <summary>🧪 Test events (no need to be live)</summary>
+        <div class="row">
+          <button class="b s" data-sim='{"type":"gift","giftName":"Rose","count":5}'>🌹 5x Rose</button>
+          <button class="b s" data-sim='{"type":"gift","giftName":"Hand Hearts"}'>🫶 Hand Hearts (100)</button>
+          <button class="b s" data-sim='{"type":"gift","giftName":"Galaxy"}'>🌌 Galaxy (1000)</button>
+          <button class="b s" data-sim='{"type":"follow"}'>➕ Follow</button>
+          <button class="b s" data-sim='{"type":"share"}'>🔁 Share</button>
+          <button class="b s" data-sim='{"type":"like","likes":250}'>❤️ 250 likes</button>
+          <button class="b s" data-sim='{"type":"join"}'>👋 Join</button>
+          <button class="b s" data-sim='{"type":"chat","comment":"!hello"}'>💬 !hello</button>
+          <button class="b s" data-sim='{"type":"chat","comment":"!tts this is a text to speech test"}'>💬 !tts test</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ======================================================= RULES -->
+  <section id="tab-rules">
+    <div class="card">
+      <h2>Actions</h2>
+      <p class="muted" style="margin-top:0">When something happens on your LIVE, show an alert, play a sound and/or speak a message. For gifts, only the most specific matching rule fires (e.g. "Big gift" wins over "Any gift").<br>
+      Placeholders: <code>{user}</code> <code>{username}</code> <code>{gift}</code> <code>{count}</code> <code>{coins}</code> <code>{comment}</code> <code>{args}</code> (text after a command) <code>{totalLikes}</code> <code>{viewers}</code></p>
+      <div id="rules"></div>
+      <button class="b p" id="addRule">+ Add action</button>
+    </div>
+  </section>
+
+  <!-- ========================================================= TTS -->
+  <section id="tab-tts">
+    <div class="card">
+      <h2>Text-to-speech (what gets read)</h2>
+      <label class="f">Read chat messages</label>
+      <select id="ttsMode">
+        <option value="off">Off</option>
+        <option value="command">Only messages starting with a command</option>
+        <option value="all">Every chat message</option>
+      </select>
+      <div class="grid2">
+        <div><label class="f">TTS command</label><input id="ttsCommand" placeholder="!tts"></div>
+        <div><label class="f">Max characters</label><input id="ttsMax" type="number" min="10" max="500"></div>
+      </div>
+      <label class="f">Blocked words (comma separated — messages containing them are not read)</label>
+      <input id="ttsBanned" placeholder="word1, word2">
+      <div class="row" style="margin-top:10px"><label><input type="checkbox" id="ttsLinks"> Don't read links</label><label><input type="checkbox" id="ttsGifts"> Also read every gift ("X sent 5 Rose")</label></div>
+    </div>
+    <div class="card">
+      <h2>This device</h2>
+      <p class="muted" style="margin-top:0">TTS and sounds play on whatever device has this page open (your phone, a tablet, an old laptop…). Turn them on here on the device whose speaker your stream can hear.</p>
+      <div class="row"><label><input type="checkbox" id="devTts"> 🗣 Speak TTS on this device</label></div>
+      <div class="row" style="margin-top:6px"><label><input type="checkbox" id="devSounds"> 🔔 Play alert sounds on this device</label></div>
+      <label class="f">Voice</label><select id="voice"></select>
+      <div class="grid2">
+        <div><label class="f">Speed <span id="rateV"></span></label><input type="range" id="rate" min="0.5" max="2" step="0.1"></div>
+        <div><label class="f">Pitch <span id="pitchV"></span></label><input type="range" id="pitch" min="0" max="2" step="0.1"></div>
+      </div>
+      <label class="f">Volume <span id="volV"></span></label><input type="range" id="vol" min="0" max="1" step="0.05">
+      <div class="row" style="margin-top:10px"><button class="b c" id="testVoice">Test voice</button></div>
+      <p class="muted" id="ttsUnsupported" hidden>⚠️ This browser has no built-in speech voices. Try Chrome or Safari.</p>
+    </div>
+  </section>
+
+  <!-- ========================================================= GAME -->
+  <section id="tab-game">
+    <div class="card">
+      <h2>🏰 Castle Clash</h2>
+      <p class="muted" style="margin-top:0">Viewers comment to join a team. Likes send soldiers, gifts send knights, giants, dragons and meteors. When a castle falls, the top fighters are shown and a new round starts on its own.</p>
+      <div class="url"><code id="gameUrl"></code><button class="b s" id="copyGame">Copy</button><a class="b s" style="text-decoration:none" href="/game" target="_blank">Open</a></div>
+      <div class="row"><a class="b s" style="text-decoration:none" href="/game?demo=1&sound=0" target="_blank">👀 Preview with fake viewers</a><button class="b s" id="gameReset">♻️ Reset scores &amp; new game</button></div>
+    </div>
+    <div class="card">
+      <h2>Teams</h2>
+      <div class="grid2">
+        <div><label class="f">Team 1 name</label><input id="g-teamA"></div>
+        <div><label class="f">Team 2 name</label><input id="g-teamB"></div>
+        <div><label class="f">Words to join team 1 (comma separated)</label><input id="g-joinA"></div>
+        <div><label class="f">Words to join team 2</label><input id="g-joinB"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Balance</h2>
+      <div class="grid2">
+        <div><label class="f">Likes per soldier</label><input type="number" min="1" id="g-likesPerSoldier"></div>
+        <div><label class="f">Castle health</label><input type="number" min="1" id="g-castleHp"></div>
+        <div><label class="f">Knight: gift worth at least (coins)</label><input type="number" min="1" id="g-knightCoins"></div>
+        <div><label class="f">Giant: at least (coins)</label><input type="number" min="1" id="g-giantCoins"></div>
+        <div><label class="f">Dragon: at least (coins)</label><input type="number" min="1" id="g-dragonCoins"></div>
+        <div><label class="f">Meteor: at least (coins)</label><input type="number" min="1" id="g-meteorCoins"></div>
+        <div><label class="f">Knights per follow</label><input type="number" min="0" id="g-followUnits"></div>
+        <div><label class="f">Soldiers per share</label><input type="number" min="0" id="g-shareUnits"></div>
+        <div><label class="f">Seconds between rounds</label><input type="number" min="3" id="g-intermission"></div>
+      </div>
+      <p class="muted">Tip: lower the castle health for short, exciting rounds when your LIVE is small.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================== OVERLAYS -->
+  <section id="tab-overlays">
+    <div class="card">
+      <h2>Goal</h2>
+      <div class="grid2">
+        <div><label class="f">Goal type</label><select id="goalType"><option value="likes">Likes</option><option value="diamonds">Coins</option><option value="follows">Follows</option><option value="shares">Shares</option><option value="gifts">Gifts</option></select></div>
+        <div><label class="f">Target</label><input id="goalTarget" type="number" min="1"></div>
+      </div>
+      <label class="f">Title</label><input id="goalTitle">
+    </div>
+    <div class="card">
+      <h2>Overlay links</h2>
+      <p class="muted" style="margin-top:0">Add these as a <b>Browser Source</b> (OBS / Streamlabs) or <b>Link</b> source (TikTok LIVE Studio). Background is transparent. In OBS tick "Control audio via OBS" on the alerts source so its sounds reach your stream.</p>
+      <div id="urls"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== SETTINGS -->
+  <section id="tab-settings">
+    <div class="card">
+      <h2>Connection</h2>
+      <label><input type="checkbox" id="autoConnect"> Auto-connect: keep checking and join my LIVE as soon as I go live</label>
+      <p class="muted">The server checks about once a minute while you're offline, so you can leave it running and just start your LIVE from your phone.</p>
+    </div>
+    <div class="card">
+      <h2>☁️ Cloud streaming (hands-free mode)</h2>
+      <p class="muted" style="margin-top:0">Only for the 24/7 server setup (see the README). Paste the <b>Server URL</b> and <b>Stream key</b> from TikTok LIVE Producer. If TikTok gives you a new key, paste it here: the server switches to it within about 5 seconds.</p>
+      <label class="f">Server URL</label><input id="streamUrl" placeholder="rtmp://push-rtmp-….tiktokcdn.com/game/" autocomplete="off">
+      <label class="f">Stream key <span id="keyHint"></span></label><input id="streamKey" type="password" placeholder="Leave empty to keep the saved key" autocomplete="off">
+      <div class="row" style="margin-top:10px"><button class="b p" id="saveStream">Save stream key</button><button class="b" id="clearStream">Stop streaming</button></div>
+    </div>
+    <div class="card">
+      <h2>Backup</h2>
+      <p class="muted" style="margin-top:0">Your settings are saved on the server and also backed up in this browser. Free hosts can wipe the server's disk on restart — the dashboard restores from this browser automatically.</p>
+      <div class="row">
+        <button class="b" id="exportBtn">⬇️ Export settings</button>
+        <label class="b" style="display:inline-block">⬆️ Import settings<input type="file" id="importFile" accept="application/json" hidden></label>
+        <button class="b" id="defaultsBtn">Restore default actions</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Admin key</h2>
+      <p class="muted" style="margin-top:0">Set the <code>ADMIN_KEY</code> environment variable on your server to stop strangers from controlling your dashboard. Overlays stay viewable without it.</p>
+      <button class="b" id="forgetKey">Forget saved key on this device</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="live" class="on"><span>📡</span>Live</button>
+  <button data-tab="game"><span>🏰</span>Game</button>
+  <button data-tab="rules"><span>⚡</span>Actions</button>
+  <button data-tab="tts"><span>🗣</span>TTS</button>
+  <button data-tab="overlays"><span>🖼</span>Overlays</button>
+  <button data-tab="settings"><span>⚙️</span>Settings</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script src="/shared/sounds.js"></script>
+<script src="/shared/tts.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('lt-' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('lt-' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('lt-' + k); } catch {} },
+};
+let settings = null, isAdmin = false;
+const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2800); };
+
+// ---------------------------------------------------------------- tabs
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('on', s.id === 'tab-' + b.dataset.tab));
+  store.set('tab', b.dataset.tab); scrollTo(0, 0);
+});
+const savedTab = store.get('tab', 'live'); document.querySelector(`nav button[data-tab="${savedTab}"]`)?.click();
+
+// ----------------------------------------------------- device audio prefs
+const dev = store.get('device', { tts: true, sounds: false, voice: '', rate: 1, pitch: 1, vol: 1 });
+function applyDevice() {
+  TTS.enabled = dev.tts; TTS.voiceURI = dev.voice; TTS.rate = dev.rate; TTS.pitch = dev.pitch; TTS.volume = dev.vol; Sounds.volume = dev.vol;
+  $('devTts').checked = dev.tts; $('devSounds').checked = dev.sounds;
+  $('rate').value = dev.rate; $('pitch').value = dev.pitch; $('vol').value = dev.vol;
+  $('rateV').textContent = dev.rate + 'x'; $('pitchV').textContent = dev.pitch; $('volV').textContent = Math.round(dev.vol * 100) + '%';
+  $('soundBanner').hidden = !(dev.tts || dev.sounds) || audioUnlocked;
+  store.set('device', dev);
+}
+function fillVoices() {
+  const vs = TTS.voices(); const sel = $('voice');
+  sel.innerHTML = '<option value="">Default voice</option>' + vs.map((v) => `<option value="${LT.esc(v.voiceURI)}">${LT.esc(v.name)} (${LT.esc(v.lang)})</option>`).join('');
+  sel.value = dev.voice;
+}
+TTS.onChange = fillVoices; fillVoices(); $('ttsUnsupported').hidden = TTS.supported;
+let audioUnlocked = false;
+addEventListener('pointerdown', () => { if (audioUnlocked) return; audioUnlocked = true; Sounds.unlock(); if (TTS.supported) speechSynthesis.speak(new SpeechSynthesisUtterance('')); applyDevice(); }, { once: false });
+$('devTts').onchange = (e) => { dev.tts = e.target.checked; applyDevice(); };
+$('devSounds').onchange = (e) => { dev.sounds = e.target.checked; applyDevice(); };
+$('voice').onchange = (e) => { dev.voice = e.target.value; applyDevice(); };
+$('rate').oninput = (e) => { dev.rate = +e.target.value; applyDevice(); };
+$('pitch').oninput = (e) => { dev.pitch = +e.target.value; applyDevice(); };
+$('vol').oninput = (e) => { dev.vol = +e.target.value; applyDevice(); };
+$('testVoice').onclick = () => { const was = TTS.enabled; TTS.enabled = true; TTS.say('Hello! This is how I will sound on your live.'); TTS.enabled = was; };
+applyDevice();
+
+// -------------------------------------------------------------- socket
+const socket = io();
+function call(event, payload) {
+  return new Promise((res) => socket.emit(event, payload, (r) => { if (r && !r.ok && r.error) toast('⚠️ ' + r.error); if (r?.error?.includes('admin key')) $('authBanner').hidden = false; res(r || {}); }));
+}
+
+socket.on('connect', async () => {
+  const key = store.get('adminKey', '');
+  const a = await new Promise((r) => socket.emit('auth', key, r));
+  isAdmin = a.ok; $('authBanner').hidden = isAdmin;
+  socket.emit('getState', async (s) => {
+    renderStatus(s.status); renderStats(s.stats);
+    $('feed').innerHTML = ''; s.feed.forEach(addFeed);
+    if (!s.admin) return;
+    settings = s.settings;
+    const backup = store.get('settingsBackup', null);
+    if (!s.settingsFromDisk && backup) {
+      const r = await call('saveSettings', backup);
+      if (r.ok) { settings = r.settings; toast('Restored your settings from this device'); }
+    }
+    renderSettings(); renderStream(s.stream);
+  });
+});
+function renderStream(st) {
+  if (!st) return;
+  $('streamUrl').value = st.url; $('streamKey').value = '';
+  $('keyHint').textContent = st.configured ? `(saved: ${st.keyHint})` : '(none saved)';
+}
+$('saveStream').onclick = async () => {
+  const r = await call('setStream', { url: $('streamUrl').value, key: $('streamKey').value });
+  if (r.ok) { renderStream(r.stream); toast(r.stream.configured ? 'Saved: streaming starts within a few seconds' : 'Saved'); }
+};
+$('clearStream').onclick = async () => { if (!confirm('Stop sending the game to TikTok?')) return; const r = await call('setStream', { url: '', key: '' }); if (r.ok) { renderStream(r.stream); toast('Streaming stopped'); } };
+socket.on('disconnect', () => renderStatus({ state: 'offline', message: 'Lost connection to your LIVE Tools server — reconnecting…' }));
+$('authBtn').onclick = () => { store.set('adminKey', $('authKey').value); socket.disconnect().connect(); };
+$('forgetKey').onclick = () => { store.del('adminKey'); toast('Key forgotten'); };
+
+socket.on('status', renderStatus);
+socket.on('stats', renderStats);
+socket.on('event', addFeed);
+socket.on('feedReset', () => $('feed').innerHTML = '');
+socket.on('settings', (s) => { if (isAdmin && JSON.stringify(s) !== JSON.stringify(settings)) { settings = s; renderSettings(); } });
+socket.on('tts', (t) => TTS.say(t.text));
+socket.on('action', (a) => { if (a.speak) TTS.say(a.speak); if (dev.sounds) Sounds.play(a.sound); });
+socket.on('control', (c) => { if (c.cmd === 'skip') TTS.skip(); });
+
+function renderStatus(st) {
+  const pill = $('pill'); pill.className = 'pill ' + st.state;
+  pill.textContent = { live: '● LIVE', connecting: 'connecting…', reconnecting: 'reconnecting…', offline: 'waiting for LIVE', idle: 'idle' }[st.state] || st.state;
+  $('statusMsg').textContent = st.message || '';
+}
+function renderStats(s) {
+  for (const k of ['viewers', 'likes', 'diamonds', 'follows', 'shares', 'gifts']) $('s-' + k).textContent = LT.fmt(s[k]);
+}
+$('showJoins').checked = store.get('showJoins', false); $('showLikes').checked = store.get('showLikes', false);
+$('showJoins').onchange = (e) => store.set('showJoins', e.target.checked);
+$('showLikes').onchange = (e) => store.set('showLikes', e.target.checked);
+const streakEls = new Map();
+function addFeed(ev) {
+  if (ev.type === 'join' && !$('showJoins').checked) return;
+  if (ev.type === 'like' && !$('showLikes').checked) return;
+  const u = ev.user || {}; let body;
+  const giftImg = (g) => g.image ? `<img class="gi" src="${LT.esc(g.image)}" referrerpolicy="no-referrer">` : '🎁';
+  switch (ev.type) {
+    case 'chat': body = LT.esc(ev.comment); break;
+    case 'gift': body = `sent <b>${ev.gift.count}x ${LT.esc(ev.gift.name)}</b> ${giftImg(ev.gift)} <span class="muted">🪙${ev.gift.coins}</span>`; break;
+    case 'giftStreak': body = `is sending ${LT.esc(ev.gift.name)} ${giftImg(ev.gift)} x${ev.gift.count}…`; break;
+    case 'follow': body = 'followed you ❤️'; break;
+    case 'share': body = 'shared your LIVE 🔁'; break;
+    case 'like': body = `sent ${ev.likes} likes`; break;
+    case 'join': body = 'joined'; break;
+    default: return;
+  }
+  const html = `${LT.avatar(u.avatar, u.nickname)}<div class="t"><span class="n">${LT.esc(u.nickname)}</span> ${body}</div>`;
+  const key = `${u.id}-${ev.gift?.id}`;
+  if (ev.type === 'giftStreak' && streakEls.has(key)) { streakEls.get(key).innerHTML = html; return; }
+  if (ev.type === 'gift' && streakEls.has(key)) { const el = streakEls.get(key); streakEls.delete(key); el.className = 'ev gift' + (ev.test ? ' test' : ''); el.innerHTML = html; return; }
+  const d = document.createElement('div');
+  d.className = `ev ${ev.type === 'giftStreak' ? 'gift' : ev.type}${ev.test ? ' test' : ''}`; d.innerHTML = html;
+  if (ev.type === 'giftStreak') streakEls.set(key, d);
+  const feed = $('feed'); feed.prepend(d);
+  while (feed.children.length > 150) feed.lastChild.remove();
+}
+
+// ----------------------------------------------------------- live tab
+$('connectBtn').onclick = async () => { const u = $('username').value.trim(); if (!u) return toast('Enter your TikTok username'); await call('tiktokConnect', u); };
+$('username').onkeydown = (e) => { if (e.key === 'Enter') $('connectBtn').click(); };
+$('disconnectBtn').onclick = () => call('tiktokDisconnect');
+$('sayBtn').onclick = () => { const t = $('sayText').value.trim(); if (t) { call('speak', t); $('sayText').value = ''; } };
+$('sayText').onkeydown = (e) => { if (e.key === 'Enter') $('sayBtn').click(); };
+$('skipBtn').onclick = () => { call('skipAlert'); TTS.skip(); };
+$('clearTtsBtn').onclick = () => { TTS.clear(); toast('TTS queue cleared on this device'); };
+$('resetBtn').onclick = () => { if (confirm('Reset all counters, the leaderboard and the feed?')) call('resetStats'); };
+document.querySelectorAll('[data-sim]').forEach((b) => b.onclick = () => call('simulate', JSON.parse(b.dataset.sim)));
+
+// ------------------------------------------------------ settings form
+let saveTimer = null;
+function save() {
+  if (!isAdmin || !settings) return;
+  store.set('settingsBackup', settings);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const r = await call('saveSettings', settings);
+    if (r.ok) { const s = $('saved'); s.classList.add('on'); setTimeout(() => s.classList.remove('on'), 1200); }
+  }, 600);
+}
+const bind = (id, set, ev = 'input') => { $(id)[ev === 'change' ? 'onchange' : 'oninput'] = (e) => { set(e.target); save(); }; };
+bind('ttsMode', (t) => settings.tts.mode = t.value, 'change');
+bind('ttsCommand', (t) => settings.tts.command = t.value);
+bind('ttsMax', (t) => settings.tts.maxLength = +t.value || 150);
+bind('ttsBanned', (t) => settings.tts.bannedWords = t.value);
+bind('ttsLinks', (t) => settings.tts.skipLinks = t.checked, 'change');
+bind('ttsGifts', (t) => settings.tts.readGifts = t.checked, 'change');
+bind('goalType', (t) => settings.goal.type = t.value, 'change');
+bind('goalTarget', (t) => settings.goal.target = +t.value || 1);
+bind('goalTitle', (t) => settings.goal.title = t.value);
+bind('autoConnect', (t) => settings.autoConnect = t.checked, 'change');
+const GAME_TEXT = ['teamA', 'teamB', 'joinA', 'joinB'];
+const GAME_NUM = ['likesPerSoldier', 'castleHp', 'knightCoins', 'giantCoins', 'dragonCoins', 'meteorCoins', 'followUnits', 'shareUnits', 'intermission'];
+for (const k of GAME_TEXT) bind('g-' + k, (t) => settings.game[k] = t.value);
+for (const k of GAME_NUM) bind('g-' + k, (t) => { if (t.value !== '') settings.game[k] = Number(t.value); });
+$('gameReset').onclick = () => { if (confirm('Reset the score to 0 : 0 and start a new game?')) call('gameReset'); };
+$('copyGame').onclick = async () => { const u = location.origin + '/game'; try { await navigator.clipboard.writeText(u); toast('Copied!'); } catch { prompt('Copy this link:', u); } };
+
+function renderSettings() {
+  if (!settings) return;
+  if (document.activeElement !== $('username')) $('username').value = settings.username;
+  $('ttsMode').value = settings.tts.mode; $('ttsCommand').value = settings.tts.command; $('ttsMax').value = settings.tts.maxLength;
+  $('ttsBanned').value = settings.tts.bannedWords; $('ttsLinks').checked = settings.tts.skipLinks; $('ttsGifts').checked = settings.tts.readGifts;
+  $('goalType').value = settings.goal.type; $('goalTarget').value = settings.goal.target; $('goalTitle').value = settings.goal.title;
+  $('autoConnect').checked = settings.autoConnect;
+  for (const k of [...GAME_TEXT, ...GAME_NUM]) if (document.activeElement !== $('g-' + k)) $('g-' + k).value = settings.game[k];
+  $('gameUrl').textContent = location.origin + '/game';
+  store.set('settingsBackup', settings);
+  renderRules(); renderUrls();
+}
+
+// ------------------------------------------------------------- rules
+const TRIGGERS = { gift: '🎁 Gift', follow: '➕ Follow', share: '🔁 Share', likes: '❤️ Every N likes', command: '💬 Chat command', keyword: '🔎 Chat contains word', join: '👋 Viewer joins' };
+function soundOptions(cur) {
+  const builtIn = Sounds.names.map((n) => `<option value="${n}" ${cur === n ? 'selected' : ''}>${n}</option>`).join('');
+  const custom = cur && !Sounds.names.includes(cur);
+  return `<option value="">— none —</option>${builtIn}<option value="__custom" ${custom ? 'selected' : ''}>Custom URL…</option>`;
+}
+function renderRules() {
+  const wrap = $('rules');
+  wrap.innerHTML = settings.rules.map((r, i) => {
+    const t = r.trigger, custom = r.sound && !Sounds.names.includes(r.sound);
+    return `<div class="rule ${r.enabled ? '' : 'off'}" data-i="${i}">
+      <div class="head"><input type="checkbox" data-k="enabled" ${r.enabled ? 'checked' : ''} title="Enabled"><input type="text" data-k="name" value="${LT.esc(r.name)}"></div>
+      <div class="grid2">
+        <div><label class="f">When</label><select data-k="trigger.type">${Object.entries(TRIGGERS).map(([k, v]) => `<option value="${k}" ${t.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        ${t.type === 'gift' ? `<div><label class="f">Gift name (empty = any gift)</label><input data-k="trigger.giftName" value="${LT.esc(t.giftName)}" placeholder="e.g. Rose"></div>
+          <div><label class="f">Min coins (total for the combo)</label><input type="number" min="0" data-k="trigger.minCoins" value="${t.minCoins}"></div>
+          <div><label class="f">Max coins (0 = no max)</label><input type="number" min="0" data-k="trigger.maxCoins" value="${t.maxCoins || 0}"></div>` : ''}
+        ${t.type === 'command' ? `<div><label class="f">Command</label><input data-k="trigger.command" value="${LT.esc(t.command)}" placeholder="!dance"></div>` : ''}
+        ${t.type === 'keyword' ? `<div><label class="f">Word or phrase</label><input data-k="trigger.command" value="${LT.esc(t.command)}" placeholder="hello"></div>` : ''}
+        ${t.type === 'likes' ? `<div><label class="f">Every how many likes</label><input type="number" min="1" data-k="trigger.every" value="${t.every}"></div>` : ''}
+      </div>
+      <div class="row" style="margin-top:8px"><label><input type="checkbox" data-k="alert.show" ${r.alert.show ? 'checked' : ''}> Show on-screen alert</label></div>
+      ${r.alert.show ? `<div class="grid2"><div><label class="f">Alert text</label><input data-k="alert.text" value="${LT.esc(r.alert.text)}"></div><div><label class="f">Seconds on screen</label><input type="number" min="1" max="60" data-k="alert.duration" value="${r.alert.duration}"></div></div>` : ''}
+      <div class="grid2">
+        <div><label class="f">Sound</label><select data-k="soundSel">${soundOptions(r.sound)}</select>${custom || r._custom ? `<input style="margin-top:6px" data-k="sound" value="${LT.esc(custom ? r.sound : '')}" placeholder="https://…/sound.mp3">` : ''}</div>
+        <div><label class="f">Speak (TTS) — empty = silent</label><input data-k="speak" value="${LT.esc(r.speak)}"></div>
+        <div><label class="f">Cooldown (seconds)</label><input type="number" min="0" data-k="cooldown" value="${r.cooldown}"></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="b s c" data-act="test">▶ Test</button><button class="b s" data-act="preview">🔊 Preview sound</button><button class="b s" data-act="up">↑</button><button class="b s" data-act="del" style="margin-left:auto">🗑 Delete</button></div>
+    </div>`;
+  }).join('') || '<p class="muted">No actions yet.</p>';
+}
+function setPath(obj, p, v) { const ks = p.split('.'); let o = obj; ks.slice(0, -1).forEach((k) => o = o[k] ||= {}); o[ks.at(-1)] = v; }
+$('rules').addEventListener('input', (e) => onRuleEdit(e, false));
+$('rules').addEventListener('change', (e) => onRuleEdit(e, true));
+function onRuleEdit(e, isChange) {
+  const el = e.target, k = el.dataset.k; if (!k) return;
+  const discrete = el.type === 'checkbox' || el.tagName === 'SELECT';
+  if (discrete !== isChange) return; // text/number on 'input', checkbox/select on 'change'
+  const r = settings.rules[el.closest('.rule').dataset.i];
+  const v = el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value;
+  if (k === 'soundSel') {
+    if (v === '__custom') { r._custom = true; r.sound = ''; } else { r._custom = false; r.sound = v; Sounds.play(v); }
+  } else setPath(r, k, v);
+  save();
+  if (discrete) renderRules();
+}
+$('rules').addEventListener('click', (e) => {
+  const act = e.target.dataset.act; if (!act) return;
+  const i = +e.target.closest('.rule').dataset.i; const r = settings.rules[i];
+  if (act === 'test') call('testRule', r.id);
+  if (act === 'preview') { Sounds.unlock(); Sounds.play(r.sound); }
+  if (act === 'del' && confirm(`Delete "${r.name}"?`)) { settings.rules.splice(i, 1); save(); renderRules(); }
+  if (act === 'up' && i > 0) { [settings.rules[i - 1], settings.rules[i]] = [settings.rules[i], settings.rules[i - 1]]; save(); renderRules(); }
+});
+$('addRule').onclick = () => {
+  settings.rules.push({ id: 'r-' + Math.random().toString(36).slice(2, 10), enabled: true, name: 'New action', trigger: { type: 'gift', giftName: '', minCoins: 1, maxCoins: 0, command: '', every: 100 }, alert: { show: true, text: '{user} sent {count}x {gift}!', duration: 5 }, sound: 'coin', speak: '', cooldown: 0 });
+  save(); renderRules(); $('rules').lastElementChild.scrollIntoView({ behavior: 'smooth' });
+};
+
+// ------------------------------------------------------------ overlays
+function renderUrls() {
+  const base = location.origin;
+  const list = [
+    ['Castle Clash game (full screen, 9:16)', '/game'],
+    ['Alerts (gift/follow pop-ups + sounds)', '/overlay/alerts'],
+    ['Alerts + speak TTS inside OBS', '/overlay/alerts?tts=1'],
+    ['Chat', '/overlay/chat?max=10'],
+    ['Goal bar', '/overlay/goal'],
+    ['Top gifters', '/overlay/top?n=5'],
+  ];
+  $('urls').innerHTML = list.map(([name, p]) => `<div class="muted">${name}</div><div class="url"><code>${LT.esc(base + p)}</code><button class="b s" data-copy="${LT.esc(base + p)}">Copy</button><a class="b s" style="text-decoration:none" href="${LT.esc(p)}" target="_blank">Open</a></div>`).join('');
+}
+$('urls').addEventListener('click', async (e) => { const u = e.target.dataset.copy; if (!u) return; try { await navigator.clipboard.writeText(u); toast('Copied!'); } catch { prompt('Copy this link:', u); } });
+
+// ------------------------------------------------------------- backup
+$('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'live-tools-settings.json'; a.click();
+};
+$('importFile').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const s = JSON.parse(await f.text()); const r = await call('saveSettings', s); if (r.ok) { settings = r.settings; renderSettings(); toast('Settings imported'); } }
+  catch { toast('⚠️ That file is not valid settings JSON'); }
+  e.target.value = '';
+};
+$('defaultsBtn').onclick = async () => {
+  if (!confirm('Replace your actions with the default set?')) return;
+  const r = await call('saveSettings', { ...settings, rules: undefined });
+  if (r.ok) { settings = r.settings; renderSettings(); toast('Default actions restored'); }
+};
+</script>
+</body>
+</html>

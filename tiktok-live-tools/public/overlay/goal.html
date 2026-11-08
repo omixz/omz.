@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goal overlay</title>
+<link rel="stylesheet" href="overlay.css">
+<style>
+  body { padding: 12px; }
+  .wrap { background: rgba(0,0,0,.5); border-radius: 16px; padding: 10px 14px; }
+  .row { display: flex; justify-content: space-between; font-weight: 800; font-size: 22px; margin-bottom: 8px; }
+  .bar { height: 26px; border-radius: 13px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, #fe2c55, #ff9a3c, #25f4ee); transition: width .6s ease; }
+  .done .fill { animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { filter: brightness(1.5); } }
+</style>
+</head>
+<body class="shadow">
+<div class="wrap" id="wrap"><div class="row"><span id="title">Goal</span><span id="num">0 / 0</span></div><div class="bar"><div class="fill" id="fill"></div></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script>
+  let goal = { type: 'likes', target: 1000, title: 'Goal' }, stats = {};
+  const key = { likes: 'likes', diamonds: 'diamonds', follows: 'follows', shares: 'shares', gifts: 'gifts' };
+  function render() {
+    const cur = stats[key[goal.type]] || 0, t = goal.target || 1;
+    document.getElementById('title').textContent = goal.title;
+    document.getElementById('num').textContent = `${LT.fmt(cur)} / ${LT.fmt(t)}`;
+    document.getElementById('fill').style.width = Math.min(100, (cur / t) * 100) + '%';
+    document.getElementById('wrap').classList.toggle('done', cur >= t);
+  }
+  const socket = io();
+  socket.on('connect', () => socket.emit('getState', (s) => { goal = s.settings.goal; stats = s.stats; render(); }));
+  socket.on('stats', (s) => { stats = s; render(); });
+  socket.on('goal', (g) => { goal = g; render(); });
+</script>
+</body>
+</html>
