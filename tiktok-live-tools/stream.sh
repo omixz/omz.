@@ -6,7 +6,7 @@
 # Stream key: paste it in the dashboard (Settings -> Cloud streaming), or set
 #   STREAM_URL + STREAM_KEY, or STREAM_TARGET (full rtmp://... URL, or a .mp4 path for testing)
 # Optional: STREAM_WIDTH (720) STREAM_HEIGHT (1280) STREAM_FPS (30) STREAM_BITRATE (2500k)
-#           GAME_PATH (/game; use /minecraft for Kill Steve) — any page of the app
+#           GAME_PATH (/game; use /minecraft for Can Steve Survive?) — any page of the app
 #           GAME_CMD  run any other real game instead of a page, e.g. GAME_CMD="supertux2 --fullscreen"
 #           MC_HOST   when set, also starts the Minecraft bridge (bot + camera + RCON), see docker-compose.yml
 set -u

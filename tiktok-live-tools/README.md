@@ -4,26 +4,43 @@ Interactive TikTok LIVE games where **viewers' likes and gifts control the actio
 
 | Game | What it is |
 |---|---|
-| ⛏️ **Minecraft: Kill Steve** (`/minecraft`) | A **real Minecraft server**, streamed in **first person**. Viewers' likes and gifts spawn zombies, creepers, TNT and boss raids named after them to **kill Steve**. Kills are credited to the viewer, with a banner and a leaderboard. |
+| ⛏️ **Minecraft: Can Steve Survive?** (`/minecraft`) | A **real Minecraft server**, streamed in **first person**. Viewers' likes and gifts send zombies, creepers, TNT and boss raids, named after them, at Steve. He fights back on his own and levels up. Round wins are credited to viewers, with a banner and a leaderboard. |
 | 🏰 **Castle Clash** (`/game`) | A two-team battle that runs in a browser. Viewers comment 1 or 2 to pick a team, likes send soldiers, gifts send knights, giants, dragons and meteors. |
 | 🎮 **Any other game** | Actions can **press keys** in any game running on the stream server, and `GAME_CMD` streams any Linux game instead of a web page. |
 
 ---
 
-## ⛏️ Minecraft: Kill Steve
+## ⛏️ Minecraft: Can Steve Survive?
 
-Viewers team up to **kill Steve**, a bot player in a **real Minecraft world**. The stream shows the world **in first person, through Steve's eyes**. Every like, follow, share and gift spawns something dangerous **named after the viewer who sent it**. When Steve dies, Minecraft's death message ("Steve was slain by Mia") names the mob that got him, so the kill is credited to that viewer:
+A survival challenge in a **real Minecraft world**, streamed **in first person through Steve's eyes**. Every like, follow, share and gift sends a mob at Steve, **named after the viewer who sent it**. Steve **fights them off on his own**:
+- he attacks the nearest monster
+- he eats when hurt
+- he backs off when he's nearly out of health and has no food
 
-- a big **"MIA KILLED STEVE!"** banner
-- a **Top Steve killers** leaderboard
-- Steve's survival timer, death count and record
+The longer Steve survives, the more he **levels up**, getting better gear every 2½ minutes:
 
-Steve fights back with mineflayer-pvp and respawns with an iron sword and armor every time, so killing him takes teamwork.
+| Level | Gear |
+|---|---|
+| 1 | Iron (what he respawns with) |
+| 2 | Diamond sword |
+| 3 | Diamond armor |
+| 4 | Full diamond |
+| 5 | Netherite |
+
+At higher levels viewers need bigger gifts. When Steve falls, Minecraft's own message ("Steve was slain by Mia") names the mob that did it, and since mobs carry viewer names, **that viewer wins the round**. The stream then shows:
+- a big **"ROUND WON BY MIA!"** banner
+- a **Top challengers** leaderboard, saved so it survives restarts
+- the round number, survival timer and record
+- a **❤️ likes progress bar** ("63 / 100 → 🧟 Zombie")
+- a feed of who sent what, with profile pictures
+- a legend of what every gift does
+
+The wording deliberately avoids violent terms so it fits TikTok's LIVE guidelines.
 
 ```
 TikTok gifts ─▶ LIVE Tools ─▶ RCON commands ─▶ real Minecraft server (Paper 1.21.4, private)
                                                      ▲
-             bot player "Steve" ─────────────────────┘  fights back, eats, respawns with a kit
+             bot player "Steve" ─────────────────────┘  fights on his own, eats, levels up, respawns
              first-person 3D camera (prismarine-viewer) ─▶ /minecraft page ─▶ ffmpeg ─▶ TikTok
 ```
 
@@ -32,17 +49,17 @@ TikTok gifts ─▶ LIVE Tools ─▶ RCON commands ─▶ real Minecraft server
 | Viewer sends | Spawned at Steve, named after the viewer |
 |---|---|
 | Gift 1–4 🪙 (Rose…) | 🧟 a zombie, one per gift in a combo (5 roses = 5 zombies) |
-| Gift 5–9 🪙 | 💀 a skeleton archer |
+| Gift 5–9 🪙 | 🏹 a skeleton archer |
 | Gift 10–29 🪙 | 🏃 2 speedy baby zombies |
 | Gift 30–98 🪙 | 💥 a squad of 3 creepers |
 | Gift 99–198 🪙 | 🧪 2 witches and poison on Steve |
 | Gift 199–499 🪙 | 🧨 TNT rain |
 | Gift 500+ 🪙 | 👹 boss raid: lightning, a ravager, vindicators and a witch |
-| Follow / Share | 🧟 a zombie / 💀 a skeleton |
+| Follow / Share | 🧟 a zombie / 🏹 a skeleton archer |
 | Every 100 likes | 🧟 a zombie |
 | Chat `!zombie` | 🧟 a zombie (15-second cooldown) |
 
-**Built to run for days.** Only viewers spawn mobs, and a lone zombie wanders in when chat is quiet so the stream never looks frozen. Creepers don't break blocks, and TNT holes are repaired every minute. Dropped items are cleared, and a world border keeps everything on camera. The bot, camera, server and stream all restart themselves. Tune it with `MC_BOT_NAME`, `MC_FIRST_PERSON=0` (camera behind Steve instead), `MC_RESPAWN_KIT` and `MC_ARENA_RADIUS`.
+**Built to run for days.** Only viewers spawn mobs, and a lone zombie wanders in when chat is quiet so the stream never looks frozen. Creepers don't break blocks, and TNT holes are repaired every minute. Dropped items are cleared, and a world border keeps everything on camera. The bot, camera, server and stream all restart themselves. Tune it with `MC_BOT_NAME`, `MC_FIRST_PERSON=0` (camera behind Steve instead), `MC_LEVEL_UP_SECONDS` (150, 0 = off), `MC_RESPAWN_KIT` and `MC_ARENA_RADIUS`.
 
 **Write your own actions.** Any action can run Minecraft commands, one per line. Placeholders:
 - `{bot}`: Steve
@@ -80,7 +97,7 @@ Run the same command again any time to update.
 
 ### Switching games
 Set `GAME_PATH` in `tiktok-live-tools/.env`, then run `sudo docker compose up -d`:
-- `GAME_PATH=/minecraft`: Minecraft, Kill Steve (default)
+- `GAME_PATH=/minecraft`: Minecraft, Can Steve Survive? (default)
 - `GAME_PATH=/game`: Castle Clash. Remove `COMPOSE_PROFILES=minecraft` to turn the Minecraft server off.
 - `GAME_CMD="some-game --fullscreen"`: any Linux game instead of a web page. Install it in `Dockerfile.streamer`, then use **key presses** in Actions (e.g. `space`, `Left Left Up`) so likes and gifts control it. Without a GPU, 2D and light 3D games work best.
 
@@ -105,7 +122,7 @@ Set `GAME_PATH` in `tiktok-live-tools/.env`, then run `sudo docker compose up -d
 | `ADMIN_KEY` | Dashboard password. **Always set this on a public server.** |
 | `GAME_PATH` / `GAME_CMD` | What the stream shows (see above) |
 | `COMPOSE_PROFILES=minecraft`, `MINECRAFT_EULA`, `MC_HOST`, `RCON_PASSWORD` | Minecraft on/off, EULA acceptance, connection |
-| `MC_BOT_NAME` (`Steve`), `MC_FIRST_PERSON` (1), `MC_RESPAWN_KIT`, `MC_ARENA_RADIUS` (24), `MC_IDLE_MOB_SECONDS` (25, 0 = off), `MINECRAFT_MEMORY` (4G) | Minecraft tuning |
+| `MC_BOT_NAME` (`Steve`), `MC_FIRST_PERSON` (1), `MC_LEVEL_UP_SECONDS` (150), `MC_RESPAWN_KIT`, `MC_ARENA_RADIUS` (24), `MC_IDLE_MOB_SECONDS` (25, 0 = off), `MINECRAFT_MEMORY` (4G) | Minecraft tuning |
 | `STREAM_URL`, `STREAM_KEY` | Optional: the stream key can be set in the dashboard instead |
 | `STREAM_BITRATE`, `STREAM_FPS`, `STREAM_WIDTH`, `STREAM_HEIGHT` | Stream quality (default 2500k, 30 fps, 720×1280) |
 | `SIGN_API_KEY` | Optional free key from [eulerstream.com](https://www.eulerstream.com), for higher rate limits on the TikTok connection |

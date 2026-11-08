@@ -181,8 +181,8 @@
   <!-- ========================================================= GAME -->
   <section id="tab-game">
     <div class="card">
-      <h2>⛏️ Minecraft: Kill Steve (real game)</h2>
-      <p class="muted" style="margin-top:0">Viewers try to kill <b>Steve</b>, a bot player in a real Minecraft world, shown in first person. Every like, follow, share and gift spawns zombies, skeletons, creepers, witches, TNT or a boss raid, each named after the viewer. Whoever's mob gets the kill is credited on screen. Steve fights back and respawns with an iron kit. It needs the Minecraft server from the hands-free setup (see the README).</p>
+      <h2>⛏️ Minecraft: Can Steve Survive? (real game)</h2>
+      <p class="muted" style="margin-top:0">A survival challenge in a real Minecraft world, shown in first person through <b>Steve</b>'s eyes. Every like, follow, share and gift sends zombies, skeletons, creepers, witches, TNT or a boss raid at him, each named after the viewer. Steve fights them off on his own and levels up his gear the longer he survives. When he falls, the round goes to the viewer whose mob won it, and he respawns for the next round. It needs the Minecraft server from the hands-free setup (see the README).</p>
       <p id="mcState" class="muted">Minecraft: not connected yet.</p>
       <div class="url"><code id="mcUrl"></code><a class="b s" style="text-decoration:none" href="/minecraft" target="_blank">Open</a></div>
       <div class="row"><button class="b p" id="mcPreset">⛏️ Add the Minecraft actions</button></div>
@@ -355,7 +355,7 @@ socket.on('connect', async () => {
 function renderMc(st) {
   const fmt = (ms) => { const m = Math.floor((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
   $('mcState').textContent = !st ? 'Minecraft: not connected yet.' :
-    st.online ? `🟢 ${st.bot} is in the world: ❤️ ${Math.round(st.health)}/20 · alive ${fmt(st.alive)} · ☠️ killed ${st.deaths}x${st.lastKiller ? ' (last: ' + st.lastKiller + ')' : ''} · ⚔️ ${st.kills} mobs slain · 👾 ${st.hostiles} nearby`
+    st.online ? `🟢 ${st.bot} is in the world: ❤️ ${Math.round(st.health)}/20 · alive ${fmt(st.alive)} · ⭐ level ${st.level || 1} · round ${(st.deaths || 0) + 1}${st.lastKiller ? ' (last round won by ' + st.lastKiller + ')' : ''} · ⚔️ ${st.kills} mobs beaten · 👾 ${st.hostiles} nearby`
               : '🔴 The Minecraft bridge is running but Steve is not in the world (server starting?)';
 }
 socket.on('mcStatus', renderMc);
@@ -552,7 +552,7 @@ $('addRule').onclick = () => {
 function renderUrls() {
   const base = location.origin;
   const list = [
-    ['Minecraft: Kill Steve (9:16)', '/minecraft'],
+    ['Minecraft: Can Steve Survive? (9:16)', '/minecraft'],
     ['Castle Clash game (full screen, 9:16)', '/game'],
     ['Alerts (gift/follow pop-ups + sounds)', '/overlay/alerts'],
     ['Alerts + speak TTS inside OBS', '/overlay/alerts?tts=1'],

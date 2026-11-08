@@ -1,9 +1,10 @@
 // Minecraft bridge for TikTok LIVE Tools.
 //
-//  - Runs "Steve", a bot player on a real Minecraft server. Viewers try to kill
-//    him with the mobs their likes and gifts spawn; he fights back, eats, and
-//    respawns with an iron kit. Minecraft's death message names the mob that
-//    got him, and mobs are named after viewers, so every kill is credited.
+//  - Runs "Steve", a bot player on a real Minecraft server, in a survival
+//    challenge: viewers' likes and gifts spawn mobs (named after them) and Steve
+//    fights them off on his own. The longer he survives the more he levels up
+//    (better gear). When he falls, the round goes to the viewer whose mob won it
+//    (read from Minecraft's own message), and he respawns for the next round.
 //  - Serves a live first-person 3D camera (prismarine-viewer), which the
 //    /minecraft page shows and the streamer sends to TikTok.
 //  - Executes the Minecraft commands from your Actions (gifts, likes, follows,
@@ -16,6 +17,8 @@ import armorManager from 'mineflayer-armor-manager';
 import viewerPkg from 'prismarine-viewer';
 import { Rcon } from 'rcon-client';
 import { io } from 'socket.io-client';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const { pathfinder, Movements, goals } = pathfinderPkg;
 const { plugin: pvp } = pvpPkg;
@@ -30,6 +33,8 @@ const CFG = {
   firstPerson: env('MC_FIRST_PERSON', '1') !== '0', // camera through Steve's eyes
   // what Steve gets every time he (re)spawns, comma separated
   kit: env('MC_RESPAWN_KIT', 'iron_sword, iron_helmet, iron_chestplate, iron_leggings, iron_boots, cooked_beef 16'),
+  levelUpSeconds: Number(env('MC_LEVEL_UP_SECONDS', 150)), // Steve upgrades his gear every N seconds he survives (0 = off)
+  dataFile: path.join(env('DATA_DIR', path.join(process.cwd(), '..', 'data')), 'minecraft-scores.json'),
   rconHost: env('RCON_HOST', env('MC_HOST', 'localhost')),
   rconPort: Number(env('RCON_PORT', 25575)),
   rconPassword: env('RCON_PASSWORD', ''),
@@ -130,8 +135,48 @@ function maintainArena() {
 }
 
 // ------------------------------------------------------------------- bot --
-const stats = { online: false, health: 20, food: 20, deaths: 0, kills: 0, aliveSince: Date.now(), best: 0, hostiles: 0, lastKiller: '', lastDeathAt: 0 };
-const killers = new Map(); // viewer name -> times they killed Steve
+// Internally "deaths" = rounds Steve lost; "killers" = viewers who won a round.
+const stats = { online: false, health: 20, food: 20, deaths: 0, kills: 0, aliveSince: Date.now(), best: 0, hostiles: 0, lastKiller: '', lastDeathAt: 0, level: 1, levelUpAt: 0 };
+const killers = new Map(); // viewer name -> rounds won (saved, so the leaderboard survives restarts)
+
+// ---- scores survive restarts (24/7 streams) ----
+try {
+  const saved = JSON.parse(fs.readFileSync(CFG.dataFile, 'utf8'));
+  stats.deaths = saved.rounds || 0;
+  stats.best = saved.best || 0;
+  stats.kills = saved.mobs || 0;
+  for (const [n, k] of saved.winners || []) killers.set(n, k);
+} catch {}
+const saveScores = debounce(() => {
+  try {
+    fs.mkdirSync(path.dirname(CFG.dataFile), { recursive: true });
+    fs.writeFileSync(CFG.dataFile, JSON.stringify({ rounds: stats.deaths, best: stats.best, mobs: stats.kills, winners: [...killers].sort((a, b) => b[1] - a[1]).slice(0, 200) }));
+  } catch (e) {
+    log('could not save scores:', e.message);
+  }
+}, 2000);
+
+// ---- levels: the longer Steve survives, the better his gear ----
+const LEVELS = [
+  null,
+  { name: 'Iron', give: [] }, // level 1 = the respawn kit
+  { name: 'Diamond sword', give: ['diamond_sword', 'golden_apple 1'] },
+  { name: 'Diamond armor', give: ['diamond_helmet', 'diamond_chestplate'] },
+  { name: 'Full diamond', give: ['diamond_leggings', 'diamond_boots', 'golden_apple 2'] },
+  { name: 'Netherite', give: ['netherite_sword', 'netherite_chestplate', 'golden_apple 2'], effect: 'resistance 30 0' },
+];
+function levelUp() {
+  if (stats.level >= LEVELS.length - 1) return;
+  stats.level++;
+  stats.levelUpAt = Date.now();
+  const L = LEVELS[stats.level];
+  for (const item of L.give) {
+    const [name, n] = item.split(/\s+/);
+    rcon.run(`give ${CFG.bot} minecraft:${name} ${Number(n) || 1}`);
+  }
+  if (L.effect) rcon.run(`effect give ${CFG.bot} minecraft:${L.effect}`);
+  log(`Steve reached level ${stats.level} (${L.name})`);
+}
 let lastAttacker = { name: '', at: 0 }; // fallback credit (TNT, lightning…)
 
 // "Steve was slain by Mia" / "Steve was blown up by Omar" / "...whilst fighting Kai"
@@ -166,6 +211,7 @@ function createBot() {
 
   b.once('spawn', () => {
     log(`${CFG.bot} spawned`);
+    stats.level = 1;
     stats.online = true;
     stats.aliveSince = Date.now();
     const moves = new Movements(b);
@@ -190,6 +236,7 @@ function createBot() {
 
   b.on('respawn', () => {
     stats.aliveSince = Date.now();
+    stats.level = 1;
     giveKit();
     setTimeout(gearUp, 1000);
   });
@@ -200,6 +247,7 @@ function createBot() {
   });
   b.on('death', () => {
     stats.deaths++;
+    stats.level = 1;
     stats.best = Math.max(stats.best, Date.now() - stats.aliveSince);
     b.pvp.stop();
     // the death message usually arrives a moment after the death event
@@ -210,13 +258,14 @@ function createBot() {
       stats.lastKiller = killer || 'the arena';
       stats.lastDeathAt = Date.now();
       if (killer) killers.set(killer, (killers.get(killer) || 0) + 1);
-      log(`Steve died (${stats.deaths}): ${deathMsg || 'no message'} -> credited to ${stats.lastKiller}`);
+      saveScores();
+      log(`round ${stats.deaths} over: ${deathMsg || 'no message'} -> won by ${stats.lastKiller}`);
       deathMsg = '';
       pushStatus();
     }, 600);
   });
   b.on('entityDead', (e) => {
-    if (isHostile(e) && b.entity && e.position.distanceTo(b.entity.position) < 6) stats.kills++;
+    if (isHostile(e) && b.entity && e.position.distanceTo(b.entity.position) < 6) ((stats.kills++), saveScores());
   });
   b.on('health', () => {
     stats.health = b.health;
@@ -295,6 +344,19 @@ setInterval(() => {
   stats.hostiles = hostiles;
   if (hostiles) lastHostileSeen = Date.now();
   if (b.health < 8) maybeEat();
+  // level up while surviving
+  const aliveFor = Date.now() - stats.aliveSince;
+  if (CFG.levelUpSeconds && aliveFor > stats.level * CFG.levelUpSeconds * 1000) levelUp();
+  // badly hurt and nothing to eat: back off from the nearest mob for a moment to regenerate
+  const hasFood = FOODS.some((n) => b.inventory.items().some((i) => i.name === n));
+  if (target && b.health <= 5 && !hasFood && best < 6) {
+    if (b.pvp.target) b.pvp.stop();
+    const away = me.minus(target.position).normalize().scaled(8).plus(me);
+    b.pathfinder.setGoal(new goals.GoalNear(away.x, away.y, away.z, 1));
+    b.setControlState('sprint', true);
+    return;
+  }
+  b.setControlState('sprint', false);
   if (target) {
     if (b.pvp.target !== target) b.pvp.attack(target);
   } else {

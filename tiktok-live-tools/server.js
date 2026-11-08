@@ -193,8 +193,8 @@ function sanitizeSettings(input) {
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
 // ---------------------------------------------------------- Minecraft preset --
-// "Kill Steve": every like, follow, share and gift sends something at Steve,
-// named after the viewer so kills are credited. Every line is an editable action.
+// "Can Steve survive?": every like, follow, share and gift sends a mob at Steve,
+// named after the viewer so round wins are credited. Every line is an editable action.
 const mob = (type, extra = '') => `execute at {bot} run summon minecraft:${type} ~{rx} ~1 ~{rz} {CustomName:'"{user}"',CustomNameVisible:1b${extra}}`;
 const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
   id: 'mc-' + id,
@@ -210,7 +210,7 @@ const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
 });
 const MINECRAFT_PRESET = [
   mcRule('zombie', '🧟 Zombie', { minCoins: 1, maxCoins: 4 }, [mob('zombie')]),
-  mcRule('skeleton', '💀 Skeleton archer', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
+  mcRule('skeleton', '🏹 Skeleton archer', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
   mcRule('babies', '🏃 2 speedy baby zombies', { minCoins: 10, maxCoins: 29 }, [mob('zombie', ',IsBaby:1b'), mob('zombie', ',IsBaby:1b')]),
   mcRule('creepers', '💥 Creeper squad', { minCoins: 30, maxCoins: 98 }, [mob('creeper'), mob('creeper'), mob('creeper')]),
   mcRule('witches', '🧪 Witch coven + poison', { minCoins: 99, maxCoins: 198 }, [mob('witch'), mob('witch'), 'effect give {bot} minecraft:poison 6 1']),
@@ -219,7 +219,7 @@ const MINECRAFT_PRESET = [
     'execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('ravager'), mob('vindicator'), mob('vindicator'), mob('witch'),
   ]),
   mcRule('follow', '🧟 Zombie', { type: 'follow' }, [mob('zombie')]),
-  mcRule('share', '💀 Skeleton archer', { type: 'share' }, [mob('skeleton')]),
+  mcRule('share', '🏹 Skeleton archer', { type: 'share' }, [mob('skeleton')]),
   mcRule('likes', '🧟 Zombie', { type: 'likes', every: 100 }, [mob('zombie')]),
   mcRule('cmd-zombie', '🧟 Zombie', { type: 'command', command: '!zombie' }, [mob('zombie')], 15),
 ];
@@ -234,7 +234,7 @@ function applyMinecraftPreset() {
   ruleRuntime.clear();
   io.emit('settings', settings);
   io.emit('legend', gameLegend());
-  console.log('[minecraft] Kill Steve actions enabled');
+  console.log('[minecraft] Steve survival actions enabled');
 }
 
 function describeTrigger(t) {
@@ -253,7 +253,7 @@ function describeTrigger(t) {
 }
 // What the Minecraft stream page shows viewers ("10–29🪙 → Iron gear").
 const gameLegend = () =>
-  settings.rules.filter((r) => r.enabled && (r.mc || r.keys)).map((r) => ({ name: r.name, trigger: describeTrigger(r.trigger), type: r.trigger.type, min: r.trigger.minCoins || 0 }));
+  settings.rules.filter((r) => r.enabled && (r.mc || r.keys)).map((r) => ({ name: r.name, trigger: describeTrigger(r.trigger), type: r.trigger.type, min: r.trigger.minCoins || 0, every: r.trigger.type === 'likes' ? r.trigger.every : undefined }));
 
 let settings = loadSettings();
 
