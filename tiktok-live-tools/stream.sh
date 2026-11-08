@@ -6,7 +6,7 @@
 # Stream key: paste it in the dashboard (Settings -> Cloud streaming), or set
 #   STREAM_URL + STREAM_KEY, or STREAM_TARGET (full rtmp://... URL, or a .mp4 path for testing)
 # Optional: STREAM_WIDTH (720) STREAM_HEIGHT (1280) STREAM_FPS (30) STREAM_BITRATE (2500k)
-#           GAME_PATH (/game; use /minecraft for the Minecraft hero) — any page of the app
+#           GAME_PATH (/game; use /minecraft for Kill Steve) — any page of the app
 #           GAME_CMD  run any other real game instead of a page, e.g. GAME_CMD="supertux2 --fullscreen"
 #           MC_HOST   when set, also starts the Minecraft bridge (bot + camera + RCON), see docker-compose.yml
 set -u
@@ -62,7 +62,7 @@ fi
 # wait for the server
 for _ in $(seq 1 60); do curl -fs "http://localhost:$PORT/healthz" >/dev/null 2>&1 && break; sleep 1; done
 
-# 3b) Minecraft: the hero bot, its 3D camera and the command runner (restarts if it crashes)
+# 3b) Minecraft: Steve the bot, his first-person camera and the command runner (restarts if it crashes)
 if [ -n "${MC_HOST:-}" ] && [ -f minecraft/bridge.js ]; then
   ( cd minecraft && while true; do APP_URL="http://localhost:$PORT" node bridge.js; log "minecraft bridge exited, restarting in 10s"; sleep 10; done ) &
 fi

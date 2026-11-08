@@ -1,8 +1,10 @@
 // Minecraft bridge for TikTok LIVE Tools.
 //
-//  - Runs a bot player ("the hero") on a real Minecraft server. It fights the
-//    mobs that viewers spawn, equips the gear they send, eats, respawns.
-//  - Serves a live 3D camera of the hero (prismarine-viewer), which the
+//  - Runs "Steve", a bot player on a real Minecraft server. Viewers try to kill
+//    him with the mobs their likes and gifts spawn; he fights back, eats, and
+//    respawns with an iron kit. Minecraft's death message names the mob that
+//    got him, and mobs are named after viewers, so every kill is credited.
+//  - Serves a live first-person 3D camera (prismarine-viewer), which the
 //    /minecraft page shows and the streamer sends to TikTok.
 //  - Executes the Minecraft commands from your Actions (gifts, likes, follows,
 //    chat commands) through RCON.
@@ -24,7 +26,10 @@ const CFG = {
   host: env('MC_HOST', 'localhost'),
   port: Number(env('MC_PORT', 25565)),
   version: env('MC_VERSION', '1.21.4'),
-  bot: env('MC_BOT_NAME', 'LiveHero'),
+  bot: env('MC_BOT_NAME', 'Steve'),
+  firstPerson: env('MC_FIRST_PERSON', '1') !== '0', // camera through Steve's eyes
+  // what Steve gets every time he (re)spawns, comma separated
+  kit: env('MC_RESPAWN_KIT', 'iron_sword, iron_helmet, iron_chestplate, iron_leggings, iron_boots, cooked_beef 16'),
   rconHost: env('RCON_HOST', env('MC_HOST', 'localhost')),
   rconPort: Number(env('RCON_PORT', 25575)),
   rconPassword: env('RCON_PASSWORD', ''),
@@ -103,7 +108,7 @@ function setupArena() {
     'weather clear',
     'gamerule doMobSpawning false', // only viewers spawn mobs
     'gamerule mobGriefing false', // creepers don't wreck the arena
-    'gamerule keepInventory true', // gifts of gear survive deaths
+    'gamerule keepInventory false', // Steve starts fresh with his kit after each death
     'gamerule doImmediateRespawn true',
     'gamerule announceAdvancements false',
     'gamerule showDeathMessages true',
@@ -125,7 +130,25 @@ function maintainArena() {
 }
 
 // ------------------------------------------------------------------- bot --
-const stats = { online: false, health: 20, food: 20, deaths: 0, kills: 0, aliveSince: Date.now(), best: 0, hostiles: 0 };
+const stats = { online: false, health: 20, food: 20, deaths: 0, kills: 0, aliveSince: Date.now(), best: 0, hostiles: 0, lastKiller: '', lastDeathAt: 0 };
+const killers = new Map(); // viewer name -> times they killed Steve
+let lastAttacker = { name: '', at: 0 }; // fallback credit (TNT, lightning…)
+
+// "Steve was slain by Mia" / "Steve was blown up by Omar" / "...whilst fighting Kai"
+function killerFromDeathMessage(msg) {
+  const m = msg.match(/(?:whilst fighting|to escape)\s+(.+?)(?:\s+using\s+.+)?$/) || msg.match(/\bby\s+(.+?)(?:\s+using\s+.+)?$/);
+  const k = m ? m[1].trim() : '';
+  return /^(lightning|magic|Block of TNT|Primed TNT|TNT)$/i.test(k) ? '' : k.slice(0, 32);
+}
+
+function giveKit() {
+  rcon.run(`clear ${CFG.bot}`);
+  for (const item of CFG.kit.split(',').map((x) => x.trim()).filter(Boolean)) {
+    const [name, n] = item.split(/\s+/);
+    if (/^[a-z0-9_:]+$/.test(name)) rcon.run(`give ${CFG.bot} ${name.includes(':') ? name : 'minecraft:' + name} ${Number(n) || 1}`);
+  }
+  rcon.run(`effect clear ${CFG.bot}`);
+}
 let bot = null;
 let reconnectTimer = null;
 let lastViewerBot = null;
@@ -142,7 +165,7 @@ function createBot() {
   b.loadPlugin(armorManager);
 
   b.once('spawn', () => {
-    log('hero spawned');
+    log(`${CFG.bot} spawned`);
     stats.online = true;
     stats.aliveSince = Date.now();
     const moves = new Movements(b);
@@ -155,10 +178,11 @@ function createBot() {
         lastViewerBot.viewer.close();
       } catch {}
     }
-    startViewer(b, { port: CFG.viewPort, firstPerson: false, viewDistance: CFG.viewDistance });
+    startViewer(b, { port: CFG.viewPort, firstPerson: CFG.firstPerson, viewDistance: CFG.viewDistance });
     lastViewerBot = b;
-    log(`camera on http://localhost:${CFG.viewPort}`);
+    log(`${CFG.firstPerson ? 'first-person ' : ''}camera on http://localhost:${CFG.viewPort}`);
     setupArena();
+    giveKit();
     setTimeout(gearUp, 1500);
     // re-check weapon/armor whenever the inventory changes (gifts arrive via /give)
     b.inventory.on('updateSlot', debounce(gearUp, 400));
@@ -166,14 +190,30 @@ function createBot() {
 
   b.on('respawn', () => {
     stats.aliveSince = Date.now();
+    giveKit();
     setTimeout(gearUp, 1000);
+  });
+  let deathMsg = '';
+  let deathMsgAt = 0;
+  b.on('messagestr', (msg) => {
+    if (msg.startsWith(CFG.bot + ' ') && !msg.includes('<')) ((deathMsg = msg), (deathMsgAt = Date.now())); // system death message
   });
   b.on('death', () => {
     stats.deaths++;
     stats.best = Math.max(stats.best, Date.now() - stats.aliveSince);
     b.pvp.stop();
-    log(`hero died (${stats.deaths} deaths)`);
-    pushStatus();
+    // the death message usually arrives a moment after the death event
+    setTimeout(() => {
+      let killer = deathMsg && Date.now() - deathMsgAt < 3000 ? killerFromDeathMessage(deathMsg) : '';
+      if (!killer && Date.now() - lastAttacker.at < 20_000) killer = lastAttacker.name;
+      if (/^(Zombie|Skeleton|Creeper|Witch|Ravager|Vindicator|Block of TNT)$/i.test(killer) && Date.now() - lastAttacker.at < 20_000) killer = lastAttacker.name;
+      stats.lastKiller = killer || 'the arena';
+      stats.lastDeathAt = Date.now();
+      if (killer) killers.set(killer, (killers.get(killer) || 0) + 1);
+      log(`Steve died (${stats.deaths}): ${deathMsg || 'no message'} -> credited to ${stats.lastKiller}`);
+      deathMsg = '';
+      pushStatus();
+    }, 600);
   });
   b.on('entityDead', (e) => {
     if (isHostile(e) && b.entity && e.position.distanceTo(b.entity.position) < 6) stats.kills++;
@@ -260,8 +300,12 @@ setInterval(() => {
   } else {
     if (b.pvp.target) b.pvp.stop();
     maybeEat();
+    // idle: stroll around the arena and look around, so the first-person view stays alive
     const fromCenter = Math.hypot(me.x, me.z);
-    if (fromCenter > 6 && !b.pathfinder.isMoving()) b.pathfinder.setGoal(new goals.GoalNear(rand(-3, 3), me.y, rand(-3, 3), 2));
+    if (!b.pathfinder.isMoving()) {
+      if (fromCenter > CFG.arena - 4 || Math.random() < 0.01) b.pathfinder.setGoal(new goals.GoalNear(rand(-8, 8), me.y, rand(-8, 8), 1));
+      else b.look(b.entity.yaw + 0.015, 0, true).catch(() => {});
+    }
   }
   // When nobody is interacting, a lone zombie wanders in so the stream never looks frozen.
   if (CFG.idleMobSeconds && !hostiles && Date.now() - lastHostileSeen > CFG.idleMobSeconds * 1000 && Date.now() - lastAction > CFG.idleMobSeconds * 1000) {
@@ -282,6 +326,7 @@ app.on('connect', () => {
 app.on('action', (a) => {
   if (!a?.mc?.length) return;
   lastAction = Date.now();
+  if (a.user?.nickname) lastAttacker = { name: String(a.user.nickname).replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 16), at: Date.now() };
   const times = Math.min(Math.max(1, a.repeat || 1), 20);
   for (let i = 0; i < times; i++) for (const cmd of a.mc) rcon.run(expand(cmd));
 });
@@ -289,7 +334,8 @@ app.on('mcRun', ({ cmd } = {}) => cmd && rcon.run(expand(cmd)));
 
 function pushStatus() {
   const alive = stats.online && bot?.health > 0 ? Date.now() - stats.aliveSince : 0;
-  app.emit('mcStatus', { ...stats, bot: CFG.bot, alive, best: Math.max(stats.best, alive) }, () => {});
+  const top = [...killers].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, kills]) => ({ name, kills }));
+  app.emit('mcStatus', { ...stats, bot: CFG.bot, alive, best: Math.max(stats.best, alive), top }, () => {});
 }
 setInterval(pushStatus, 1000);
 

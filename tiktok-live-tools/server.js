@@ -193,8 +193,8 @@ function sanitizeSettings(input) {
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
 // ---------------------------------------------------------- Minecraft preset --
-// "Hero vs viewers": gifts either hurt the bot (mobs, TNT) or help it (gear,
-// food). Added from the dashboard; every line is a normal editable action.
+// "Kill Steve": every like, follow, share and gift sends something at Steve,
+// named after the viewer so kills are credited. Every line is an editable action.
 const mob = (type, extra = '') => `execute at {bot} run summon minecraft:${type} ~{rx} ~1 ~{rz} {CustomName:'"{user}"',CustomNameVisible:1b${extra}}`;
 const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
   id: 'mc-' + id,
@@ -210,24 +210,18 @@ const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
 });
 const MINECRAFT_PRESET = [
   mcRule('zombie', '🧟 Zombie', { minCoins: 1, maxCoins: 4 }, [mob('zombie')]),
-  mcRule('skeleton', '💀 Skeleton', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
-  mcRule('iron', '🛡️ Iron gear (help)', { minCoins: 10, maxCoins: 29 }, [
-    'give {bot} minecraft:iron_sword', 'give {bot} minecraft:iron_helmet', 'give {bot} minecraft:iron_chestplate',
-    'give {bot} minecraft:iron_leggings', 'give {bot} minecraft:iron_boots', 'give {bot} minecraft:cooked_beef 8',
-  ]),
+  mcRule('skeleton', '💀 Skeleton archer', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
+  mcRule('babies', '🏃 2 speedy baby zombies', { minCoins: 10, maxCoins: 29 }, [mob('zombie', ',IsBaby:1b'), mob('zombie', ',IsBaby:1b')]),
   mcRule('creepers', '💥 Creeper squad', { minCoins: 30, maxCoins: 98 }, [mob('creeper'), mob('creeper'), mob('creeper')]),
-  mcRule('diamond', '💎 Diamond gear (help)', { minCoins: 99, maxCoins: 198 }, [
-    'give {bot} minecraft:diamond_sword', 'give {bot} minecraft:diamond_helmet', 'give {bot} minecraft:diamond_chestplate',
-    'give {bot} minecraft:diamond_leggings', 'give {bot} minecraft:diamond_boots', 'give {bot} minecraft:golden_apple 2',
-  ]),
+  mcRule('witches', '🧪 Witch coven + poison', { minCoins: 99, maxCoins: 198 }, [mob('witch'), mob('witch'), 'effect give {bot} minecraft:poison 6 1']),
   mcRule('tnt', '🧨 TNT rain', { minCoins: 199, maxCoins: 499 }, Array(6).fill('execute at {bot} run summon minecraft:tnt ~{rx} ~5 ~{rz} {fuse:50}')),
   mcRule('boss', '👹 Boss raid', { minCoins: 500 }, [
     'execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('ravager'), mob('vindicator'), mob('vindicator'), mob('witch'),
   ]),
-  mcRule('follow', '🍎 Golden apple (help)', { type: 'follow' }, ['give {bot} minecraft:golden_apple 1']),
-  mcRule('share', '❤️‍🩹 Instant heal (help)', { type: 'share' }, ['effect give {bot} minecraft:instant_health 1 1']),
-  mcRule('likes', '✨ Regeneration (help)', { type: 'likes', every: 100 }, ['effect give {bot} minecraft:regeneration 5 1']),
-  mcRule('cmd-zombie', '🧟 Chat zombie', { type: 'command', command: '!zombie' }, [mob('zombie')], 15),
+  mcRule('follow', '🧟 Zombie', { type: 'follow' }, [mob('zombie')]),
+  mcRule('share', '💀 Skeleton archer', { type: 'share' }, [mob('skeleton')]),
+  mcRule('likes', '🧟 Zombie', { type: 'likes', every: 100 }, [mob('zombie')]),
+  mcRule('cmd-zombie', '🧟 Zombie', { type: 'command', command: '!zombie' }, [mob('zombie')], 15),
 ];
 
 function applyMinecraftPreset() {
@@ -240,7 +234,7 @@ function applyMinecraftPreset() {
   ruleRuntime.clear();
   io.emit('settings', settings);
   io.emit('legend', gameLegend());
-  console.log('[minecraft] Minecraft actions enabled');
+  console.log('[minecraft] Kill Steve actions enabled');
 }
 
 function describeTrigger(t) {

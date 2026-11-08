@@ -181,12 +181,12 @@
   <!-- ========================================================= GAME -->
   <section id="tab-game">
     <div class="card">
-      <h2>⛏️ Minecraft: hero vs viewers (real game)</h2>
-      <p class="muted" style="margin-top:0">A bot player fights to survive in a real Minecraft world. Viewers' gifts <b>hurt</b> it (zombies, creepers, TNT, boss raids, named after the viewer) or <b>help</b> it (iron and diamond gear, golden apples, healing). It needs the Minecraft server from the hands-free setup (see the README).</p>
+      <h2>⛏️ Minecraft: Kill Steve (real game)</h2>
+      <p class="muted" style="margin-top:0">Viewers try to kill <b>Steve</b>, a bot player in a real Minecraft world, shown in first person. Every like, follow, share and gift spawns zombies, skeletons, creepers, witches, TNT or a boss raid, each named after the viewer. Whoever's mob gets the kill is credited on screen. Steve fights back and respawns with an iron kit. It needs the Minecraft server from the hands-free setup (see the README).</p>
       <p id="mcState" class="muted">Minecraft: not connected yet.</p>
       <div class="url"><code id="mcUrl"></code><a class="b s" style="text-decoration:none" href="/minecraft" target="_blank">Open</a></div>
       <div class="row"><button class="b p" id="mcPreset">⛏️ Add the Minecraft actions</button></div>
-      <p class="muted">Adds 11 editable actions to the <b>Actions</b> tab (gift tiers, follow, share, likes, <code>!zombie</code>). Pressing it again resets them to the defaults.</p>
+      <p class="muted">Adds 11 editable actions to the <b>Actions</b> tab (gift tiers, follow, share, likes, <code>!zombie</code>). They switch on by themselves the first time Steve joins; pressing this again resets them.</p>
       <label class="f">Run a Minecraft command now</label>
       <div class="row"><input class="grow" id="mcCmd" placeholder="give {bot} minecraft:diamond_sword"><button class="b c" id="mcRunBtn">Run</button></div>
     </div>
@@ -355,8 +355,8 @@ socket.on('connect', async () => {
 function renderMc(st) {
   const fmt = (ms) => { const m = Math.floor((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
   $('mcState').textContent = !st ? 'Minecraft: not connected yet.' :
-    st.online ? `🟢 ${st.bot} is in the world: ❤️ ${Math.round(st.health)}/20 · alive ${fmt(st.alive)} · 💀 ${st.deaths} deaths · ⚔️ ${st.kills} kills · 👾 ${st.hostiles} monsters nearby`
-              : '🔴 The Minecraft bridge is running but the hero is not in the world (server starting?)';
+    st.online ? `🟢 ${st.bot} is in the world: ❤️ ${Math.round(st.health)}/20 · alive ${fmt(st.alive)} · ☠️ killed ${st.deaths}x${st.lastKiller ? ' (last: ' + st.lastKiller + ')' : ''} · ⚔️ ${st.kills} mobs slain · 👾 ${st.hostiles} nearby`
+              : '🔴 The Minecraft bridge is running but Steve is not in the world (server starting?)';
 }
 socket.on('mcStatus', renderMc);
 $('mcPreset').onclick = async () => {
@@ -511,7 +511,7 @@ function renderRules() {
         <div><label class="f">Cooldown (seconds)</label><input type="number" min="0" data-k="cooldown" value="${r.cooldown}"></div>
       </div>
       <details ${r.mc || r.keys ? 'open' : ''}><summary>⛏️ Game actions (Minecraft / key presses)</summary>
-        <label class="f">Minecraft commands, one per line. <code>{bot}</code> = the hero, <code>{user}</code> = viewer name, <code>{rx}</code> <code>{rz}</code> = a random spot nearby. Repeats once per gift in a combo.</label>
+        <label class="f">Minecraft commands, one per line. <code>{bot}</code> = Steve, <code>{user}</code> = viewer name, <code>{rx}</code> <code>{rz}</code> = a random spot nearby. Repeats once per gift in a combo.</label>
         <textarea rows="3" data-k="mc" placeholder="execute at {bot} run summon minecraft:zombie ~{rx} ~1 ~{rz}">${LT.esc(r.mc || '')}</textarea>
         <label class="f">Key presses for any other game on the stream server (e.g. <code>space</code> or <code>Left Left Up</code>)</label>
         <input data-k="keys" value="${LT.esc(r.keys || '')}" placeholder="space">
@@ -552,7 +552,7 @@ $('addRule').onclick = () => {
 function renderUrls() {
   const base = location.origin;
   const list = [
-    ['Minecraft hero vs viewers (9:16)', '/minecraft'],
+    ['Minecraft: Kill Steve (9:16)', '/minecraft'],
     ['Castle Clash game (full screen, 9:16)', '/game'],
     ['Alerts (gift/follow pop-ups + sounds)', '/overlay/alerts'],
     ['Alerts + speak TTS inside OBS', '/overlay/alerts?tts=1'],
