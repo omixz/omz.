@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kill Steve</title>
+<style>
+  /* The stream page: first-person camera through Steve's eyes + who's trying to kill him.
+     URL options: ?view=http://host:3007 (camera address)  ?title=KILL%20STEVE! */
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; color: #fff; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .shadow { text-shadow: 0 2px 3px #000, 0 0 2px #000; }
+  #top { position: fixed; top: 0; left: 0; right: 0; padding: 12px 16px 26px; background: linear-gradient(#000d, #0000); text-align: center; pointer-events: none; }
+  #title { font-size: 40px; font-weight: 900; letter-spacing: 1px; color: #ff3b3b; line-height: 1; }
+  #sub { font-size: 17px; font-weight: 800; margin-top: 6px; }
+  #timer { font-variant-numeric: tabular-nums; color: #7CFC6A; }
+  #timer.danger { color: #ff4d4d; }
+  .chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { background: #0009; border-radius: 99px; padding: 4px 12px; font-weight: 800; font-size: 17px; }
+  .bars { margin-top: 6px; font-size: 20px; letter-spacing: 1px; }
+  #board { position: fixed; right: 10px; top: 200px; min-width: 170px; background: #000a; border-radius: 12px; padding: 8px 12px; font-weight: 800; font-size: 16px; pointer-events: none; }
+  #board h3 { margin: 0 0 4px; font-size: 16px; color: #ffd84d; }
+  #board .r { display: flex; justify-content: space-between; gap: 10px; }
+  #feed { position: fixed; left: 10px; top: 200px; width: 52%; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .ev { background: #000a; border-left: 5px solid #ff4d4d; border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: 17px; animation: slide .35s ease-out; }
+  .ev .who { color: #ffd84d; }
+  @keyframes slide { from { opacity: 0; transform: translateX(-30px); } }
+  #legend { position: fixed; left: 0; right: 0; bottom: 0; padding: 26px 10px 12px; background: linear-gradient(#0000, #000d 30%); display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 15px; font-weight: 700; pointer-events: none; }
+  #legend .t { color: #ffd84d; }
+  #legend .h { grid-column: 1 / -1; text-align: center; font-size: 18px; font-weight: 900; margin-bottom: 4px; color: #ff6b6b; }
+  #offline { position: fixed; inset: 0; display: grid; place-items: center; background: #000c; font-size: 22px; font-weight: 800; text-align: center; padding: 20px; }
+  #death { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: radial-gradient(#b0000088, #3a0000ee); opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #death.on { opacity: 1; }
+  #death .big { font-size: 58px; font-weight: 900; line-height: 1.05; }
+  #death .who { color: #ffd84d; font-size: 64px; font-weight: 900; animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
+  #death .small { font-size: 22px; font-weight: 800; margin-top: 12px; }
+  @keyframes pop { from { transform: scale(.3); } }
+</style>
+</head>
+<body>
+<iframe id="cam" allow="autoplay"></iframe>
+<div id="top" class="shadow">
+  <div id="title">KILL STEVE!</div>
+  <div id="sub">Steve has survived <span id="timer">0:00</span></div>
+  <div class="chips"><span class="chip" id="deaths">☠️ Killed 0x</span><span class="chip" id="best">🏆 Record 0:00</span><span class="chip" id="kills">⚔️ 0 mobs</span></div>
+  <div class="bars" id="hearts"></div>
+</div>
+<div id="feed" class="shadow"></div>
+<div id="board" class="shadow" hidden><h3>☠️ Top Steve killers</h3><div id="boardRows"></div></div>
+<div id="legend" class="shadow"></div>
+<div id="death" class="shadow"><div class="who" id="killer"></div><div class="big">KILLED STEVE!</div><div class="small" id="deathSub"></div></div>
+<div id="offline" class="shadow">⛏️ Connecting to the Minecraft world…</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script src="/shared/sounds.js"></script>
+<script>
+  const P = LT.params, $ = (id) => document.getElementById(id);
+  const viewUrl = P.get('view') || `${location.protocol}//${location.hostname}:3007`;
+  $('cam').src = viewUrl;
+  let botName = 'Steve', lastDeaths = null, lastSeen = 0;
+
+  const clock = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+
+  function renderStatus(st) {
+    if (!st) return;
+    lastSeen = Date.now();
+    botName = st.bot || botName;
+    $('title').textContent = P.get('title') || `KILL ${botName.toUpperCase()}!`;
+    $('sub').firstChild.textContent = `${botName} has survived `;
+    $('offline').hidden = !!st.online;
+    $('timer').textContent = clock(st.alive || 0);
+    $('timer').classList.toggle('danger', st.health > 0 && st.health <= 6);
+    $('deaths').textContent = `☠️ Killed ${st.deaths}x`;
+    $('best').textContent = `🏆 Record ${clock(st.best || 0)}`;
+    $('kills').textContent = `⚔️ ${st.kills} mobs`;
+    const hp = Math.max(0, Math.round(st.health || 0));
+    $('hearts').textContent = '❤️'.repeat(Math.ceil(hp / 2)) + '🖤'.repeat(10 - Math.ceil(hp / 2));
+    const top = st.top || [];
+    $('board').hidden = !top.length;
+    $('boardRows').innerHTML = top.map((k, i) => `<div class="r"><span>${['🥇', '🥈', '🥉'][i] || '•'} ${LT.esc(k.name)}</span><span>${k.kills}</span></div>`).join('');
+    if (lastDeaths !== null && st.deaths > lastDeaths) killedBanner(st);
+    lastDeaths = st.deaths;
+  }
+  function killedBanner(st) {
+    const who = st.lastKiller && st.lastKiller !== 'the arena' ? st.lastKiller : 'The arena';
+    $('killer').textContent = who.toUpperCase();
+    const mine = (st.top || []).find((k) => k.name === st.lastKiller);
+    $('deathSub').textContent = mine ? `${mine.kills} kill${mine.kills > 1 ? 's' : ''} today · Steve's death #${st.deaths}` : `Steve's death #${st.deaths}`;
+    $('death').classList.add('on'); setTimeout(() => $('death').classList.remove('on'), 4000);
+    Sounds.play('fanfare');
+  }
+  setInterval(() => { if (Date.now() - lastSeen > 8000) $('offline').hidden = false; }, 2000);
+
+  function renderLegend(list) {
+    if (!list?.length) { $('legend').innerHTML = ''; return; }
+    const order = { gift: 0, likes: 1, follow: 2, share: 3, command: 4, keyword: 5, join: 6 };
+    const rows = list.slice().sort((a, b) => order[a.type] - order[b.type] || a.min - b.min).slice(0, 12);
+    $('legend').innerHTML = `<div class="h">🎁 Like, follow &amp; send gifts to KILL ${LT.esc(botName.toUpperCase())}!</div>` +
+      rows.map((r) => `<div><span class="t">${LT.esc(r.trigger)}</span> → ${LT.esc(r.name.replace(/\s*\((help|hurt)\)/i, ''))}</div>`).join('');
+  }
+
+  function addFeed(a) {
+    if (!a.mc?.length) return;
+    const d = document.createElement('div');
+    d.className = 'ev';
+    const times = a.repeat > 1 ? ` x${a.repeat}` : '';
+    d.innerHTML = `<span class="who">${LT.esc(a.user?.nickname || 'Someone')}</span> → ${LT.esc(a.ruleName.replace(/\s*\((help|hurt)\)/i, ''))}${times}`;
+    $('feed').prepend(d);
+    while ($('feed').children.length > 5) $('feed').lastChild.remove();
+    setTimeout(() => d.remove(), 15000);
+    Sounds.play('pop');
+  }
+
+  const socket = io();
+  socket.on('connect', () => socket.emit('getState', (s) => { renderStatus(s.mc); renderLegend(s.legend); }));
+  socket.on('mcStatus', renderStatus);
+  socket.on('legend', renderLegend);
+  socket.on('action', addFeed);
+  // the camera reconnects by itself if the bridge restarts
+  setInterval(() => { if (!$('offline').hidden) $('cam').src = viewUrl; }, 30000);
+</script>
+</body>
+</html>

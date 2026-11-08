@@ -8,6 +8,7 @@
 <style>
   :root { --bg: #121214; --card: #1c1c20; --card2: #26262c; --line: #33333b; --text: #f2f2f5; --mute: #9a9aa6; --pink: #fe2c55; --cyan: #25f4ee; --ok: #2ecc71; --warn: #f5a623; }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding-bottom: 76px; }
   header { position: sticky; top: 0; z-index: 5; background: rgba(18,18,20,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
   header h1 { font-size: 17px; margin: 0; flex: 1; } header h1 b { color: var(--pink); }
@@ -29,6 +30,7 @@
   input[type=range] { padding: 0; }
   button.b { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
   button.b:active { transform: scale(.97); }
+  a.b { color: var(--text); display: inline-block; }
   button.p { background: var(--pink); border-color: var(--pink); color: #fff; } button.c { background: var(--cyan); border-color: var(--cyan); color: #000; }
   button.s { padding: 6px 10px; font-size: 13px; }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -178,6 +180,16 @@
 
   <!-- ========================================================= GAME -->
   <section id="tab-game">
+    <div class="card">
+      <h2>⛏️ Minecraft: Kill Steve (real game)</h2>
+      <p class="muted" style="margin-top:0">Viewers try to kill <b>Steve</b>, a bot player in a real Minecraft world, shown in first person. Every like, follow, share and gift spawns zombies, skeletons, creepers, witches, TNT or a boss raid, each named after the viewer. Whoever's mob gets the kill is credited on screen. Steve fights back and respawns with an iron kit. It needs the Minecraft server from the hands-free setup (see the README).</p>
+      <p id="mcState" class="muted">Minecraft: not connected yet.</p>
+      <div class="url"><code id="mcUrl"></code><a class="b s" style="text-decoration:none" href="/minecraft" target="_blank">Open</a></div>
+      <div class="row"><button class="b p" id="mcPreset">⛏️ Add the Minecraft actions</button></div>
+      <p class="muted">Adds 11 editable actions to the <b>Actions</b> tab (gift tiers, follow, share, likes, <code>!zombie</code>). They switch on by themselves the first time Steve joins; pressing this again resets them.</p>
+      <label class="f">Run a Minecraft command now</label>
+      <div class="row"><input class="grow" id="mcCmd" placeholder="give {bot} minecraft:diamond_sword"><button class="b c" id="mcRunBtn">Run</button></div>
+    </div>
     <div class="card">
       <h2>🏰 Castle Clash</h2>
       <p class="muted" style="margin-top:0">Viewers comment to join a team. Likes send soldiers, gifts send knights, giants, dragons and meteors. When a castle falls, the top fighters are shown and a new round starts on its own.</p>
@@ -337,9 +349,23 @@ socket.on('connect', async () => {
       const r = await call('saveSettings', backup);
       if (r.ok) { settings = r.settings; toast('Restored your settings from this device'); }
     }
-    renderSettings(); renderStream(s.stream);
+    renderSettings(); renderStream(s.stream); renderMc(s.mc);
   });
 });
+function renderMc(st) {
+  const fmt = (ms) => { const m = Math.floor((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
+  $('mcState').textContent = !st ? 'Minecraft: not connected yet.' :
+    st.online ? `🟢 ${st.bot} is in the world: ❤️ ${Math.round(st.health)}/20 · alive ${fmt(st.alive)} · ☠️ killed ${st.deaths}x${st.lastKiller ? ' (last: ' + st.lastKiller + ')' : ''} · ⚔️ ${st.kills} mobs slain · 👾 ${st.hostiles} nearby`
+              : '🔴 The Minecraft bridge is running but Steve is not in the world (server starting?)';
+}
+socket.on('mcStatus', renderMc);
+$('mcPreset').onclick = async () => {
+  if (settings.rules.some((r) => r.id.startsWith('mc-')) && !confirm('Reset the Minecraft actions to the defaults?')) return;
+  const r = await call('addMinecraftPreset');
+  if (r.ok) { settings = r.settings; renderSettings(); toast('Minecraft actions added: see the Actions tab'); }
+};
+$('mcRunBtn').onclick = async () => { const c = $('mcCmd').value.trim(); if (!c) return; const r = await call('mcRun', c); if (r.ok) { toast('Sent to Minecraft'); $('mcCmd').value = ''; } };
+$('mcCmd').onkeydown = (e) => { if (e.key === 'Enter') $('mcRunBtn').click(); };
 function renderStream(st) {
   if (!st) return;
   $('streamUrl').value = st.url; $('streamKey').value = '';
@@ -450,6 +476,7 @@ function renderSettings() {
   $('autoConnect').checked = settings.autoConnect;
   for (const k of [...GAME_TEXT, ...GAME_NUM]) if (document.activeElement !== $('g-' + k)) $('g-' + k).value = settings.game[k];
   $('gameUrl').textContent = location.origin + '/game';
+  $('mcUrl').textContent = location.origin + '/minecraft';
   store.set('settingsBackup', settings);
   renderRules(); renderUrls();
 }
@@ -483,6 +510,12 @@ function renderRules() {
         <div><label class="f">Speak (TTS) — empty = silent</label><input data-k="speak" value="${LT.esc(r.speak)}"></div>
         <div><label class="f">Cooldown (seconds)</label><input type="number" min="0" data-k="cooldown" value="${r.cooldown}"></div>
       </div>
+      <details ${r.mc || r.keys ? 'open' : ''}><summary>⛏️ Game actions (Minecraft / key presses)</summary>
+        <label class="f">Minecraft commands, one per line. <code>{bot}</code> = Steve, <code>{user}</code> = viewer name, <code>{rx}</code> <code>{rz}</code> = a random spot nearby. Repeats once per gift in a combo.</label>
+        <textarea rows="3" data-k="mc" placeholder="execute at {bot} run summon minecraft:zombie ~{rx} ~1 ~{rz}">${LT.esc(r.mc || '')}</textarea>
+        <label class="f">Key presses for any other game on the stream server (e.g. <code>space</code> or <code>Left Left Up</code>)</label>
+        <input data-k="keys" value="${LT.esc(r.keys || '')}" placeholder="space">
+      </details>
       <div class="row" style="margin-top:10px"><button class="b s c" data-act="test">▶ Test</button><button class="b s" data-act="preview">🔊 Preview sound</button><button class="b s" data-act="up">↑</button><button class="b s" data-act="del" style="margin-left:auto">🗑 Delete</button></div>
     </div>`;
   }).join('') || '<p class="muted">No actions yet.</p>';
@@ -511,7 +544,7 @@ $('rules').addEventListener('click', (e) => {
   if (act === 'up' && i > 0) { [settings.rules[i - 1], settings.rules[i]] = [settings.rules[i], settings.rules[i - 1]]; save(); renderRules(); }
 });
 $('addRule').onclick = () => {
-  settings.rules.push({ id: 'r-' + Math.random().toString(36).slice(2, 10), enabled: true, name: 'New action', trigger: { type: 'gift', giftName: '', minCoins: 1, maxCoins: 0, command: '', every: 100 }, alert: { show: true, text: '{user} sent {count}x {gift}!', duration: 5 }, sound: 'coin', speak: '', cooldown: 0 });
+  settings.rules.push({ id: 'r-' + Math.random().toString(36).slice(2, 10), enabled: true, name: 'New action', trigger: { type: 'gift', giftName: '', minCoins: 1, maxCoins: 0, command: '', every: 100 }, alert: { show: true, text: '{user} sent {count}x {gift}!', duration: 5 }, sound: 'coin', speak: '', mc: '', keys: '', cooldown: 0 });
   save(); renderRules(); $('rules').lastElementChild.scrollIntoView({ behavior: 'smooth' });
 };
 
@@ -519,6 +552,7 @@ $('addRule').onclick = () => {
 function renderUrls() {
   const base = location.origin;
   const list = [
+    ['Minecraft: Kill Steve (9:16)', '/minecraft'],
     ['Castle Clash game (full screen, 9:16)', '/game'],
     ['Alerts (gift/follow pop-ups + sounds)', '/overlay/alerts'],
     ['Alerts + speak TTS inside OBS', '/overlay/alerts?tts=1'],

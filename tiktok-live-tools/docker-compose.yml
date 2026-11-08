@@ -1,4 +1,4 @@
-# Run everything hands-free:  docker compose up -d
+# Run everything hands-free:  docker compose up -d --build
 # It restarts by itself after crashes and after the machine reboots.
 services:
   live:
@@ -8,7 +8,34 @@ services:
     restart: always
     env_file: .env
     ports:
-      - "3000:3000"
+      - "3000:3000"   # dashboard (protect it with ADMIN_KEY)
+      - "3007:3007"   # Minecraft camera, so the dashboard's /minecraft preview works from your phone
     volumes:
       - ./data:/app/data
     shm_size: "1gb"
+
+  # A real Minecraft Java server (Paper 1.21.4) for the "Kill Steve" game.
+  # Enabled by COMPOSE_PROFILES=minecraft in .env. It is private: no port is opened
+  # to the internet; only the bot and the command runner inside Docker can reach it.
+  minecraft:
+    image: itzg/minecraft-server:latest
+    profiles: ["minecraft"]
+    restart: always
+    environment:
+      EULA: "${MINECRAFT_EULA:-FALSE}"        # you must accept https://aka.ms/MinecraftEULA in .env
+      TYPE: PAPER
+      VERSION: "1.21.4"
+      MEMORY: "${MINECRAFT_MEMORY:-4G}"
+      ONLINE_MODE: "FALSE"                    # lets the bot join without a Microsoft account
+      ENFORCE_SECURE_PROFILE: "FALSE"
+      ENABLE_RCON: "TRUE"
+      RCON_PASSWORD: "${RCON_PASSWORD}"
+      LEVEL_TYPE: "minecraft:flat"
+      DIFFICULTY: normal
+      SPAWN_PROTECTION: "0"
+      VIEW_DISTANCE: "6"
+      SIMULATION_DISTANCE: "6"
+      MAX_PLAYERS: "5"
+      MOTD: "TikTok LIVE arena"
+    volumes:
+      - ./minecraft-data:/data
