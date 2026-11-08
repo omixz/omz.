@@ -6,7 +6,9 @@
 # Stream key: paste it in the dashboard (Settings -> Cloud streaming), or set
 #   STREAM_URL + STREAM_KEY, or STREAM_TARGET (full rtmp://... URL, or a .mp4 path for testing)
 # Optional: STREAM_WIDTH (720) STREAM_HEIGHT (1280) STREAM_FPS (30) STREAM_BITRATE (2500k)
-#           GAME_PATH (/game) — e.g. /overlay/... if you'd rather stream something else
+#           GAME_PATH (/game; use /minecraft for the Minecraft hero) — any page of the app
+#           GAME_CMD  run any other real game instead of a page, e.g. GAME_CMD="supertux2 --fullscreen"
+#           MC_HOST   when set, also starts the Minecraft bridge (bot + camera + RCON), see docker-compose.yml
 set -u
 cd "$(dirname "$0")"
 
@@ -60,16 +62,27 @@ fi
 # wait for the server
 for _ in $(seq 1 60); do curl -fs "http://localhost:$PORT/healthz" >/dev/null 2>&1 && break; sleep 1; done
 
-# 4) the game, full screen, sound allowed without a click (restarts if it crashes)
-if [ -z "$CHROME" ]; then log "no Chromium found — set CHROME_BIN"; exit 1; fi
+# 3b) Minecraft: the hero bot, its 3D camera and the command runner (restarts if it crashes)
+if [ -n "${MC_HOST:-}" ] && [ -f minecraft/bridge.js ]; then
+  ( cd minecraft && while true; do APP_URL="http://localhost:$PORT" node bridge.js; log "minecraft bridge exited, restarting in 10s"; sleep 10; done ) &
+fi
+
+# 4) the game, full screen, sound allowed without a click (restarts if it crashes).
+#    WebGL runs on the CPU (SwiftShader) so 3D games like the Minecraft camera work without a GPU.
+if [ -n "${GAME_CMD:-}" ]; then
+  ( while true; do bash -c "$GAME_CMD"; log "game exited, restarting in 3s"; sleep 3; done ) &
+else
+if [ -z "$CHROME" ]; then log "no Chromium found: set CHROME_BIN"; exit 1; fi
 ( while true; do
-    "$CHROME" --no-sandbox --no-first-run --no-default-browser-check --disable-gpu --disable-dev-shm-usage \
+    "$CHROME" --no-sandbox --no-first-run --no-default-browser-check --disable-dev-shm-usage \
+      --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist \
       --kiosk --app="http://localhost:$PORT$GAME_PATH" --window-position=0,0 --window-size="$W,$H" \
       --autoplay-policy=no-user-gesture-required --noerrdialogs --disable-infobars \
       --disable-session-crashed-bubble --disable-features=Translate,MediaRouter \
       --user-data-dir="$RUN_DIR/chrome" >/dev/null 2>&1
     log "browser exited, restarting in 3s"; sleep 3
   done ) &
+fi
 
 # 5) send it to TikTok. Reconnects forever: while you're not LIVE, TikTok simply
 #    ignores the feed. If you paste a new stream key in the dashboard, it switches.

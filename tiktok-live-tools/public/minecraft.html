@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minecraft LIVE</title>
+<style>
+  /* The stream page: live 3D camera of the hero + survival stats + what viewers can do.
+     URL options: ?view=http://host:3007 (camera address)  ?title=Can%20he%20survive%3F */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; color: #fff; }
+  [hidden] { display: none !important; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .shadow { text-shadow: 0 2px 3px #000, 0 0 2px #000; }
+  #top { position: fixed; top: 0; left: 0; right: 0; padding: 14px 16px 22px; background: linear-gradient(#000c, #0000); text-align: center; pointer-events: none; }
+  #title { font-size: 26px; font-weight: 900; letter-spacing: .5px; }
+  #timer { font-size: 54px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; color: #7CFC6A; }
+  #timer.danger { color: #ff4d4d; animation: pulse .6s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+  .chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { background: #0009; border-radius: 99px; padding: 4px 12px; font-weight: 800; font-size: 17px; }
+  .bars { display: flex; justify-content: center; gap: 2px; margin-top: 8px; font-size: 20px; }
+  #feed { position: fixed; left: 10px; top: 210px; width: 62%; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .ev { background: #000a; border-left: 5px solid #7CFC6A; border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: 18px; animation: slide .35s ease-out; }
+  .ev.hurt { border-color: #ff4d4d; }
+  .ev .who { color: #ffd84d; }
+  @keyframes slide { from { opacity: 0; transform: translateX(-30px); } }
+  #legend { position: fixed; left: 0; right: 0; bottom: 0; padding: 26px 10px 12px; background: linear-gradient(#0000, #000d 30%); display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 15px; font-weight: 700; pointer-events: none; }
+  #legend .t { color: #ffd84d; }
+  #legend .h { grid-column: 1 / -1; text-align: center; font-size: 17px; font-weight: 900; margin-bottom: 4px; }
+  #offline { position: fixed; inset: 0; display: grid; place-items: center; background: #000c; font-size: 22px; font-weight: 800; text-align: center; padding: 20px; }
+  #death { position: fixed; inset: 0; display: grid; place-items: center; background: #8b000099; font-size: 64px; font-weight: 900; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #death.on { opacity: 1; }
+</style>
+</head>
+<body>
+<iframe id="cam" allow="autoplay"></iframe>
+<div id="top" class="shadow">
+  <div id="title">Can the hero survive?</div>
+  <div id="timer">0:00</div>
+  <div class="chips"><span class="chip" id="deaths">💀 0</span><span class="chip" id="kills">⚔️ 0</span><span class="chip" id="best">🏆 0:00</span></div>
+  <div class="bars" id="hearts"></div>
+</div>
+<div id="feed" class="shadow"></div>
+<div id="legend" class="shadow"></div>
+<div id="death" class="shadow">💀 DIED!</div>
+<div id="offline" class="shadow">⛏️ Connecting to the Minecraft world…</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script src="/shared/sounds.js"></script>
+<script>
+  const P = LT.params, $ = (id) => document.getElementById(id);
+  const viewUrl = P.get('view') || `${location.protocol}//${location.hostname}:3007`;
+  $('cam').src = viewUrl;
+  let botName = 'the hero', lastDeaths = null, lastSeen = 0;
+
+  const clock = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+
+  function renderStatus(st) {
+    if (!st) return;
+    lastSeen = Date.now();
+    botName = st.bot || botName;
+    $('title').textContent = P.get('title') || `Can ${botName} survive your gifts?`;
+    $('offline').hidden = !!st.online;
+    $('timer').textContent = clock(st.alive || 0);
+    $('timer').classList.toggle('danger', st.health > 0 && st.health <= 6);
+    $('deaths').textContent = `💀 ${st.deaths}`;
+    $('kills').textContent = `⚔️ ${st.kills}`;
+    $('best').textContent = `🏆 ${clock(st.best || 0)}`;
+    const hp = Math.max(0, Math.round(st.health || 0));
+    $('hearts').textContent = '❤️'.repeat(Math.ceil(hp / 2)) + '🖤'.repeat(10 - Math.ceil(hp / 2)) + '  ' + '🍗'.repeat(Math.ceil((st.food || 0) / 4));
+    if (lastDeaths !== null && st.deaths > lastDeaths) { $('death').classList.add('on'); setTimeout(() => $('death').classList.remove('on'), 1800); Sounds.play('boing'); }
+    lastDeaths = st.deaths;
+  }
+  setInterval(() => { if (Date.now() - lastSeen > 8000) $('offline').hidden = false; }, 2000);
+
+  function renderLegend(list) {
+    if (!list?.length) { $('legend').innerHTML = ''; return; }
+    const order = { gift: 0, likes: 1, follow: 2, share: 3, command: 4, keyword: 5, join: 6 };
+    const rows = list.slice().sort((a, b) => order[a.type] - order[b.type] || a.min - b.min).slice(0, 12);
+    $('legend').innerHTML = `<div class="h">🎁 Send gifts to HELP or HURT ${LT.esc(botName)}!</div>` +
+      rows.map((r) => `<div><span class="t">${LT.esc(r.trigger)}</span> → ${LT.esc(r.name.replace(/\s*\((help|hurt)\)/i, ''))}</div>`).join('');
+  }
+
+  function addFeed(a) {
+    if (!a.mc?.length) return;
+    const help = /help/i.test(a.ruleName);
+    const d = document.createElement('div');
+    d.className = 'ev ' + (help ? 'help' : 'hurt');
+    const times = a.repeat > 1 ? ` x${a.repeat}` : '';
+    d.innerHTML = `<span class="who">${LT.esc(a.user?.nickname || 'Someone')}</span> → ${LT.esc(a.ruleName.replace(/\s*\((help|hurt)\)/i, ''))}${times}`;
+    $('feed').prepend(d);
+    while ($('feed').children.length > 5) $('feed').lastChild.remove();
+    setTimeout(() => d.remove(), 15000);
+    Sounds.play(help ? 'chime' : 'pop');
+  }
+
+  const socket = io();
+  socket.on('connect', () => socket.emit('getState', (s) => { renderStatus(s.mc); renderLegend(s.legend); }));
+  socket.on('mcStatus', renderStatus);
+  socket.on('legend', renderLegend);
+  socket.on('action', addFeed);
+  // camera reconnects by itself if the bridge restarts
+  let camRetry = setInterval(() => { if (!$('offline').hidden) $('cam').src = viewUrl; }, 30000);
+</script>
+</body>
+</html>

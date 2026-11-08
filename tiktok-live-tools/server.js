@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { spawn, spawnSync } from 'node:child_process';
 import { Server } from 'socket.io';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
 
@@ -25,6 +26,7 @@ const MAX_FEED = 200;
 const DEFAULT_SETTINGS = {
   username: process.env.TIKTOK_USERNAME || '',
   autoConnect: true,
+  mcPresetApplied: false, // Minecraft actions are added automatically the first time the hero joins
   tts: {
     mode: 'command', // off | all | command
     command: '!tts',
@@ -151,6 +153,7 @@ function sanitizeSettings(input) {
   const s = deepMerge(DEFAULT_SETTINGS, input || {});
   s.username = String(s.username || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/, '').replace(/\/live.*$/, '');
   s.autoConnect = Boolean(s.autoConnect);
+  s.mcPresetApplied = Boolean(s.mcPresetApplied);
   s.tts.maxLength = clamp(Number(s.tts.maxLength) || 150, 10, 500);
   s.goal.target = Math.max(1, Number(s.goal.target) || 1);
   const g = s.game;
@@ -180,12 +183,83 @@ function sanitizeSettings(input) {
     },
     sound: String(r.sound || '').slice(0, 500),
     speak: String(r.speak || '').slice(0, 300),
+    mc: String(r.mc || '').slice(0, 3000), // Minecraft commands, one per line (run by minecraft/bridge.js)
+    keys: String(r.keys || '').slice(0, 200), // key presses for any game in the virtual screen
     cooldown: Math.max(0, Number(r.cooldown) || 0),
   }));
   return s;
 }
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+// ---------------------------------------------------------- Minecraft preset --
+// "Hero vs viewers": gifts either hurt the bot (mobs, TNT) or help it (gear,
+// food). Added from the dashboard; every line is a normal editable action.
+const mob = (type, extra = '') => `execute at {bot} run summon minecraft:${type} ~{rx} ~1 ~{rz} {CustomName:'"{user}"',CustomNameVisible:1b${extra}}`;
+const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
+  id: 'mc-' + id,
+  enabled: true,
+  name,
+  trigger: { type: 'gift', giftName: '', minCoins: 0, maxCoins: 0, command: '', every: 100, ...trigger },
+  alert: { show: false, text: '{user}: ' + name, duration: 4 },
+  sound: '',
+  speak: '',
+  mc: mc.join('\n'),
+  keys: '',
+  cooldown,
+});
+const MINECRAFT_PRESET = [
+  mcRule('zombie', '🧟 Zombie', { minCoins: 1, maxCoins: 4 }, [mob('zombie')]),
+  mcRule('skeleton', '💀 Skeleton', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
+  mcRule('iron', '🛡️ Iron gear (help)', { minCoins: 10, maxCoins: 29 }, [
+    'give {bot} minecraft:iron_sword', 'give {bot} minecraft:iron_helmet', 'give {bot} minecraft:iron_chestplate',
+    'give {bot} minecraft:iron_leggings', 'give {bot} minecraft:iron_boots', 'give {bot} minecraft:cooked_beef 8',
+  ]),
+  mcRule('creepers', '💥 Creeper squad', { minCoins: 30, maxCoins: 98 }, [mob('creeper'), mob('creeper'), mob('creeper')]),
+  mcRule('diamond', '💎 Diamond gear (help)', { minCoins: 99, maxCoins: 198 }, [
+    'give {bot} minecraft:diamond_sword', 'give {bot} minecraft:diamond_helmet', 'give {bot} minecraft:diamond_chestplate',
+    'give {bot} minecraft:diamond_leggings', 'give {bot} minecraft:diamond_boots', 'give {bot} minecraft:golden_apple 2',
+  ]),
+  mcRule('tnt', '🧨 TNT rain', { minCoins: 199, maxCoins: 499 }, Array(6).fill('execute at {bot} run summon minecraft:tnt ~{rx} ~5 ~{rz} {fuse:50}')),
+  mcRule('boss', '👹 Boss raid', { minCoins: 500 }, [
+    'execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('ravager'), mob('vindicator'), mob('vindicator'), mob('witch'),
+  ]),
+  mcRule('follow', '🍎 Golden apple (help)', { type: 'follow' }, ['give {bot} minecraft:golden_apple 1']),
+  mcRule('share', '❤️‍🩹 Instant heal (help)', { type: 'share' }, ['effect give {bot} minecraft:instant_health 1 1']),
+  mcRule('likes', '✨ Regeneration (help)', { type: 'likes', every: 100 }, ['effect give {bot} minecraft:regeneration 5 1']),
+  mcRule('cmd-zombie', '🧟 Chat zombie', { type: 'command', command: '!zombie' }, [mob('zombie')], 15),
+];
+
+function applyMinecraftPreset() {
+  settings = sanitizeSettings({
+    ...settings,
+    mcPresetApplied: true,
+    rules: [...settings.rules.filter((r) => !r.id.startsWith('mc-')), ...MINECRAFT_PRESET],
+  });
+  saveSettings();
+  ruleRuntime.clear();
+  io.emit('settings', settings);
+  io.emit('legend', gameLegend());
+  console.log('[minecraft] Minecraft actions enabled');
+}
+
+function describeTrigger(t) {
+  switch (t.type) {
+    case 'gift':
+      if (t.giftName) return `🎁 ${t.giftName}`;
+      return t.maxCoins ? `${t.minCoins}–${t.maxCoins}🪙` : `${t.minCoins}+🪙`;
+    case 'follow': return '➕ Follow';
+    case 'share': return '🔁 Share';
+    case 'likes': return `❤️ ${t.every} likes`;
+    case 'command': return `💬 ${t.command}`;
+    case 'keyword': return `💬 "${t.command}"`;
+    case 'join': return '👋 Join';
+    default: return t.type;
+  }
+}
+// What the Minecraft stream page shows viewers ("10–29🪙 → Iron gear").
+const gameLegend = () =>
+  settings.rules.filter((r) => r.enabled && (r.mc || r.keys)).map((r) => ({ name: r.name, trigger: describeTrigger(r.trigger), type: r.trigger.type, min: r.trigger.minCoins || 0 }));
 
 let settings = loadSettings();
 
@@ -196,6 +270,7 @@ function freshStats() {
 }
 
 let stats = freshStats();
+let mcStatus = null; // last status reported by minecraft/bridge.js
 let feed = [];
 let lastRoomId = null;
 const status = { state: 'idle', username: '', roomId: null, message: '', since: Date.now() };
@@ -343,8 +418,11 @@ function ruleMatches(rule, ev) {
     case 'gift': {
       if (ev.type !== 'gift') return false;
       if (t.giftName && t.giftName.trim().toLowerCase() !== ev.gift.name.toLowerCase()) return false;
-      if (t.minCoins && ev.gift.coins < t.minCoins) return false;
-      if (t.maxCoins && ev.gift.coins > t.maxCoins) return false;
+      // Game actions repeat once per gift in a combo, so they compare the price
+      // of ONE gift; screen alerts compare the combo's total.
+      const coins = rule.mc || rule.keys ? ev.gift.coinsEach ?? ev.gift.coins : ev.gift.coins;
+      if (t.minCoins && coins < t.minCoins) return false;
+      if (t.maxCoins && coins > t.maxCoins) return false;
       return true;
     }
     case 'follow':
@@ -395,8 +473,56 @@ function fireRule(rule, ev) {
     alert: rule.alert.show ? { text: fill(rule.alert.text, ev), duration: rule.alert.duration } : null,
     sound: rule.sound || '',
     speak: fill(rule.speak, ev),
+    // one action per gift in a combo (capped) so "5x Rose" spawns 5 mobs
+    repeat: ev.type === 'gift' ? Math.min(Math.max(1, ev.gift?.count || 1), 20) : 1,
+    mc: rule.mc
+      ? rule.mc
+          .split('\n')
+          .map((l) => fillGame(l.trim(), ev))
+          .filter((l) => l && !l.startsWith('#'))
+          .map((l) => l.replace(/^\//, ''))
+      : [],
   };
   io.emit('action', action);
+  if (rule.keys) pressKeys(rule.keys, action.repeat);
+}
+
+// Placeholders inside game commands: user names are reduced to safe
+// characters so a viewer's nickname can never break or inject a command.
+const safeName = (s) => String(s || '').replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 16) || 'viewer';
+function fillGame(template, ev) {
+  return fill(template, {
+    ...ev,
+    comment: '',
+    args: '',
+    user: { ...ev.user, nickname: safeName(ev.user?.nickname), uniqueId: safeName(ev.user?.uniqueId) },
+    gift: ev.gift && { ...ev.gift, name: safeName(ev.gift.name) },
+  });
+}
+
+// ------------------------------------------------- key presses (any game) --
+// Works when the server runs next to a game on a (virtual) screen, e.g. in the
+// streamer container: "space", "Left", "ctrl+r", "w w w"... uses xdotool.
+const HAS_XDOTOOL = Boolean(process.env.DISPLAY) && spawnSync('sh', ['-c', 'command -v xdotool']).status === 0;
+const keyQueue = [];
+let keyBusy = false;
+function pressKeys(spec, times = 1) {
+  if (!HAS_XDOTOOL) return;
+  const keys = String(spec)
+    .split(/\s+/)
+    .filter((k) => /^[A-Za-z0-9_+]{1,24}$/.test(k))
+    .slice(0, 20);
+  if (!keys.length) return;
+  for (let i = 0; i < times && keyQueue.length < 200; i++) keyQueue.push(keys);
+  drainKeys();
+}
+function drainKeys() {
+  if (keyBusy || !keyQueue.length) return;
+  keyBusy = true;
+  const keys = keyQueue.shift();
+  const p = spawn('xdotool', ['key', '--delay', '60', ...keys], { stdio: 'ignore' });
+  p.on('error', () => {});
+  p.on('exit', () => setTimeout(() => ((keyBusy = false), drainKeys()), 80));
 }
 
 function runRules(ev) {
@@ -405,11 +531,15 @@ function runRules(ev) {
   // "any gift" and the "big gift" alert.
   const matching = settings.rules.filter((r) => r.enabled && ruleMatches(r, ev));
   if (!matching.length) return;
+  // Picked separately for game rules (Minecraft / keys) and screen-alert
+  // rules, so a gift can both show an alert and do something in the game.
   const giftRules = matching.filter((r) => r.trigger.type === 'gift');
   const others = matching.filter((r) => r.trigger.type !== 'gift');
-  if (giftRules.length) {
-    giftRules.sort((a, b) => (b.trigger.giftName ? 1 : 0) - (a.trigger.giftName ? 1 : 0) || b.trigger.minCoins - a.trigger.minCoins);
-    others.unshift(giftRules[0]);
+  const isGame = (r) => Boolean(r.mc || r.keys);
+  for (const group of [giftRules.filter(isGame), giftRules.filter((r) => !isGame(r))]) {
+    if (!group.length) continue;
+    group.sort((a, b) => (b.trigger.giftName ? 1 : 0) - (a.trigger.giftName ? 1 : 0) || b.trigger.minCoins - a.trigger.minCoins);
+    others.unshift(group[0]);
   }
   const now = Date.now();
   for (const rule of others) {
@@ -676,6 +806,9 @@ io.on('connection', (socket) => {
       // overlays get only what they need; the dashboard gets everything
       settings: isAdmin ? settings : { goal: settings.goal, game: settings.game },
       settingsFromDisk,
+      mc: mcStatus,
+      legend: gameLegend(),
+      keysAvailable: HAS_XDOTOOL,
       stream: isAdmin ? streamInfo() : undefined,
       admin: isAdmin,
       keyRequired: Boolean(ADMIN_KEY),
@@ -703,6 +836,7 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('settings', settings); // other open dashboards
     io.emit('goal', settings.goal);
     io.emit('game', settings.game);
+    io.emit('legend', gameLegend());
     if (settings.username !== prevUser && wantConnected) connectTikTok();
     return { settings };
   });
@@ -732,6 +866,25 @@ io.on('connection', (socket) => {
   admin('skipAlert', () => io.emit('control', { cmd: 'skip' }));
   admin('gameReset', () => io.emit('control', { cmd: 'gameReset' }));
   admin('setStream', (p) => ({ stream: writeStream(p) }));
+  // Minecraft: manual command from the dashboard, and live status from the bridge
+  admin('addMinecraftPreset', () => {
+    applyMinecraftPreset();
+    return { settings };
+  });
+  admin('mcRun', (cmd) => {
+    const line = String(cmd || '').trim().replace(/^\//, '').slice(0, 500);
+    if (!line || /[\r\n]/.test(line)) throw new Error('Enter one command');
+    io.emit('mcRun', { cmd: line });
+  });
+  admin('mcStatus', (st) => {
+    mcStatus = { ...st, ts: Date.now() };
+    // hands-free: the first time a hero joins, switch on the Minecraft actions
+    if (st?.online && !settings.mcPresetApplied) {
+      if (!settings.rules.some((r) => r.mc)) applyMinecraftPreset();
+      else ((settings.mcPresetApplied = true), saveSettings());
+    }
+    io.emit('mcStatus', mcStatus);
+  });
   admin('resetStats', () => {
     stats = freshStats();
     feed = [];
