@@ -176,6 +176,40 @@
     </div>
   </section>
 
+  <!-- ========================================================= GAME -->
+  <section id="tab-game">
+    <div class="card">
+      <h2>🏰 Castle Clash</h2>
+      <p class="muted" style="margin-top:0">Viewers comment to join a team. Likes send soldiers, gifts send knights, giants, dragons and meteors. When a castle falls, the top fighters are shown and a new round starts on its own.</p>
+      <div class="url"><code id="gameUrl"></code><button class="b s" id="copyGame">Copy</button><a class="b s" style="text-decoration:none" href="/game" target="_blank">Open</a></div>
+      <div class="row"><a class="b s" style="text-decoration:none" href="/game?demo=1&sound=0" target="_blank">👀 Preview with fake viewers</a><button class="b s" id="gameReset">♻️ Reset scores &amp; new game</button></div>
+    </div>
+    <div class="card">
+      <h2>Teams</h2>
+      <div class="grid2">
+        <div><label class="f">Team 1 name</label><input id="g-teamA"></div>
+        <div><label class="f">Team 2 name</label><input id="g-teamB"></div>
+        <div><label class="f">Words to join team 1 (comma separated)</label><input id="g-joinA"></div>
+        <div><label class="f">Words to join team 2</label><input id="g-joinB"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Balance</h2>
+      <div class="grid2">
+        <div><label class="f">Likes per soldier</label><input type="number" min="1" id="g-likesPerSoldier"></div>
+        <div><label class="f">Castle health</label><input type="number" min="1" id="g-castleHp"></div>
+        <div><label class="f">Knight: gift worth at least (coins)</label><input type="number" min="1" id="g-knightCoins"></div>
+        <div><label class="f">Giant: at least (coins)</label><input type="number" min="1" id="g-giantCoins"></div>
+        <div><label class="f">Dragon: at least (coins)</label><input type="number" min="1" id="g-dragonCoins"></div>
+        <div><label class="f">Meteor: at least (coins)</label><input type="number" min="1" id="g-meteorCoins"></div>
+        <div><label class="f">Knights per follow</label><input type="number" min="0" id="g-followUnits"></div>
+        <div><label class="f">Soldiers per share</label><input type="number" min="0" id="g-shareUnits"></div>
+        <div><label class="f">Seconds between rounds</label><input type="number" min="3" id="g-intermission"></div>
+      </div>
+      <p class="muted">Tip: lower the castle health for short, exciting rounds when your LIVE is small.</p>
+    </div>
+  </section>
+
   <!-- ===================================================== OVERLAYS -->
   <section id="tab-overlays">
     <div class="card">
@@ -201,6 +235,13 @@
       <p class="muted">The server checks about once a minute while you're offline, so you can leave it running and just start your LIVE from your phone.</p>
     </div>
     <div class="card">
+      <h2>☁️ Cloud streaming (hands-free mode)</h2>
+      <p class="muted" style="margin-top:0">Only for the 24/7 server setup (see the README). Paste the <b>Server URL</b> and <b>Stream key</b> from TikTok LIVE Producer. If TikTok gives you a new key, paste it here: the server switches to it within about 5 seconds.</p>
+      <label class="f">Server URL</label><input id="streamUrl" placeholder="rtmp://push-rtmp-….tiktokcdn.com/game/" autocomplete="off">
+      <label class="f">Stream key <span id="keyHint"></span></label><input id="streamKey" type="password" placeholder="Leave empty to keep the saved key" autocomplete="off">
+      <div class="row" style="margin-top:10px"><button class="b p" id="saveStream">Save stream key</button><button class="b" id="clearStream">Stop streaming</button></div>
+    </div>
+    <div class="card">
       <h2>Backup</h2>
       <p class="muted" style="margin-top:0">Your settings are saved on the server and also backed up in this browser. Free hosts can wipe the server's disk on restart — the dashboard restores from this browser automatically.</p>
       <div class="row">
@@ -219,6 +260,7 @@
 
 <nav>
   <button data-tab="live" class="on"><span>📡</span>Live</button>
+  <button data-tab="game"><span>🏰</span>Game</button>
   <button data-tab="rules"><span>⚡</span>Actions</button>
   <button data-tab="tts"><span>🗣</span>TTS</button>
   <button data-tab="overlays"><span>🖼</span>Overlays</button>
@@ -295,9 +337,19 @@ socket.on('connect', async () => {
       const r = await call('saveSettings', backup);
       if (r.ok) { settings = r.settings; toast('Restored your settings from this device'); }
     }
-    renderSettings();
+    renderSettings(); renderStream(s.stream);
   });
 });
+function renderStream(st) {
+  if (!st) return;
+  $('streamUrl').value = st.url; $('streamKey').value = '';
+  $('keyHint').textContent = st.configured ? `(saved: ${st.keyHint})` : '(none saved)';
+}
+$('saveStream').onclick = async () => {
+  const r = await call('setStream', { url: $('streamUrl').value, key: $('streamKey').value });
+  if (r.ok) { renderStream(r.stream); toast(r.stream.configured ? 'Saved: streaming starts within a few seconds' : 'Saved'); }
+};
+$('clearStream').onclick = async () => { if (!confirm('Stop sending the game to TikTok?')) return; const r = await call('setStream', { url: '', key: '' }); if (r.ok) { renderStream(r.stream); toast('Streaming stopped'); } };
 socket.on('disconnect', () => renderStatus({ state: 'offline', message: 'Lost connection to your LIVE Tools server — reconnecting…' }));
 $('authBtn').onclick = () => { store.set('adminKey', $('authKey').value); socket.disconnect().connect(); };
 $('forgetKey').onclick = () => { store.del('adminKey'); toast('Key forgotten'); };
@@ -382,6 +434,12 @@ bind('goalType', (t) => settings.goal.type = t.value, 'change');
 bind('goalTarget', (t) => settings.goal.target = +t.value || 1);
 bind('goalTitle', (t) => settings.goal.title = t.value);
 bind('autoConnect', (t) => settings.autoConnect = t.checked, 'change');
+const GAME_TEXT = ['teamA', 'teamB', 'joinA', 'joinB'];
+const GAME_NUM = ['likesPerSoldier', 'castleHp', 'knightCoins', 'giantCoins', 'dragonCoins', 'meteorCoins', 'followUnits', 'shareUnits', 'intermission'];
+for (const k of GAME_TEXT) bind('g-' + k, (t) => settings.game[k] = t.value);
+for (const k of GAME_NUM) bind('g-' + k, (t) => { if (t.value !== '') settings.game[k] = Number(t.value); });
+$('gameReset').onclick = () => { if (confirm('Reset the score to 0 : 0 and start a new game?')) call('gameReset'); };
+$('copyGame').onclick = async () => { const u = location.origin + '/game'; try { await navigator.clipboard.writeText(u); toast('Copied!'); } catch { prompt('Copy this link:', u); } };
 
 function renderSettings() {
   if (!settings) return;
@@ -390,6 +448,8 @@ function renderSettings() {
   $('ttsBanned').value = settings.tts.bannedWords; $('ttsLinks').checked = settings.tts.skipLinks; $('ttsGifts').checked = settings.tts.readGifts;
   $('goalType').value = settings.goal.type; $('goalTarget').value = settings.goal.target; $('goalTitle').value = settings.goal.title;
   $('autoConnect').checked = settings.autoConnect;
+  for (const k of [...GAME_TEXT, ...GAME_NUM]) if (document.activeElement !== $('g-' + k)) $('g-' + k).value = settings.game[k];
+  $('gameUrl').textContent = location.origin + '/game';
   store.set('settingsBackup', settings);
   renderRules(); renderUrls();
 }
@@ -459,6 +519,7 @@ $('addRule').onclick = () => {
 function renderUrls() {
   const base = location.origin;
   const list = [
+    ['Castle Clash game (full screen, 9:16)', '/game'],
     ['Alerts (gift/follow pop-ups + sounds)', '/overlay/alerts'],
     ['Alerts + speak TTS inside OBS', '/overlay/alerts?tts=1'],
     ['Chat', '/overlay/chat?max=10'],

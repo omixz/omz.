@@ -1,0 +1,14 @@
+# Run everything hands-free:  docker compose up -d
+# It restarts by itself after crashes and after the machine reboots.
+services:
+  live:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamer
+    restart: always
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    shm_size: "1gb"

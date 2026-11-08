@@ -16,6 +16,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const STREAM_FILE = path.join(DATA_DIR, 'stream.json'); // read by stream.sh (cloud streaming)
 const OFFLINE_RETRY_MS = 60_000; // how often to check whether you went live
 const MAX_FEED = 200;
 
@@ -33,6 +34,22 @@ const DEFAULT_SETTINGS = {
     bannedWords: '',
   },
   goal: { type: 'likes', target: 1000, title: 'Like goal' },
+  // Castle Clash game (public/game.html)
+  game: {
+    teamA: 'RED',
+    teamB: 'BLUE',
+    joinA: '1, red',
+    joinB: '2, blue',
+    likesPerSoldier: 5,
+    castleHp: 2000,
+    knightCoins: 1,
+    giantCoins: 10,
+    dragonCoins: 99,
+    meteorCoins: 500,
+    followUnits: 2,
+    shareUnits: 5,
+    intermission: 10,
+  },
   rules: [
     {
       id: 'r-any-gift',
@@ -136,6 +153,14 @@ function sanitizeSettings(input) {
   s.autoConnect = Boolean(s.autoConnect);
   s.tts.maxLength = clamp(Number(s.tts.maxLength) || 150, 10, 500);
   s.goal.target = Math.max(1, Number(s.goal.target) || 1);
+  const g = s.game;
+  g.teamA = String(g.teamA || 'RED').slice(0, 16);
+  g.teamB = String(g.teamB || 'BLUE').slice(0, 16);
+  g.joinA = String(g.joinA || '').slice(0, 100);
+  g.joinB = String(g.joinB || '').slice(0, 100);
+  for (const k of ['likesPerSoldier', 'castleHp', 'knightCoins', 'giantCoins', 'dragonCoins', 'meteorCoins', 'followUnits', 'shareUnits', 'intermission']) {
+    g[k] = Math.max(k.endsWith('Units') ? 0 : 1, Math.round(Number(g[k]) || DEFAULT_SETTINGS.game[k]));
+  }
   s.rules = (Array.isArray(s.rules) ? s.rules : []).slice(0, 100).map((r) => ({
     id: String(r.id || crypto.randomUUID()),
     enabled: r.enabled !== false,
@@ -606,6 +631,31 @@ function simulate(p = {}) {
   }
 }
 
+// --------------------------------------------------------- cloud stream --
+// The RTMP stream key lives in its own file (never in settings, never sent
+// back to browsers) so stream.sh can pick it up and switch without a restart.
+function readStream() {
+  try {
+    return JSON.parse(fs.readFileSync(STREAM_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+function streamInfo() {
+  const s = readStream();
+  return { url: s.url || '', keyHint: s.key ? '••••' + String(s.key).slice(-4) : '', configured: Boolean(s.url && s.key) };
+}
+function writeStream({ url, key } = {}) {
+  url = String(url || '').trim();
+  key = String(key || '').trim();
+  if (url && !/^rtmps?:\/\//i.test(url)) throw new Error('Server URL must start with rtmp:// or rtmps://');
+  const cur = readStream();
+  const next = { url, key: key || (url ? cur.key || '' : '') };
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(STREAM_FILE, JSON.stringify(next), { mode: 0o600 });
+  return streamInfo();
+}
+
 // ------------------------------------------------------------------ socket --
 
 io.on('connection', (socket) => {
@@ -624,8 +674,9 @@ io.on('connection', (socket) => {
       stats: publicStats(),
       feed: feed.slice(-60),
       // overlays get only what they need; the dashboard gets everything
-      settings: isAdmin ? settings : { goal: settings.goal },
+      settings: isAdmin ? settings : { goal: settings.goal, game: settings.game },
       settingsFromDisk,
+      stream: isAdmin ? streamInfo() : undefined,
       admin: isAdmin,
       keyRequired: Boolean(ADMIN_KEY),
     }),
@@ -651,6 +702,7 @@ io.on('connection', (socket) => {
     ruleRuntime.clear();
     socket.broadcast.emit('settings', settings); // other open dashboards
     io.emit('goal', settings.goal);
+    io.emit('game', settings.game);
     if (settings.username !== prevUser && wantConnected) connectTikTok();
     return { settings };
   });
@@ -678,6 +730,8 @@ io.on('connection', (socket) => {
     if (t) io.emit('tts', { id: crypto.randomUUID(), text: t });
   });
   admin('skipAlert', () => io.emit('control', { cmd: 'skip' }));
+  admin('gameReset', () => io.emit('control', { cmd: 'gameReset' }));
+  admin('setStream', (p) => ({ stream: writeStream(p) }));
   admin('resetStats', () => {
     stats = freshStats();
     feed = [];
