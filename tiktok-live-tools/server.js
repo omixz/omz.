@@ -1,0 +1,704 @@
+// TikTok LIVE Tools — a lightweight, self-hosted alternative to desktop LIVE
+// interaction apps. One small Node process: it connects to your TikTok LIVE,
+// runs your rules (alerts, sounds, TTS) and pushes everything to a phone-friendly
+// dashboard and to OBS / TikTok LIVE Studio browser-source overlays.
+import express from 'express';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { Server } from 'socket.io';
+import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.PORT) || 3000;
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const OFFLINE_RETRY_MS = 60_000; // how often to check whether you went live
+const MAX_FEED = 200;
+
+// ---------------------------------------------------------------- settings --
+
+const DEFAULT_SETTINGS = {
+  username: process.env.TIKTOK_USERNAME || '',
+  autoConnect: true,
+  tts: {
+    mode: 'command', // off | all | command
+    command: '!tts',
+    readGifts: false, // gift thank-yous are handled by rules' "speak" text
+    maxLength: 150,
+    skipLinks: true,
+    bannedWords: '',
+  },
+  goal: { type: 'likes', target: 1000, title: 'Like goal' },
+  rules: [
+    {
+      id: 'r-any-gift',
+      enabled: true,
+      name: 'Any gift',
+      trigger: { type: 'gift', giftName: '', minCoins: 1 },
+      alert: { show: true, text: '{user} sent {count}x {gift}!', duration: 5 },
+      sound: 'coin',
+      speak: 'Thank you {user} for the {gift}',
+      cooldown: 0,
+    },
+    {
+      id: 'r-big-gift',
+      enabled: true,
+      name: 'Big gift (100+ coins)',
+      trigger: { type: 'gift', giftName: '', minCoins: 100 },
+      alert: { show: true, text: 'WOW! {user} sent {count}x {gift} ({coins} coins)!', duration: 8 },
+      sound: 'fanfare',
+      speak: 'Wow! Huge thanks {user}!',
+      cooldown: 0,
+    },
+    {
+      id: 'r-follow',
+      enabled: true,
+      name: 'New follower',
+      trigger: { type: 'follow' },
+      alert: { show: true, text: '{user} just followed!', duration: 4 },
+      sound: 'chime',
+      speak: '',
+      cooldown: 0,
+    },
+    {
+      id: 'r-share',
+      enabled: true,
+      name: 'Share',
+      trigger: { type: 'share' },
+      alert: { show: true, text: '{user} shared the LIVE!', duration: 4 },
+      sound: 'pop',
+      speak: '',
+      cooldown: 10,
+    },
+    {
+      id: 'r-likes',
+      enabled: false,
+      name: 'Every 500 likes',
+      trigger: { type: 'likes', every: 500 },
+      alert: { show: true, text: '{totalLikes} likes! Keep tapping!', duration: 4 },
+      sound: 'chime',
+      speak: '',
+      cooldown: 0,
+    },
+    {
+      id: 'r-hello',
+      enabled: true,
+      name: 'Chat command !hello',
+      trigger: { type: 'command', command: '!hello' },
+      alert: { show: false, text: '', duration: 3 },
+      sound: '',
+      speak: 'Hello {user}!',
+      cooldown: 5,
+    },
+  ],
+};
+
+function deepMerge(base, extra) {
+  if (Array.isArray(base)) return Array.isArray(extra) ? extra : base;
+  if (base && typeof base === 'object') {
+    const out = { ...base };
+    if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+      for (const k of Object.keys(extra)) out[k] = k in base ? deepMerge(base[k], extra[k]) : extra[k];
+    }
+    return out;
+  }
+  return extra === undefined ? base : extra;
+}
+
+let settingsFromDisk = false;
+function loadSettings() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+    settingsFromDisk = true;
+    return deepMerge(DEFAULT_SETTINGS, saved);
+  } catch {
+    return structuredClone(DEFAULT_SETTINGS);
+  }
+}
+
+function saveSettings() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    settingsFromDisk = true;
+  } catch (err) {
+    console.error('[settings] could not save:', err.message);
+  }
+}
+
+function sanitizeSettings(input) {
+  const s = deepMerge(DEFAULT_SETTINGS, input || {});
+  s.username = String(s.username || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/, '').replace(/\/live.*$/, '');
+  s.autoConnect = Boolean(s.autoConnect);
+  s.tts.maxLength = clamp(Number(s.tts.maxLength) || 150, 10, 500);
+  s.goal.target = Math.max(1, Number(s.goal.target) || 1);
+  s.rules = (Array.isArray(s.rules) ? s.rules : []).slice(0, 100).map((r) => ({
+    id: String(r.id || crypto.randomUUID()),
+    enabled: r.enabled !== false,
+    name: String(r.name || 'Rule').slice(0, 80),
+    trigger: {
+      type: String(r.trigger?.type || 'gift'),
+      giftName: String(r.trigger?.giftName || ''),
+      minCoins: Math.max(0, Number(r.trigger?.minCoins) || 0),
+      maxCoins: Math.max(0, Number(r.trigger?.maxCoins) || 0),
+      command: String(r.trigger?.command || ''),
+      every: Math.max(1, Number(r.trigger?.every) || 100),
+    },
+    alert: {
+      show: Boolean(r.alert?.show),
+      text: String(r.alert?.text || '').slice(0, 300),
+      duration: clamp(Number(r.alert?.duration) || 5, 1, 60),
+    },
+    sound: String(r.sound || '').slice(0, 500),
+    speak: String(r.speak || '').slice(0, 300),
+    cooldown: Math.max(0, Number(r.cooldown) || 0),
+  }));
+  return s;
+}
+
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+let settings = loadSettings();
+
+// ------------------------------------------------------------------- state --
+
+function freshStats() {
+  return { viewers: 0, likes: 0, diamonds: 0, follows: 0, shares: 0, gifts: 0, chats: 0, joins: 0, gifters: {} };
+}
+
+let stats = freshStats();
+let feed = [];
+let lastRoomId = null;
+const status = { state: 'idle', username: '', roomId: null, message: '', since: Date.now() };
+
+let connection = null;
+let wantConnected = false;
+let retryTimer = null;
+let retryDelay = 5_000;
+const ruleRuntime = new Map(); // ruleId -> { lastFired, likeBucket }
+
+// ------------------------------------------------------------------ server --
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+app.get('/healthz', (_req, res) => res.json({ ok: true, status: status.state }));
+
+function publicStats() {
+  const top = Object.values(stats.gifters)
+    .sort((a, b) => b.coins - a.coins)
+    .slice(0, 10);
+  const { gifters, likeBaseline, ...rest } = stats;
+  return { ...rest, top };
+}
+
+function setStatus(state, message = '') {
+  Object.assign(status, { state, message, username: settings.username, roomId: connection?.roomId || status.roomId, since: Date.now() });
+  io.emit('status', status);
+  console.log(`[status] ${state}${message ? ' — ' + message : ''}`);
+}
+
+let statsTimer = null;
+function emitStatsSoon() {
+  if (statsTimer) return;
+  statsTimer = setTimeout(() => {
+    statsTimer = null;
+    io.emit('stats', publicStats());
+  }, 250);
+}
+
+function pushFeed(ev) {
+  feed.push(ev);
+  if (feed.length > MAX_FEED) feed = feed.slice(-MAX_FEED);
+  io.emit('event', ev);
+}
+
+// --------------------------------------------------------- normalization --
+
+const firstUrl = (img) => img?.urlList?.[0] || img?.url_list?.[0] || img?.urls?.[0] || '';
+
+function normUser(u = {}) {
+  return {
+    id: String(u.userId || u.id || ''),
+    uniqueId: u.uniqueId || u.displayId || u.display_id || '',
+    nickname: u.nickname || u.uniqueId || u.displayId || 'Someone',
+    avatar: firstUrl(u.avatarThumb) || firstUrl(u.avatarMedium) || u.profilePictureUrl || '',
+  };
+}
+
+function normGift(d) {
+  const g = d.gift || {};
+  const ext = d.extendedGiftInfo || {};
+  const det = d.giftDetails || {};
+  const count = Number(d.repeatCount) || 1;
+  const coinsEach = Number(g.diamondCount ?? det.diamondCount ?? ext.diamond_count ?? 0) || 0;
+  return {
+    id: String(d.giftId || g.id || ''),
+    name: g.name || det.giftName || ext.name || 'Gift',
+    image: firstUrl(g.image) || firstUrl(g.icon) || firstUrl(det.giftImage) || firstUrl(ext.image) || '',
+    type: Number(g.type ?? det.giftType ?? 0),
+    count,
+    coinsEach,
+    coins: coinsEach * count,
+  };
+}
+
+// ---------------------------------------------------------------- pipeline --
+
+function handleEvent(ev) {
+  ev.ts = ev.ts || Date.now();
+  ev.id = ev.id || crypto.randomUUID();
+
+  switch (ev.type) {
+    case 'chat':
+      stats.chats++;
+      break;
+    case 'gift': {
+      stats.gifts += ev.gift.count;
+      stats.diamonds += ev.gift.coins;
+      const key = ev.user.id || ev.user.uniqueId || ev.user.nickname;
+      const g = (stats.gifters[key] ||= { ...ev.user, coins: 0 });
+      g.coins += ev.gift.coins;
+      g.avatar = ev.user.avatar || g.avatar;
+      break;
+    }
+    case 'like':
+      // TikTok reports the room's running total; count from when we connected so
+      // like goals start at 0 (and we don't miss likes TikTok batches together).
+      if (ev.totalLikes && stats.likeBaseline === undefined) stats.likeBaseline = ev.totalLikes - stats.likes - ev.likes;
+      stats.likes = Math.max(stats.likes + ev.likes, ev.totalLikes ? ev.totalLikes - stats.likeBaseline : 0);
+      ev.totalLikes = stats.likes;
+      break;
+    case 'follow':
+      stats.follows++;
+      break;
+    case 'share':
+      stats.shares++;
+      break;
+    case 'join':
+      stats.joins++;
+      break;
+  }
+
+  // likes and joins are high-volume: keep them out of the feed history to save memory
+  if (ev.type !== 'like' && ev.type !== 'join') pushFeed(ev);
+  else io.emit('event', ev);
+
+  emitStatsSoon();
+  runRules(ev);
+  maybeTts(ev);
+}
+
+function fill(template, ev) {
+  if (!template) return '';
+  const map = {
+    user: ev.user?.nickname || 'Someone',
+    username: ev.user?.uniqueId || ev.user?.nickname || '',
+    gift: ev.gift?.name || '',
+    count: ev.gift?.count ?? '',
+    coins: ev.gift?.coins ?? '',
+    comment: ev.comment || '',
+    args: ev.args || '',
+    likes: ev.likes ?? '',
+    totalLikes: stats.likes,
+    viewers: stats.viewers,
+  };
+  return template.replace(/\{(\w+)\}/g, (m, k) => (k in map ? String(map[k]) : m));
+}
+
+function ruleMatches(rule, ev) {
+  const t = rule.trigger;
+  switch (t.type) {
+    case 'gift': {
+      if (ev.type !== 'gift') return false;
+      if (t.giftName && t.giftName.trim().toLowerCase() !== ev.gift.name.toLowerCase()) return false;
+      if (t.minCoins && ev.gift.coins < t.minCoins) return false;
+      if (t.maxCoins && ev.gift.coins > t.maxCoins) return false;
+      return true;
+    }
+    case 'follow':
+    case 'share':
+    case 'join':
+      return ev.type === t.type;
+    case 'command': {
+      if (ev.type !== 'chat' || !t.command) return false;
+      const text = ev.comment.trim().toLowerCase();
+      const cmd = t.command.trim().toLowerCase();
+      if (text === cmd || text.startsWith(cmd + ' ')) {
+        ev.args = ev.comment.trim().slice(cmd.length).trim();
+        return true;
+      }
+      return false;
+    }
+    case 'keyword':
+      return ev.type === 'chat' && !!t.command && ev.comment.toLowerCase().includes(t.command.toLowerCase());
+    case 'likes': {
+      if (ev.type !== 'like') return false;
+      const rt = runtimeFor(rule.id);
+      const bucket = Math.floor(stats.likes / t.every);
+      if (rt.likeBucket === undefined) rt.likeBucket = Math.floor((stats.likes - ev.likes) / t.every);
+      if (bucket > rt.likeBucket) {
+        rt.likeBucket = bucket;
+        return true;
+      }
+      return false;
+    }
+    default:
+      return false;
+  }
+}
+
+function runtimeFor(id) {
+  if (!ruleRuntime.has(id)) ruleRuntime.set(id, {});
+  return ruleRuntime.get(id);
+}
+
+function fireRule(rule, ev) {
+  const action = {
+    id: crypto.randomUUID(),
+    ruleId: rule.id,
+    ruleName: rule.name,
+    eventType: ev.type,
+    user: ev.user,
+    image: ev.gift?.image || ev.user?.avatar || '',
+    alert: rule.alert.show ? { text: fill(rule.alert.text, ev), duration: rule.alert.duration } : null,
+    sound: rule.sound || '',
+    speak: fill(rule.speak, ev),
+  };
+  io.emit('action', action);
+}
+
+function runRules(ev) {
+  // For "gift" rules only the most specific matching rule fires (highest
+  // minCoins, then named gift), so a 100-coin gift doesn't trigger both the
+  // "any gift" and the "big gift" alert.
+  const matching = settings.rules.filter((r) => r.enabled && ruleMatches(r, ev));
+  if (!matching.length) return;
+  const giftRules = matching.filter((r) => r.trigger.type === 'gift');
+  const others = matching.filter((r) => r.trigger.type !== 'gift');
+  if (giftRules.length) {
+    giftRules.sort((a, b) => (b.trigger.giftName ? 1 : 0) - (a.trigger.giftName ? 1 : 0) || b.trigger.minCoins - a.trigger.minCoins);
+    others.unshift(giftRules[0]);
+  }
+  const now = Date.now();
+  for (const rule of others) {
+    const rt = runtimeFor(rule.id);
+    if (rule.cooldown && rt.lastFired && now - rt.lastFired < rule.cooldown * 1000) continue;
+    rt.lastFired = now;
+    fireRule(rule, ev);
+  }
+}
+
+function cleanForSpeech(text) {
+  let t = String(text || '');
+  if (settings.tts.skipLinks) t = t.replace(/https?:\/\/\S+/gi, 'link');
+  const banned = settings.tts.bannedWords
+    .split(',')
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean);
+  if (banned.some((w) => t.toLowerCase().includes(w))) return '';
+  return t.slice(0, settings.tts.maxLength);
+}
+
+function maybeTts(ev) {
+  const tts = settings.tts;
+  let text = '';
+  if (ev.type === 'chat' && tts.mode !== 'off') {
+    if (tts.mode === 'all') {
+      // don't read commands that a rule already handles
+      if (!ev.comment.trim().startsWith('!')) text = `${ev.user.nickname} says ${ev.comment}`;
+    } else if (tts.mode === 'command' && tts.command) {
+      const cmd = tts.command.trim().toLowerCase();
+      const c = ev.comment.trim();
+      if (c.toLowerCase().startsWith(cmd + ' ')) text = `${ev.user.nickname} says ${c.slice(cmd.length).trim()}`;
+    }
+  } else if (ev.type === 'gift' && tts.readGifts) {
+    text = `${ev.user.nickname} sent ${ev.gift.count} ${ev.gift.name}`;
+  }
+  text = cleanForSpeech(text);
+  if (text) io.emit('tts', { id: crypto.randomUUID(), text });
+}
+
+// ------------------------------------------------------------ TikTok link --
+
+function clearRetry() {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+}
+
+function scheduleRetry(ms, why) {
+  clearRetry();
+  if (!wantConnected) return;
+  setStatus(status.state === 'offline' ? 'offline' : 'reconnecting', `${why} Retrying in ${Math.round(ms / 1000)}s.`);
+  retryTimer = setTimeout(connectTikTok, ms);
+}
+
+async function teardown() {
+  const c = connection;
+  connection = null;
+  if (c) {
+    c.removeAllListeners();
+    c.on('error', () => {}); // swallow late errors
+    try {
+      await c.disconnect();
+    } catch {}
+  }
+}
+
+async function connectTikTok() {
+  clearRetry();
+  if (!settings.username) {
+    setStatus('idle', 'Set your TikTok username first.');
+    return;
+  }
+  await teardown();
+  wantConnected = true;
+  setStatus('connecting', `Connecting to @${settings.username}…`);
+
+  const c = new TikTokLiveConnection(settings.username, {
+    signApiKey: process.env.SIGN_API_KEY || undefined,
+    processInitialData: false,
+    enableExtendedGiftInfo: false,
+  });
+  connection = c;
+  wire(c);
+
+  try {
+    const state = await c.connect();
+    if (connection !== c) return;
+    retryDelay = 5_000;
+    if (state.roomId !== lastRoomId) {
+      // new stream => fresh leaderboard / counters
+      stats = freshStats();
+      ruleRuntime.clear();
+      lastRoomId = state.roomId;
+      io.emit('stats', publicStats());
+    }
+    status.roomId = state.roomId;
+    setStatus('live', `Connected to @${settings.username}'s LIVE.`);
+  } catch (err) {
+    if (connection !== c) return;
+    const msg = err?.message || String(err);
+    const offline = err?.constructor?.name === 'UserOfflineError' || /offline|isn't online|not live|status.*4/i.test(msg);
+    await teardown();
+    if (offline) {
+      status.state = 'offline';
+      scheduleRetry(OFFLINE_RETRY_MS, `@${settings.username} is not live right now.`);
+    } else {
+      scheduleRetry(retryDelay, `Connection failed: ${msg}.`);
+      retryDelay = Math.min(retryDelay * 2, 5 * 60_000);
+    }
+  }
+}
+
+function wire(c) {
+  const on = (event, fn) =>
+    c.on(event, (data) => {
+      if (connection !== c) return;
+      try {
+        fn(data || {});
+      } catch (err) {
+        console.error(`[${event}] handler error:`, err);
+      }
+    });
+
+  on(WebcastEvent.CHAT, (d) => {
+    const comment = String(d.comment ?? d.content ?? '').trim();
+    if (comment) handleEvent({ type: 'chat', user: normUser(d.user), comment });
+  });
+
+  on(WebcastEvent.GIFT, (d) => {
+    const gift = normGift(d);
+    const user = normUser(d.user);
+    // Streakable gifts (type 1) fire repeatedly while the streak runs; only the
+    // final event (repeatEnd) carries the real count.
+    if (gift.type === 1 && !d.repeatEnd) {
+      io.emit('event', { type: 'giftStreak', user, gift, ts: Date.now(), id: `streak-${user.id}-${gift.id}` });
+      return;
+    }
+    handleEvent({ type: 'gift', user, gift });
+  });
+
+  on(WebcastEvent.LIKE, (d) => {
+    const likes = Number(d.likeCount ?? d.count) || 1;
+    const totalLikes = Number(d.totalLikeCount ?? d.total) || 0;
+    handleEvent({ type: 'like', user: normUser(d.user), likes, totalLikes });
+  });
+
+  on(WebcastEvent.FOLLOW, (d) => handleEvent({ type: 'follow', user: normUser(d.user) }));
+  on(WebcastEvent.SHARE, (d) => handleEvent({ type: 'share', user: normUser(d.user) }));
+  on(WebcastEvent.MEMBER, (d) => handleEvent({ type: 'join', user: normUser(d.user) }));
+
+  on(WebcastEvent.ROOM_USER, (d) => {
+    const v = Number(d.viewerCount ?? d.total ?? d.totalUser) || 0;
+    if (v) {
+      stats.viewers = v;
+      emitStatsSoon();
+    }
+  });
+
+  on(WebcastEvent.STREAM_END, () => {
+    status.state = 'offline';
+    scheduleRetry(OFFLINE_RETRY_MS, 'Stream ended.');
+  });
+
+  on(ControlEvent.DISCONNECTED, (d) => {
+    if (!wantConnected || status.state === 'offline') return;
+    scheduleRetry(retryDelay, `Disconnected${d?.reason ? ` (${d.reason})` : ''}.`);
+  });
+
+  on(ControlEvent.ERROR, (e) => {
+    console.warn('[tiktok] error:', e?.info || '', e?.exception?.message || e?.exception || '');
+  });
+}
+
+async function disconnectTikTok() {
+  wantConnected = false;
+  clearRetry();
+  await teardown();
+  setStatus('idle', 'Disconnected.');
+}
+
+// ------------------------------------------------------------- simulation --
+
+const SAMPLE_GIFTS = [
+  { name: 'Rose', coinsEach: 1, type: 1 },
+  { name: 'TikTok', coinsEach: 1, type: 1 },
+  { name: 'Finger Heart', coinsEach: 5, type: 1 },
+  { name: 'Doughnut', coinsEach: 30, type: 1 },
+  { name: 'Hand Hearts', coinsEach: 100, type: 0 },
+  { name: 'Galaxy', coinsEach: 1000, type: 0 },
+];
+const SAMPLE_NAMES = ['Mia', 'Leo', 'Zara', 'Omar', 'Kai', 'Noor', 'Ivy', 'Sam'];
+
+function fakeUser(name) {
+  const n = name || SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
+  return { id: 'test-' + n.toLowerCase(), uniqueId: n.toLowerCase() + '_test', nickname: n, avatar: '' };
+}
+
+function simulate(p = {}) {
+  const user = fakeUser(p.user);
+  switch (p.type) {
+    case 'gift': {
+      const base = SAMPLE_GIFTS.find((g) => g.name.toLowerCase() === String(p.giftName || '').toLowerCase()) || SAMPLE_GIFTS[Math.floor(Math.random() * SAMPLE_GIFTS.length)];
+      const count = Math.max(1, Number(p.count) || 1);
+      const coinsEach = Number(p.coins) || base.coinsEach;
+      handleEvent({ type: 'gift', user, gift: { id: 'test', name: p.giftName || base.name, image: '', type: base.type, count, coinsEach, coins: coinsEach * count }, test: true });
+      break;
+    }
+    case 'chat':
+      handleEvent({ type: 'chat', user, comment: String(p.comment || 'Hello from the test button!'), test: true });
+      break;
+    case 'like':
+      handleEvent({ type: 'like', user, likes: Number(p.likes) || 50, totalLikes: 0, test: true });
+      break;
+    case 'follow':
+    case 'share':
+    case 'join':
+      handleEvent({ type: p.type, user, test: true });
+      break;
+  }
+}
+
+// ------------------------------------------------------------------ socket --
+
+io.on('connection', (socket) => {
+  let isAdmin = !ADMIN_KEY;
+
+  socket.on('auth', (key, ack) => {
+    if (typeof ack !== 'function') return;
+    isAdmin = !ADMIN_KEY || (typeof key === 'string' && key.length === ADMIN_KEY.length && crypto.timingSafeEqual(Buffer.from(key), Buffer.from(ADMIN_KEY)));
+    ack?.({ ok: isAdmin, keyRequired: Boolean(ADMIN_KEY) });
+  });
+
+  socket.on('getState', (ack) =>
+    typeof ack === 'function' &&
+    ack({
+      status,
+      stats: publicStats(),
+      feed: feed.slice(-60),
+      // overlays get only what they need; the dashboard gets everything
+      settings: isAdmin ? settings : { goal: settings.goal },
+      settingsFromDisk,
+      admin: isAdmin,
+      keyRequired: Boolean(ADMIN_KEY),
+    }),
+  );
+
+  const admin = (event, fn) =>
+    socket.on(event, async (...args) => {
+      const ack = typeof args.at(-1) === 'function' ? args.pop() : () => {};
+      const payload = args[0];
+      if (!isAdmin) return ack({ ok: false, error: 'Not authorised — enter your admin key.' });
+      try {
+        const result = await fn(payload);
+        ack({ ok: true, ...(result || {}) });
+      } catch (err) {
+        ack({ ok: false, error: err?.message || String(err) });
+      }
+    });
+
+  admin('saveSettings', (s) => {
+    const prevUser = settings.username;
+    settings = sanitizeSettings(s);
+    saveSettings();
+    ruleRuntime.clear();
+    socket.broadcast.emit('settings', settings); // other open dashboards
+    io.emit('goal', settings.goal);
+    if (settings.username !== prevUser && wantConnected) connectTikTok();
+    return { settings };
+  });
+
+  admin('tiktokConnect', (username) => {
+    if (typeof username === 'string' && username.trim()) {
+      settings = sanitizeSettings({ ...settings, username });
+      saveSettings();
+      io.emit('settings', settings);
+    }
+    connectTikTok();
+  });
+
+  admin('tiktokDisconnect', () => disconnectTikTok());
+  admin('simulate', (p) => simulate(p));
+  admin('testRule', (id) => {
+    const rule = settings.rules.find((r) => r.id === id);
+    if (!rule) throw new Error('Rule not found');
+    const user = fakeUser();
+    const ev = { type: rule.trigger.type, user, comment: rule.trigger.command || 'test', likes: rule.trigger.every || 100, gift: { name: rule.trigger.giftName || 'Rose', count: 1, coins: rule.trigger.minCoins || 1, image: '' } };
+    fireRule(rule, ev);
+  });
+  admin('speak', (text) => {
+    const t = cleanForSpeech(text);
+    if (t) io.emit('tts', { id: crypto.randomUUID(), text: t });
+  });
+  admin('skipAlert', () => io.emit('control', { cmd: 'skip' }));
+  admin('resetStats', () => {
+    stats = freshStats();
+    feed = [];
+    ruleRuntime.clear();
+    io.emit('stats', publicStats());
+    io.emit('feedReset');
+  });
+});
+
+// ------------------------------------------------------------------- boot --
+
+server.listen(PORT, () => {
+  console.log(`TikTok LIVE Tools running on http://localhost:${PORT}`);
+  if (ADMIN_KEY) console.log('Dashboard is protected by ADMIN_KEY.');
+  else console.log('Tip: set ADMIN_KEY so nobody else can control your dashboard.');
+  if (settings.autoConnect && settings.username) connectTikTok();
+});
+
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, async () => {
+    await teardown();
+    process.exit(0);
+  });
+}

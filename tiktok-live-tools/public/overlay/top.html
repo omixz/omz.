@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top gifters overlay</title>
+<link rel="stylesheet" href="overlay.css">
+<style>
+  /* URL options: ?n=5 ?title=Top%20Gifters */
+  body { padding: 12px; font-size: 20px; }
+  .wrap { background: rgba(0,0,0,.5); border-radius: 16px; padding: 10px 14px; min-width: 240px; }
+  h3 { margin: 0 0 6px; font-size: 1.1em; }
+  .r { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c { color: #ffd84d; font-weight: 800; }
+  .medal { width: 1.4em; text-align: center; }
+</style>
+</head>
+<body class="shadow">
+<div class="wrap"><h3 id="h"></h3><div id="list"></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script>
+  const n = Number(LT.params.get('n') || 5);
+  document.getElementById('h').textContent = LT.params.get('title') || '🏆 Top Gifters';
+  const medals = ['🥇', '🥈', '🥉'];
+  function render(s) {
+    const top = (s.top || []).slice(0, n);
+    document.getElementById('list').innerHTML = top.length
+      ? top.map((u, i) => `<div class="r"><span class="medal">${medals[i] || i + 1}</span>${LT.avatar(u.avatar, u.nickname)}<span class="n">${LT.esc(u.nickname)}</span><span class="c">🪙 ${LT.fmt(u.coins)}</span></div>`).join('')
+      : '<div class="r">Be the first to send a gift!</div>';
+  }
+  const socket = io();
+  socket.on('connect', () => socket.emit('getState', (s) => render(s.stats)));
+  socket.on('stats', render);
+</script>
+</body>
+</html>

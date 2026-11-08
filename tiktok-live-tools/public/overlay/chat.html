@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat overlay</title>
+<link rel="stylesheet" href="overlay.css">
+<style>
+  /* URL options: ?max=12 ?gifts=0 ?follows=0 ?fade=30 (seconds, 0 = never) ?size=20 */
+  body { height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; box-sizing: border-box; }
+  .msg { display: flex; align-items: flex-start; gap: 8px; margin-top: 6px; padding: 6px 10px; border-radius: 12px; background: rgba(0,0,0,.45); animation: in .3s ease-out; transition: opacity 1s; }
+  .msg.gone { opacity: 0; }
+  .name { font-weight: 700; color: #25f4ee; margin-right: 6px; }
+  .gift .name, .gift .body { color: #ffd84d; }
+  .follow .body, .share .body { color: #ff8fab; }
+  .msg img.gi { height: 1.3em; vertical-align: middle; }
+  @keyframes in { from { opacity: 0; transform: translateX(-20px); } }
+</style>
+</head>
+<body class="shadow">
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared/client.js"></script>
+<script>
+  const p = LT.params;
+  const max = Number(p.get('max') || 12), fade = Number(p.get('fade') || 0);
+  const showGifts = p.get('gifts') !== '0', showSocial = p.get('follows') !== '0';
+  document.body.style.fontSize = (p.get('size') || 20) + 'px';
+  function add(ev) {
+    let body;
+    if (ev.type === 'chat') body = LT.esc(ev.comment);
+    else if (ev.type === 'gift' && showGifts) body = `sent ${ev.gift.count}x ${LT.esc(ev.gift.name)} ${ev.gift.image ? `<img class="gi" src="${LT.esc(ev.gift.image)}" referrerpolicy="no-referrer">` : '🎁'}`;
+    else if (ev.type === 'follow' && showSocial) body = 'followed ❤️';
+    else if (ev.type === 'share' && showSocial) body = 'shared the LIVE 🔁';
+    else return;
+    const d = document.createElement('div');
+    d.className = 'msg ' + ev.type;
+    d.innerHTML = `${LT.avatar(ev.user.avatar, ev.user.nickname)}<div><span class="name">${LT.esc(ev.user.nickname)}</span><span class="body">${body}</span></div>`;
+    document.body.appendChild(d);
+    while (document.body.querySelectorAll('.msg').length > max) document.body.querySelector('.msg').remove();
+    if (fade) setTimeout(() => { d.classList.add('gone'); setTimeout(() => d.remove(), 1000); }, fade * 1000);
+  }
+  const socket = io();
+  socket.on('connect', () => socket.emit('getState', (s) => { document.querySelectorAll('.msg').forEach((m) => m.remove()); s.feed.slice(-max).forEach(add); }));
+  socket.on('event', add);
+  socket.on('feedReset', () => document.querySelectorAll('.msg').forEach((m) => m.remove()));
+</script>
+</body>
+</html>

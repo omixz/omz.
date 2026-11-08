@@ -1,0 +1,5 @@
+/* Overlays are transparent so they sit on top of your stream in OBS / LIVE Studio. */
+html, body { margin: 0; background: transparent; overflow: hidden; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; color: #fff; }
+.av { width: 1.6em; height: 1.6em; border-radius: 50%; object-fit: cover; flex: none; }
+.av-fallback { display: inline-grid; place-items: center; background: linear-gradient(135deg, #fe2c55, #25f4ee); font-weight: 700; font-size: .8em; }
+.shadow { text-shadow: 0 2px 4px rgba(0,0,0,.8), 0 0 2px #000; }
