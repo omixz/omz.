@@ -4,6 +4,7 @@ import { readTags, parseName, MIME, extOf, isAudio } from './tags.js';
 import * as au from './audius.js';
 import * as sync from './sync.js';
 import * as sc from './soundcloud.js';
+import * as yt from './youtube.js';
 
 /* ================= helpers ================= */
 const $ = (s, r = document) => r.querySelector(s);
@@ -118,6 +119,7 @@ const S = {
   shuffle: false, repeat: 'off', // off | all | one
   from: { label: 'Home', href: '#/home' },
   recent: [],
+  recs: new Set(), // songs smart shuffle added to the queue
 };
 let likes = {};    // track id -> +time liked / -time unliked (used to merge across devices)
 let scDeleted = {}; // removed SoundCloud song id -> time removed
@@ -127,9 +129,13 @@ const coverURL = new Map();
 let lists = {}, froms = {};
 const isRemote = (t) => t?.source === 'audius';
 const isSC = (t) => t?.source === 'soundcloud';
-const isFile = (t) => !!t && !isRemote(t) && !isSC(t);
-const urlArt = (t) => isRemote(t) || isSC(t);
-const albumKey = (t) => (isRemote(t) ? 'au:' + t.rid : isSC(t) ? 'sc:' + t.id : `${t.albumArtist || t.artist}\u001f${t.album}`);
+const isYT = (t) => t?.source === 'youtube';
+// Streamed catalog songs: only kept on the device once you play, like or add them somewhere.
+const isStream = (t) => isRemote(t) || isYT(t);
+const isFile = (t) => !!t && !isRemote(t) && !isSC(t) && !isYT(t);
+const urlArt = (t) => isRemote(t) || isSC(t) || isYT(t);
+const albumKey = (t) => (isRemote(t) ? 'au:' + t.rid : isSC(t) || isYT(t) ? t.id : `${t.albumArtist || t.artist}\u001f${t.album}`);
+const sourceURL = (t) => t.permalink || (isYT(t) ? (t.vid ? 'https://www.youtube.com/watch?v=' + t.vid : 'https://www.youtube.com/results?search_query=' + enc(`${t.artist} ${t.title}`)) : '');
 const current = () => S.tracks.get(S.queue[S.qi]);
 
 function ingest(list) {
@@ -143,21 +149,22 @@ function ingest(list) {
 // Keep catalog songs on this device once they're part of your queue, likes or playlists.
 async function keep(ids) {
   const out = [];
-  for (const id of ids) { const t = S.tracks.get(id); if (isRemote(t) && !t._saved) { t._saved = true; if (!t.addedAt) t.addedAt = Date.now(); out.push({ ...t, _saved: undefined }); } }
+  for (const id of ids) { const t = S.tracks.get(id); if (isStream(t) && !t._saved) { t._saved = true; if (!t.addedAt) t.addedAt = Date.now(); out.push({ ...t, _saved: undefined }); } }
   if (out.length) await idb.putMany('tracks', out).catch(() => {});
 }
 
 function persist() {
   lsSet('tempo:state', {
     queue: S.queue, qi: S.qi, order: S.order, shuffle: S.shuffle, repeat: S.repeat, from: S.from,
-    recent: S.recent, time: loadedId ? P.time() : pendingSeek, vol: audio.volume, muted: audio.muted,
+    recent: S.recent, recs: [...S.recs], time: loadedId ? P.time() : pendingSeek, vol: audio.volume, muted: audio.muted,
   });
 }
 function restore() {
   const st = lsGet('tempo:state', null);
   if (!st) return;
   const ok = (id) => S.tracks.has(id);
-  S.shuffle = !!st.shuffle; S.repeat = ['off', 'all', 'one'].includes(st.repeat) ? st.repeat : 'off';
+  S.shuffle = st.shuffle === 'smart' ? 'smart' : !!st.shuffle;
+  S.recs = new Set((st.recs || []).filter(ok)); S.repeat = ['off', 'all', 'one'].includes(st.repeat) ? st.repeat : 'off';
   S.recent = (st.recent || []).filter(ok);
   if (st.from) S.from = st.from;
   const cur = st.queue?.[st.qi];
@@ -207,7 +214,7 @@ async function setArt(el, t) {
 
 /* ================= grouping ================= */
 // "Your library" = your own files + catalog songs you've liked.
-const libTracks = () => [...S.tracks.values()].filter((t) => !isRemote(t) || t.liked);
+const libTracks = () => [...S.tracks.values()].filter((t) => !isStream(t) || t.liked || t.inLib);
 const localTracks = () => [...S.tracks.values()].filter(isFile);
 function getAlbums() {
   const m = new Map();
@@ -236,14 +243,14 @@ function getArtists() {
 const likedTracks = () => [...S.tracks.values()].filter((t) => t.liked).sort((a, b) => (b.likedAt || 0) - (a.likedAt || 0));
 const plTracks = (pl) => pl.ids.map((id) => S.tracks.get(id)).filter(Boolean);
 const totalDur = (ts) => ts.reduce((s, t) => s + (t.duration || 0), 0);
-const artistHref = (t) => (isRemote(t) ? `#/a/${enc(t.artistId)}` : `#/artist/${enc(t.artist)}`);
+const artistHref = (t) => (isRemote(t) ? `#/a/${enc(t.artistId)}` : isYT(t) ? `#/search/${enc(t.artist.split(',')[0])}` : `#/artist/${enc(t.artist)}`);
 
 /* ================= templates ================= */
 function row(t, i, ctx, o = {}) {
-  const albumCol = isRemote(t) ? `<span>${esc(t.genre || 'Single')}</span>` : isSC(t) ? '<span>SoundCloud</span>' : `<a href="#/album/${enc(albumKey(t))}" data-act="go">${esc(t.album)}</a>`;
+  const albumCol = isRemote(t) ? `<span>${esc(t.genre || 'Single')}</span>` : isSC(t) ? '<span>SoundCloud</span>' : isYT(t) ? `<span>${t.from ? esc(t.from) + ' → ' : ''}YouTube</span>` : `<a href="#/album/${enc(albumKey(t))}" data-act="go">${esc(t.album)}</a>`;
   return `<div class="row" data-act="play" data-ctx="${esc(ctx)}" data-i="${i}" data-id="${esc(t.id)}">
     <span class="idx"><span class="n">${o.album ? (t.track || i + 1) : i + 1}</span><span class="eq"><i></i><i></i><i></i></span></span>
-    <div class="lead">${o.album ? '' : trackArt(t, 'xs')}<div class="meta"><div class="ttl">${esc(t.title)}</div><div class="sub"><a href="${artistHref(t)}" data-act="go">${esc(t.artist)}</a></div></div></div>
+    <div class="lead">${o.album ? '' : trackArt(t, 'xs')}<div class="meta"><div class="ttl">${esc(t.title)}</div><div class="sub">${S.recs.has(t.id) && (ctx === 'queue' || ctx.startsWith('pl:')) ? '<span class="rec">✦ Recommended</span> ' : ''}<a href="${artistHref(t)}" data-act="go">${esc(t.artist)}</a></div></div></div>
     <div class="col-alb">${albumCol}</div>
     <button class="ib like ${t.liked ? 'on' : ''}" data-act="like" data-id="${esc(t.id)}" aria-label="${t.liked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}">${icon(t.liked ? 'heartFill' : 'heart')}</button>
     <span class="dur">${t.duration ? fmt(t.duration) : '–'}</span>
@@ -298,11 +305,11 @@ function vHome() {
   const recent = S.recent.map((id) => S.tracks.get(id)).filter(Boolean);
   const seen = new Set(); const quickItems = [];
   for (const t of recent) {
-    const k = isRemote(t) ? 'a:' + t.artistId : albumKey(t);
+    const k = isFile(t) ? albumKey(t) : 'a:' + (t.artistId || t.artist);
     if (seen.has(k)) continue; seen.add(k);
-    quickItems.push(isRemote(t)
-      ? `<div class="q" data-act="nav" data-href="#/a/${enc(t.artistId)}">${trackArt(t, '')}<span class="l">${esc(t.artist)}</span></div>`
-      : `<div class="q" data-act="nav" data-href="#/album/${enc(albumKey(t))}">${trackArt(t, '')}<span class="l">${esc(t.album)}</span></div>`);
+    quickItems.push(isFile(t)
+      ? `<div class="q" data-act="nav" data-href="#/album/${enc(albumKey(t))}">${trackArt(t, '')}<span class="l">${esc(t.album)}</span></div>`
+      : `<div class="q" data-act="nav" data-href="${artistHref(t)}">${trackArt(t, '')}<span class="l">${esc(t.artist)}</span></div>`);
     if (quickItems.length >= 4) break;
   }
   const pls = [...S.playlists.values()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 2);
@@ -316,6 +323,11 @@ function vHome() {
     ${installBanner()}
     <div class="view-head"><h1>${greet}</h1><a class="ib m-only acct" href="#/account" aria-label="Account">${user ? `<span class="avatar">${esc(user.email[0].toUpperCase())}</span>` : icon('user')}</a></div>
     <div class="quick">${quick.join('')}</div>
+    <div class="dj-card" data-act="dj" role="button" tabindex="0">
+      <div class="dj-orb"><span></span></div>
+      <div class="dj-text"><b>${DJ_NAME}</b><p>Your personal DJ. Plays what you love, mixes in new finds and talks you through it.</p></div>
+      <button class="fab" data-act="dj" aria-label="Start ${DJ_NAME}">${icon('play')}</button>
+    </div>
     ${recent.length ? `<section class="sec"><div class="sec-head"><h2>Recently played</h2></div>${trackList(recent.slice(0, 6), 'recent', { from: { label: 'Recently played', href: '#/home' }, noHead: true })}</section>` : ''}
     <section class="sec"><div class="sec-head"><h2>Trending this week</h2><a href="#/genre/">Show all</a></div>${asyncBox('trending')}</section>
     <section class="sec"><div class="sec-head"><h2>Popular playlists</h2></div>${asyncBox('trendingPl', '', shelfLoading())}</section>
@@ -342,14 +354,19 @@ function vSearch() {
 }
 function searchResults() {
   const q = searchQ.trim().toLowerCase();
-  if (sc.isLink(searchQ)) return `<div class="banner big">${icon('link')}<p><b>That's a SoundCloud link.</b><br>Add the song to your library to play it here.</p><button class="btn primary" data-act="addSC" data-link="${esc(searchQ.trim())}">Add song</button></div>`;
-  if (!q) return `<div class="banner">${icon('link')}<p>Found an unreleased song on SoundCloud? Paste its link here or <button class="linkbtn" data-act="addSC">add a SoundCloud link</button>.</p></div><section class="sec"><h2>Browse all</h2>${genreGrid(au.GENRES)}</section>`;
+  const link = searchQ.trim();
+  if (/open\.spotify\.com\//.test(link) || yt.isPlaylistLink(link) || (sc.isLink(link) && sc.isCollectionLink(link)))
+    return `<div class="banner big">${icon('download')}<p><b>That's a playlist link.</b><br>Import it to rebuild it as a playlist in Tempo.</p><button class="btn primary" data-act="importPl" data-link="${esc(link)}">Import playlist</button></div>`;
+  if (sc.isLink(link)) return `<div class="banner big">${icon('link')}<p><b>That's a SoundCloud link.</b><br>Add the song to your library to play it here.</p><button class="btn primary" data-act="addSC" data-link="${esc(link)}">Add song</button></div>`;
+  if (yt.isLink(link) && yt.videoId(link)) return `<div class="banner big">${icon('link')}<p><b>That's a YouTube link.</b><br>Add the song to your library to play it here.</p><button class="btn primary" data-act="addYT" data-link="${esc(link)}">Add song</button></div>`;
+  if (!q) return `<div class="banner">${icon('link')}<p>Paste a Spotify, YouTube, YouTube Music or SoundCloud link here to add a song or import a whole playlist.</p></div><section class="sec"><h2>Browse all</h2>${genreGrid(au.GENRES)}</section>`;
   const words = q.split(/\s+/);
   const hit = (s) => words.every((w) => s.includes(w));
   const songs = libTracks().filter((t) => hit(`${t.title} ${t.artist} ${t.album} ${t.genre}`.toLowerCase())).sort(byText('title'));
   const albums = getAlbums().filter((a) => hit(`${a.name} ${a.artist}`.toLowerCase()));
   return `${songs.length ? `<section class="sec"><div class="sec-head"><h2>In your library</h2></div>${trackList(songs.slice(0, 8), 'searchLib', { from: { label: `Search: ${searchQ}`, href: '#/search' }, noHead: true })}</section>` : ''}
     ${albums.length ? `<section class="sec"><div class="sec-head"><h2>Your albums</h2></div><div class="shelf">${albums.map(albumCard).join('')}</div></section>` : ''}
+    <div id="ytResults">${ytSearchState === searchQ.trim() ? '' : ytSearchOn ? `<div class="banner">${icon('search')}<p>Not finding it? Search all of YouTube for “${esc(searchQ.trim())}”.</p><button class="btn" data-act="ytSearch">Search YouTube</button></div>` : ''}</div>
     ${asyncBox('search', searchQ.trim(), `<section class="sec"><h2>Songs</h2>${loading(6)}</section>`)}`;
 }
 function vLibrary(tab) {
@@ -372,7 +389,7 @@ function vLibrary(tab) {
       <div class="card new" data-act="newPlaylist"><div class="art md">${icon('plus')}</div><div class="ttl">New playlist</div><div class="sub">Build your own mix</div></div></div>`;
   }
   return `<div class="view">
-    <div class="view-head"><h1>Your Library</h1><div class="head-btns"><button class="btn" data-act="addSC">${icon('link')}SoundCloud link</button><button class="btn" data-act="import">${icon('plus')}Add files</button></div></div>
+    <div class="view-head"><h1>Your Library</h1><div class="head-btns"><button class="btn" data-act="importPl">${icon('download')}Import playlist</button><button class="btn" data-act="addSC">${icon('link')}SoundCloud link</button><button class="btn" data-act="import">${icon('plus')}Add files</button></div></div>
     <div class="chips">${tabs.map(([k, l]) => `<a class="chip ${k === tab ? 'on' : ''}" href="#/library/${k}">${l}</a>`).join('')}</div>
     ${body}</div>`;
 }
@@ -386,7 +403,7 @@ function vAlbum(key) {
     ${trackList(a.tracks, 'album', { album: true, from: { label: a.name, href: `#/album/${enc(a.key)}` } })}</div>`;
 }
 function vArtist(name) {
-  const tracks = libTracks().filter((t) => !isRemote(t) && t.artist === name);
+  const tracks = libTracks().filter((t) => !isRemote(t) && !isYT(t) && t.artist === name);
   if (!tracks.length) return vMissing('artist');
   const albums = getAlbums().filter((al) => al.tracks.some((t) => t.artist === name) || al.artist === name).sort((x, y) => (y.year || 0) - (x.year || 0));
   const popular = [...tracks].sort((x, y) => (y.plays || 0) - (x.plays || 0) || byText('title')(x, y)).slice(0, 5);
@@ -394,7 +411,7 @@ function vArtist(name) {
   const from = { label: name, href: `#/artist/${enc(name)}` };
   lists.artistAll = all.map((t) => t.id); froms.artistAll = from;
   const k = albumKey(tracks.find((t) => coverKeys.has(albumKey(t))) || tracks[0]);
-  const scPic = tracks.find(isSC)?.art480 || '';
+  const scPic = tracks.find(urlArt)?.art480 || '';
   return `<div class="view" style="--h:${hue(k)}"><div class="hero-grad"></div>${backBtn()}
     <div class="dhead">${art(k, name, 'lg round', coverKeys.has(k) ? '' : scPic)}<div class="info"><small>Artist</small><h1>${esc(name)}</h1>
       <div class="by">${plural(tracks.length, 'song')} · ${plural(albums.length, 'album')}</div></div></div>
@@ -411,7 +428,7 @@ function vPlaylist(id) {
   const ts = plTracks(p);
   const key = ts[0] ? albumKey(ts[0]) : 'pl' + p.id;
   return `<div class="view" style="--h:${hue(key)}"><div class="hero-grad"></div>${backBtn()}
-    <div class="dhead">${plCover(p, 'lg')}<div class="info"><small>Playlist</small><h1>${esc(p.name)}</h1>
+    <div class="dhead">${plCover(p, 'lg')}<div class="info"><small>Playlist${p.from ? ' · imported from ' + esc(p.from) : ''}</small><h1>${esc(p.name)}</h1>
       <div class="by">${plural(ts.length, 'song')}${ts.length ? `, ${fmtLong(totalDur(ts))}` : ''}</div></div></div>
     ${ts.length ? playActions('pl:' + p.id, `<button class="ib big" data-act="plRename" data-pl="${p.id}" aria-label="Rename">${icon('edit')}</button><button class="ib big" data-act="plDelete" data-pl="${p.id}" aria-label="Delete playlist">${icon('trash')}</button>`)
       : `<div class="actions"><button class="btn" data-act="plRename" data-pl="${p.id}">${icon('edit')}Rename</button><button class="btn" data-act="plDelete" data-pl="${p.id}">${icon('trash')}Delete</button></div>`}
@@ -460,6 +477,12 @@ function vAccount() {
       <div class="auth-btns"><button class="btn" data-act="syncNow">${icon('cloud')}Sync now</button><button class="btn ghost" data-act="signOut">Sign out</button></div></div>`;
   }
   return `<div class="view">${backBtn()}<div class="view-head"><h1>Account</h1></div>${body}
+    <div class="panel"><h2>Music services</h2>
+      <div class="svc"><div><b>Import playlists</b><p class="muted">Bring in playlists from Spotify, YouTube, YouTube Music or SoundCloud.</p></div><button class="btn" data-act="importPl">${icon('download')}Import</button></div>
+      <div class="svc"><div><b>SoundCloud</b><p class="muted">${lsGet('tempo:scProfile', '') ? `Linked: ${esc(lsGet('tempo:scProfile', '').replace(/^https?:\/\/(www\.)?/, ''))}` : 'Link your profile to bring in your uploads. You can also import any SoundCloud playlist.'}</p></div><button class="btn" data-act="linkSC">${icon('link')}${lsGet('tempo:scProfile', '') ? 'Refresh' : 'Link'}</button></div>
+      <div class="svc"><div><b>YouTube</b><p class="muted">${ytSearchOn ? `${icon('check')} Search is on. Imported Spotify songs play from YouTube.` : yt.hasServer() ? 'Search is off. Add a free YouTube API key to this deployment to search YouTube and play imported Spotify songs (README, step 3).' : 'Search needs the online version of Tempo plus a free YouTube API key (README, step 3). You can still paste YouTube links.'}</p></div></div>
+      <div class="svc"><div><b>${DJ_NAME}'s voice</b><p class="muted">The DJ talks between songs using your device's built-in voice.</p></div><button class="btn" data-act="djVoice">${DJ.voice ? 'Turn off' : 'Turn on'}</button></div>
+    </div>
     <div class="panel"><h2>On this device</h2><p class="muted">${plural(localCount, 'music file')} · ${plural(likedTracks().length, 'liked song')} · ${plural(S.playlists.size, 'playlist')}<br><span id="storageLine"></span></p>
       <div class="auth-btns"><button class="btn" data-act="import">${icon('upload')}Add music files</button>${installEvt ? `<button class="btn" data-act="install">${icon('download')}Install app</button>` : ''}</div></div>
     <p class="credit">Catalog streaming from <a href="https://audius.co" target="_blank" rel="noopener">Audius</a>.</p></div>`;
@@ -535,12 +558,12 @@ const main = $('#main');
 function render(keepScroll = false) {
   const top = main.scrollTop;
   const { name, arg } = route();
-  if (keepScroll && name === 'search' && $('#q') && $('#results')) { updateSearch(); return; }
+  if (keepScroll && name === 'search' && $('#q') && $('#results') && !arg) { updateSearch(); return; }
   renderSeq++;
   lists = {}; froms = {};
   let html;
   switch (name) {
-    case 'search': html = vSearch(); break;
+    case 'search': if (arg) searchQ = arg; html = vSearch(); break;
     case 'library': html = vLibrary(arg || 'playlists'); break;
     case 'album': html = vAlbum(arg); break;
     case 'artist': html = vArtist(arg); break;
@@ -596,25 +619,50 @@ const refresh = () => { render(true); renderSidebar(); };
 const audio = $('#audio');
 let curURL = null, loadedId = null, pendingSeek = 0, loadToken = 0, errCount = 0, unlocked = false, silent = false;
 let pre = { id: null, url: null };
-// Two players: the <audio> element (files + Audius) and SoundCloud's embedded player.
+// Three players: the <audio> element (your files + Audius), SoundCloud's embedded
+// player and YouTube's embedded player. P always talks to whichever one is active.
 let engine = 'audio';
-const scState = { paused: true, time: 0, dur: 0 };
+const emb = { paused: true, time: 0, dur: 0 };
+const ENG = {
+  audio: { paused: () => audio.paused, time: () => audio.currentTime, dur: () => audio.duration, seek: (t) => { audio.currentTime = t; }, play: () => audio.play().catch(() => {}), pause: () => audio.pause(), volume: () => {} },
+  sc: { paused: () => emb.paused, time: () => emb.time, dur: () => emb.dur, seek: (t) => { emb.time = t; sc.seek(t); updateTime(); }, play: () => sc.play(), pause: () => { sc.pause(); emb.paused = true; updatePlayUI(); }, volume: (v) => sc.volume(v) },
+  yt: { paused: () => emb.paused, time: () => emb.time, dur: () => emb.dur, seek: (t) => { emb.time = t; yt.seek(t); updateTime(); }, play: () => yt.play(), pause: () => { yt.pause(); emb.paused = true; updatePlayUI(); }, volume: (v) => yt.volume(v) },
+};
 const P = {
-  paused: () => (engine === 'sc' ? scState.paused : audio.paused),
-  time: () => (engine === 'sc' ? scState.time : audio.currentTime),
-  dur: () => (engine === 'sc' ? scState.dur : audio.duration),
-  seek: (t) => { if (engine === 'sc') { scState.time = t; sc.seek(t); updateTime(); } else audio.currentTime = t; },
-  play: () => (engine === 'sc' ? sc.play() : audio.play().catch(() => {})),
-  pause: () => (engine === 'sc' ? sc.pause() : audio.pause()),
+  paused: () => ENG[engine].paused(), time: () => ENG[engine].time(), dur: () => ENG[engine].dur(),
+  seek: (t) => ENG[engine].seek(t), play: () => ENG[engine].play(), pause: () => ENG[engine].pause(),
 };
-let lastScSave = 0;
-const scEvents = {
-  play: () => { scState.paused = false; errCount = 0; updatePlayUI(); },
-  pause: () => { scState.paused = true; updatePlayUI(); },
-  finish: () => { scState.paused = true; next(true); },
-  progress: (t) => { scState.time = t; updateTime(); if (Date.now() - lastScSave > 4000) { lastScSave = Date.now(); persist(); } },
-  error: () => { toast("SoundCloud couldn't play this song"); if (++errCount < 3 && S.queue.length > 1) setTimeout(() => next(true), 900); },
+const setVolumeAll = () => { const v = audio.muted ? 0 : audio.volume; ENG.sc.volume(v); ENG.yt.volume(v); };
+let lastEmbSave = 0;
+const embEvents = {
+  play: () => { emb.paused = false; errCount = 0; updatePlayUI(); },
+  pause: () => { emb.paused = true; updatePlayUI(); },
+  finish: () => { emb.paused = true; next(true); },
+  progress: (t, d) => { emb.time = t; if (d) emb.dur = d; updateTime(); if (Date.now() - lastEmbSave > 4000) { lastEmbSave = Date.now(); persist(); } },
+  error: (code) => {
+    const t = current();
+    // YouTube: the owner blocked embedding or removed it. For matched songs, try the next-best video.
+    if (engine === 'yt' && isYT(t) && t.q && [100, 101, 150].includes(code) && (t.bad?.length || 0) < 3) {
+      t.bad = [...(t.bad || []), t.vid]; t.vid = ''; load(t.id); return;
+    }
+    toast(engine === 'yt' ? `YouTube won't play “${t?.title}” here` : "SoundCloud couldn't play this song");
+    if (++errCount < 3 && S.queue.length > 1) setTimeout(() => next(true), 900);
+  },
 };
+function switchEngine(kind) {
+  if (engine !== kind) {
+    if (engine === 'audio') { audio.pause(); revoke(curURL); curURL = null; audio.removeAttribute('src'); }
+    else if (engine === 'sc') sc.pause();
+    else if (engine === 'yt') yt.stop();
+    engine = kind;
+  }
+  const box = $('#embedBox');
+  box.hidden = kind === 'audio';
+  box.dataset.kind = kind;
+  $('#embedLabel').textContent = kind === 'yt' ? 'Playing from YouTube' : 'Playing from SoundCloud';
+  $('#scFrame').hidden = kind !== 'sc'; $('#ytFrame').hidden = kind !== 'yt';
+  document.body.dataset.engine = kind;
+}
 
 function silentURL() {
   const n = 800, b = new ArrayBuffer(44 + n), v = new DataView(b);
@@ -639,9 +687,9 @@ async function load(id, autoplay = true, seek = 0) {
   const tok = ++loadToken;
   const t = S.tracks.get(id);
   if (!t) return;
-  if (isSC(t)) return loadSC(t, tok, autoplay, seek);
-  if (engine === 'sc') { sc.pause(); scState.paused = true; $('#scBox').hidden = true; }
-  engine = 'audio';
+  if (autoplay && DJ.on && DJ.lines.has(id)) { await djSpeak(id); if (tok !== loadToken) return; }
+  if (isSC(t)) return loadEmbed('sc', t, tok, autoplay, seek);
+  if (isYT(t)) return loadEmbed('yt', t, tok, autoplay, seek);
   let url;
   if (isRemote(t)) url = au.streamURL(t.rid);
   else if (pre.id === id) { url = pre.url; pre = { id: null, url: null }; }
@@ -651,13 +699,18 @@ async function load(id, autoplay = true, seek = 0) {
     if (!blob) { toast(`“${t.title}” isn't on this device`); if (autoplay && S.queue.length > 1 && ++errCount < 5) next(true); return; }
     url = URL.createObjectURL(blob);
   }
+  return loadAudio(t, url, tok, autoplay, seek);
+}
+async function loadAudio(t, url, tok, autoplay, seek) {
+  switchEngine('audio');
   if (curURL !== url) revoke(curURL);
-  curURL = url; loadedId = id; silent = false; pendingSeek = 0;
+  curURL = url; loadedId = t.id; silent = false; pendingSeek = 0;
   audio.src = url;
   if (seek > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(seek, (audio.duration || seek + 1) - 0.5); }, { once: true });
   updateTrackUI();
   if (autoplay) {
     try { await audio.play(); } catch (e) { if (e.name === 'NotAllowedError') toast('Tap play to start'); }
+    if (tok !== loadToken) return;
     countPlay(t);
   }
   persist();
@@ -665,24 +718,61 @@ async function load(id, autoplay = true, seek = 0) {
 }
 function countPlay(t) {
   t.plays = (t.plays || 0) + 1; t.lastPlayed = Date.now();
-  if (!isRemote(t) || t._saved) saveTrack(t);
+  if (!isStream(t) || t._saved) saveTrack(t);
   S.recent = [t.id, ...S.recent.filter((x) => x !== t.id)].slice(0, 50);
+  if (DJ.on && S.qi >= S.queue.length - 2) djExtend();
 }
-async function loadSC(t, tok, autoplay, seek) {
-  if (engine === 'audio') { audio.pause(); revoke(curURL); curURL = null; audio.removeAttribute('src'); }
-  engine = 'sc'; loadedId = t.id; silent = false; pendingSeek = 0;
-  Object.assign(scState, { paused: !autoplay, time: seek || 0, dur: t.duration || 0 });
-  $('#scBox').hidden = false;
+// Songs imported from Spotify etc. only have a title + artist. Find the matching YouTube video.
+async function resolveYT(t) {
+  if (t.vid) return t.vid;
+  if (!(await yt.searchEnabled())) return null;
+  const results = (await yt.search(`${t.artist.split(',')[0]} ${t.title}`)).filter((r) => !(t.bad || []).includes(r.vid));
+  const m = yt.bestMatch(results, t.title, t.artist, t.duration);
+  if (!m || yt.quality(m, t.title, t.artist) < 0.5) return null;
+  Object.assign(t, { vid: m.vid, permalink: 'https://www.youtube.com/watch?v=' + m.vid });
+  if (!t.art480) Object.assign(t, { art150: m.art, art480: m.art, art1000: m.art });
+  if (!t.duration) t.duration = m.duration;
+  if (t._saved || t.liked) { saveTrack(t); changed(); }
+  return t.vid;
+}
+// Without YouTube search, try to find the same song on Audius instead.
+async function audiusMatch(t) {
+  if (t.alt) return t.alt;
+  const res = await au.searchTracks(`${t.artist.split(',')[0]} ${t.title}`).catch(() => []);
+  const scored = res.map((r) => ({ r, q: yt.quality(r, t.title, t.artist) })).sort((x, y) => y.q - x.q);
+  if (!scored.length || scored[0].q < 0.75) return null;
+  t.alt = scored[0].r.rid;
+  return t.alt;
+}
+async function loadEmbed(kind, t, tok, autoplay, seek) {
+  let vid = null;
+  if (kind === 'yt') {
+    updateTrackUI(t);
+    try { vid = await resolveYT(t); } catch (e) { console.warn('YouTube lookup failed', e); }
+    if (tok !== loadToken) return;
+    if (!vid) {
+      const alt = await audiusMatch(t);
+      if (tok !== loadToken) return;
+      if (alt) return loadAudio(t, au.streamURL(alt), tok, autoplay, seek);
+      toast((await yt.searchEnabled()) ? `Couldn't find “${t.title}” on YouTube` : `Can't play “${t.title}” yet. Turn on YouTube search to play imported songs (see Account)`, 4000);
+      if (autoplay && S.queue.length > 1 && ++errCount < 5) setTimeout(() => next(true), 700);
+      return;
+    }
+  }
+  switchEngine(kind);
+  loadedId = t.id; silent = false; pendingSeek = 0;
+  // stays "paused" until the player confirms it started (the PLAY event)
+  Object.assign(emb, { paused: true, time: seek || 0, dur: t.duration || 0 });
   updateTrackUI();
   try {
-    const d = await sc.load($('#scFrame'), scEvents, t.url, autoplay);
+    const d = kind === 'sc' ? await sc.load($('#scFrame'), embEvents, t.url, autoplay) : await yt.load($('#ytFrame'), embEvents, vid, autoplay, seek);
     if (tok !== loadToken) return;
-    sc.volume(audio.muted ? 0 : audio.volume);
-    if (d && Math.abs((t.duration || 0) - d) > 1) { t.duration = d; saveTrack(t); }
-    scState.dur = d || t.duration;
-    if (seek > 0) P.seek(seek);
+    setVolumeAll();
+    if (d && Math.abs((t.duration || 0) - d) > 1) { t.duration = d; if (!isStream(t) || t._saved) saveTrack(t); }
+    emb.dur = d || t.duration;
+    if (kind === 'sc' && seek > 0) P.seek(seek);
     updateTime();
-  } catch (e) { toast(e.message || "Couldn't load SoundCloud"); return; }
+  } catch (e) { toast(e.message || "Couldn't load the player"); return; }
   if (autoplay) countPlay(t);
   persist();
 }
@@ -705,16 +795,19 @@ function playList(ids, i = 0, from) {
   if (!ids?.length) return;
   i = Math.max(0, Math.min(i, ids.length - 1));
   if (from) S.from = from;
+  if (DJ.on && from?.label !== DJ_NAME) stopDJ();
+  S.recs.clear();
   keep(ids);
   if (S.shuffle) {
     S.order = ids.slice();
     S.queue = [ids[i], ...shuffleArr(ids.filter((_, j) => j !== i))]; S.qi = 0;
   } else { S.queue = ids.slice(); S.order = null; S.qi = i; }
   load(S.queue[S.qi]);
+  if (S.shuffle === 'smart') smartFill();
 }
 function shufflePlay(ids, from) {
   if (!ids?.length) return;
-  if (!S.shuffle) { S.shuffle = true; updateModesUI(); }
+  if (!S.shuffle) { S.shuffle = lsGet('tempo:smartDefault', false) ? 'smart' : true; updateModesUI(); }
   playList(ids, Math.floor(Math.random() * ids.length), from);
 }
 function togglePlay() {
@@ -742,18 +835,21 @@ function prev() {
   load(S.queue[S.qi]);
 }
 function toggleShuffle() {
-  S.shuffle = !S.shuffle;
+  const was = S.shuffle;
+  S.shuffle = !was ? true : was === true ? 'smart' : false;
   if (S.queue.length) {
     const cur = S.queue[S.qi];
-    if (S.shuffle) {
+    if (S.shuffle === true) {
       S.order = S.queue.slice();
       S.queue = [cur, ...shuffleArr(S.queue.filter((_, j) => j !== S.qi))]; S.qi = 0;
-    } else if (S.order) {
-      S.queue = S.order; S.order = null; S.qi = Math.max(0, S.queue.indexOf(cur));
+    } else if (!S.shuffle) {
+      dropRecs();
+      if (S.order) { S.queue = S.order.filter((id) => S.tracks.has(id)); S.order = null; S.qi = Math.max(0, S.queue.indexOf(cur)); }
     }
   }
-  toast(S.shuffle ? 'Shuffle on' : 'Shuffle off');
+  toast(S.shuffle === 'smart' ? 'Smart shuffle on: mixing in songs picked for you' : S.shuffle ? 'Shuffle on' : 'Shuffle off');
   updateModesUI(); persist(); prefetchNext();
+  if (S.shuffle === 'smart') smartFill();
   if (route().name === 'queue') render(true);
 }
 function cycleRepeat() {
@@ -792,7 +888,7 @@ audio.addEventListener('loadedmetadata', () => {
   const t = S.tracks.get(loadedId);
   if (t && isFinite(audio.duration) && Math.abs((t.duration || 0) - audio.duration) > 1) {
     t.duration = audio.duration;
-    if (!isRemote(t) || t._saved) saveTrack(t);
+    if (!isStream(t) || t._saved) saveTrack(t);
   }
   updateTime();
 });
@@ -833,7 +929,7 @@ function updatePlayUI() {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = loadedId ? (playing ? 'playing' : 'paused') : 'none';
 }
 function updateModesUI() {
-  $$('[data-act=shuffle]').forEach((b) => b.classList.toggle('on', S.shuffle));
+  $$('[data-act=shuffle]').forEach((b) => { b.classList.toggle('on', !!S.shuffle); b.classList.toggle('smart', S.shuffle === 'smart'); b.setAttribute('aria-label', S.shuffle === 'smart' ? 'Smart shuffle (on)' : S.shuffle ? 'Shuffle (on)' : 'Shuffle'); });
   $$('[data-act=repeat]').forEach((b) => { b.classList.toggle('on', S.repeat !== 'off'); b.innerHTML = icon(S.repeat === 'one' ? 'repeatOne' : 'repeat'); });
 }
 function updateLikeUI() {
@@ -853,8 +949,10 @@ async function updateTrackUI() {
   $('#npFrom').textContent = S.from?.label || 'Your Library';
   $('#npFrom').href = S.from?.href || '#/home';
   $('#npSource').hidden = isFile(t);
-  $('#npSource').href = t.permalink || 'https://audius.co';
-  $('#npSource').textContent = isSC(t) ? 'Listen on SoundCloud ↗' : 'Listen on Audius ↗';
+  $('#npSource').href = sourceURL(t) || 'https://audius.co';
+  $('#npSource').textContent = isSC(t) ? 'Listen on SoundCloud ↗' : isYT(t) ? 'Watch on YouTube ↗' : 'Listen on Audius ↗';
+  $('#npDJ').hidden = !DJ.on; $('#djPill').hidden = !DJ.on;
+  $('#npRec').hidden = !S.recs.has(t.id);
   $('#player').style.setProperty('--h', hue(k));
   setArt($('#pArt'), t); setArt($('#npArt'), t);
   const bg = $('#npBg');
@@ -896,7 +994,7 @@ async function toggleLike(id) {
   t.liked = !t.liked; t.likedAt = t.liked ? Date.now() : 0;
   likes[id] = t.liked ? t.likedAt : -Date.now();
   lsSet('tempo:likes', likes);
-  if (isRemote(t)) { t._saved = true; if (!t.addedAt) t.addedAt = Date.now(); }
+  if (isStream(t)) { t._saved = true; if (!t.addedAt) t.addedAt = Date.now(); }
   await saveTrack(t);
   $$(`.like[data-id="${CSS.escape(id)}"]`).forEach((b) => { b.classList.toggle('on', t.liked); b.innerHTML = icon(t.liked ? 'heartFill' : 'heart'); });
   updateLikeUI();
@@ -949,7 +1047,7 @@ async function deletePlaylist(p) {
   changed();
 }
 async function deleteTrack(id) {
-  const t = S.tracks.get(id); if (!t || isRemote(t)) return;
+  const t = S.tracks.get(id); if (!t || isStream(t)) return;
   if (!(await confirmBox(isSC(t) ? 'Remove from library?' : 'Delete from this device?', `“${t.title}” will be removed from your library and your playlists.`, isSC(t) ? 'Remove' : 'Delete'))) return;
   const wasCurrent = S.queue[S.qi] === id;
   S.tracks.delete(id);
@@ -961,7 +1059,7 @@ async function deleteTrack(id) {
   S.order = S.order?.filter((x) => x !== id) || null;
   S.recent = S.recent.filter((x) => x !== id);
   if (wasCurrent) {
-    P.pause(); audio.removeAttribute('src'); loadedId = null; $('#scBox').hidden = true; engine = 'audio';
+    P.pause(); loadedId = null; switchEngine('audio');
     S.qi = Math.min(S.qi - before, S.queue.length - 1);
     if (S.qi >= 0) load(S.queue[S.qi], false); else { S.qi = -1; updateTrackUI(); updatePlayUI(); }
   } else S.qi = S.queue.indexOf(curId);
@@ -1004,15 +1102,276 @@ async function addSoundCloud(link) {
   } catch (e) { tst.set(e.message || "Couldn't add that link"); setTimeout(tst.close, 3500); }
 }
 
+/* ================= YouTube songs & playlist import ================= */
+let ytSearchOn = false, ytSearchState = '';
+// "Artist - Song (Official Video)" on channel X -> { title: 'Song', artist: 'Artist' }
+function cleanYT(title, channel) {
+  let t = String(title).replace(/\s*[([](?:official\s*)?(?:music\s*|lyrics?\s*|lyric\s*)?(?:video|audio|visuali[sz]er)?(?:\s*\(?(?:hd|hq|4k)(?:\s*remaster(?:ed)?)?\)?)?[)\]]/gi, (m) => (/official|video|audio|lyric|visuali|hd|hq|4k/i.test(m) ? '' : m)).trim();
+  let artist = channel || 'YouTube';
+  const m = t.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+  if (m) { artist = m[1].trim(); t = m[2].trim(); }
+  return { title: t || title, artist };
+}
+function ytTrack({ vid, title, artist, art = '', duration = 0, q = false, from = '' }) {
+  const id = vid ? 'yt:' + vid : 'ytq:' + hash(`${artist}|${title}`.toLowerCase());
+  const have = S.tracks.get(id);
+  if (have) return have;
+  const t = {
+    id, source: 'youtube', vid: vid || '', q: !!q, from, title, artist, album: '', albumArtist: '', genre: '', duration, track: 0, disc: 0, year: 0,
+    art150: art, art480: art, art1000: art, permalink: vid ? 'https://www.youtube.com/watch?v=' + vid : '',
+    addedAt: Date.now(), liked: likes[id] > 0, likedAt: likes[id] > 0 ? likes[id] : 0, plays: 0,
+  };
+  S.tracks.set(id, t);
+  return t;
+}
+const ytResultTrack = (r) => { const c = cleanYT(r.title, r.channel); return ytTrack({ vid: r.vid, title: r.topic ? r.title : c.title, artist: r.topic ? r.channel : c.artist, art: r.art, duration: r.duration }); };
+function scTrack(x) {
+  const id = 'sc:' + hash(x.url);
+  let t = S.tracks.get(id);
+  if (!t) {
+    t = { id, source: 'soundcloud', url: x.url, permalink: x.permalink, title: x.title, artist: x.artist, artistUrl: x.artistUrl || '', album: '', albumArtist: '', genre: x.genre || '',
+      duration: x.duration || 0, track: 0, disc: 0, year: 0, art150: x.art150, art480: x.art480, art1000: x.art1000, addedAt: Date.now(), liked: likes[id] > 0, likedAt: likes[id] > 0 ? likes[id] : 0, plays: 0 };
+    S.tracks.set(id, t);
+    delete scDeleted[id];
+  }
+  return t;
+}
+async function runYouTubeSearch() {
+  const q = searchQ.trim();
+  const box = $('#ytResults');
+  if (!q || !box) return;
+  ytSearchState = q;
+  box.innerHTML = `<section class="sec"><h2>From YouTube</h2>${loading(5)}</section>`;
+  try {
+    const ts = (await yt.search(q)).map(ytResultTrack);
+    if (searchQ.trim() !== q || !box.isConnected) return;
+    box.innerHTML = `<section class="sec"><div class="sec-head"><h2>From YouTube</h2></div>${trackList(ts, 'ytsearch', { from: { label: `YouTube: ${q}`, href: '#/search/' + enc(q) }, noHead: true, empty: 'Nothing found on YouTube.' })}</section>`;
+    markPlaying();
+  } catch (e) { box.innerHTML = `<p class="empty-sm">${esc(e.message)}</p>`; }
+}
+function clearSearchBox() { if (route().name === 'search') { searchQ = ''; if ($('#q')) $('#q').value = ''; } }
+async function addYouTube(link) {
+  const vid = yt.videoId(link || '');
+  if (!vid) { toast("That doesn't look like a YouTube video link"); return; }
+  const tst = toast('Looking up the video…', 0);
+  let info;
+  try { info = await yt.info(vid); } catch { info = { vid, title: 'YouTube video', channel: 'YouTube', art: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` }; }
+  const c = cleanYT(info.title, info.channel);
+  const t = ytTrack({ vid, title: c.title, artist: c.artist, art: info.art });
+  t.inLib = true;
+  await keep([t.id]); await saveTrack(t); changed();
+  tst.close(); toast(`Added “${t.title}”`);
+  clearSearchBox(); refresh(); unlock();
+  playList([t.id], 0, { label: 'YouTube', href: '#/library/songs' });
+}
+// Import a Spotify / YouTube / YouTube Music / SoundCloud playlist (or profile) as a Tempo playlist.
+async function importPlaylist(link) {
+  link ??= await ask({ title: 'Import a playlist', placeholder: 'Spotify, YouTube, YouTube Music or SoundCloud link', ok: 'Import', type: 'url' });
+  if (!link) return null;
+  link = link.trim();
+  const tst = toast('Reading the playlist…', 0);
+  try {
+    let name, tracks, from;
+    if (sc.isLink(link)) {
+      const r = await sc.listSounds(link);
+      if (!r.sounds.length) throw new Error('No playable songs found at that SoundCloud link');
+      tracks = r.sounds.map(scTrack);
+      lsSet('tempo:scDel', scDeleted);
+      await idb.putMany('tracks', tracks.map((t) => ({ ...t, _saved: undefined })));
+      const set = link.match(/\/sets\/([^/?#]+)/);
+      name = set ? set[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : `${r.owner || 'SoundCloud'} on SoundCloud`;
+      from = 'SoundCloud';
+    } else if (/open\.spotify\.com\//.test(link) || yt.isLink(link)) {
+      await yt.searchEnabled();
+      if (!yt.hasServer()) throw new Error('Importing from Spotify and YouTube works in the online version of Tempo (it needs its small server).');
+      const d = await yt.importPlaylist(link);
+      if (!d.tracks?.length) throw new Error('That playlist is empty');
+      from = d.from; name = d.name;
+      tracks = d.tracks.map((x) => {
+        if (x.vid) { const c = cleanYT(x.title, x.artist); return ytTrack({ vid: x.vid, title: c.title, artist: c.artist, art: x.art, from }); }
+        return ytTrack({ title: x.title, artist: x.artist, duration: x.duration, q: true, from });
+      });
+    } else throw new Error('Paste a Spotify, YouTube, YouTube Music or SoundCloud link');
+    const ids = [...new Set(tracks.map((t) => t.id))];
+    await keep(ids);
+    let p = [...S.playlists.values()].find((x) => x.src === link);
+    if (p) { p.ids = ids; p.name = name; await savePlaylist(p); location.hash = `#/playlist/${p.id}`; }
+    else { p = await newPlaylist(ids, name); if (!p) return null; p.src = link; p.from = from; await savePlaylist(p); if (ids.length === 1) location.hash = `#/playlist/${p.id}`; }
+    clearSearchBox(); refresh();
+    tst.set(`Imported “${name}”: ${plural(ids.length, 'song')}`); setTimeout(tst.close, 3500);
+    if (from === 'Spotify' && !ytSearchOn) setTimeout(() => toast('Tip: turn on YouTube search (see Account) so every imported song can play', 5000), 3600);
+    return p;
+  } catch (e) {
+    tst.set(e.message || "Couldn't import that playlist"); setTimeout(tst.close, 4500);
+    return null;
+  }
+}
+async function linkSoundCloud() {
+  const link = await ask({ title: 'Link your SoundCloud', placeholder: 'https://soundcloud.com/your-name', ok: 'Link', type: 'url', value: lsGet('tempo:scProfile', '') });
+  if (!link) return;
+  if (!sc.isLink(link)) { toast("That doesn't look like a SoundCloud profile link"); return; }
+  lsSet('tempo:scProfile', link.trim());
+  await importPlaylist(link.trim());
+}
+
+/* ================= recommendations, smart shuffle & DJ ================= */
+const normG = (g) => String(g || '').toLowerCase().replace(/[^a-z]/g, '');
+const matchGenre = (g) => { const n = normG(g); return n ? au.GENRES.find((x) => { const m = normG(x); return m && (n.includes(m) || m.includes(n)); }) || '' : ''; };
+const countTop = (arr) => { const m = new Map(); arr.forEach((x) => m.set(x, (m.get(x) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k); };
+function taste() {
+  const score = (t) => (t.liked ? 5 : 0) + Math.min(t.plays || 0, 10) + (S.recent.includes(t.id) ? 2 : 0);
+  const fav = [...S.tracks.values()].filter((t) => score(t) > 0).sort((a, b) => score(b) - score(a));
+  return { fav, genres: countTop(fav.map((t) => matchGenre(t.genre)).filter(Boolean)), artists: countTop(fav.map((t) => t.artist)) };
+}
+// Songs similar to `seeds`: trending in their genres, more from their artists, and (if on) YouTube.
+async function recommend(seeds, n = 8, exclude = new Set()) {
+  const genres = countTop(seeds.map((t) => matchGenre(t.genre)).filter(Boolean));
+  const auArtists = countTop(seeds.filter(isRemote).map((t) => t.artistId));
+  const others = countTop(seeds.filter((t) => !isRemote(t)).map((t) => t.artist.split(',')[0].trim()));
+  const jobs = [];
+  for (const g of genres.slice(0, 2)) jobs.push(au.trending(g));
+  for (const a of auArtists.slice(0, 2)) jobs.push(au.artistTracks(a));
+  if (ytSearchOn && others.length) jobs.push(yt.search(`${others.slice(0, 2).join(', ')} similar songs`).then((rs) => rs.map(ytResultTrack)));
+  if (!jobs.length) jobs.push(au.trending());
+  const pools = (await Promise.all(jobs.map((j) => j.catch(() => [])))).map((l) => shuffleArr(ingest(l).slice(0, 25)));
+  const seen = new Set([...exclude, ...seeds.map((t) => t.id)]);
+  const seenNames = new Set(seeds.map((t) => `${t.artist}|${t.title}`.toLowerCase()));
+  const out = [];
+  for (let i = 0; out.length < n && i < 25; i++) {
+    for (const pool of pools) {
+      const t = pool[i];
+      const key = t && `${t.artist}|${t.title}`.toLowerCase();
+      if (!t || seen.has(t.id) || seenNames.has(key)) continue;
+      seen.add(t.id); seenNames.add(key); out.push(t);
+      if (out.length >= n) break;
+    }
+  }
+  return out;
+}
+async function smartFill() {
+  if (S.shuffle !== 'smart' || !S.queue.length) return;
+  const seeds = S.queue.filter((id) => !S.recs.has(id)).map((id) => S.tracks.get(id)).filter(Boolean).slice(0, 40);
+  const base = S.queue.slice(S.qi + 1).filter((id) => !S.recs.has(id));
+  const recs = await recommend(seeds, Math.max(3, Math.min(15, Math.ceil(base.length / 3))), new Set(S.queue));
+  if (S.shuffle !== 'smart' || !recs.length) return;
+  await keep(recs.map((t) => t.id));
+  const fresh = S.queue.slice(S.qi + 1).filter((id) => !S.recs.has(id));
+  const out = []; let r = 0;
+  fresh.forEach((id, i) => { out.push(id); if ((i + 1) % 3 === 0 && r < recs.length) { out.push(recs[r].id); S.recs.add(recs[r++].id); } });
+  while (r < recs.length && out.length < 6) { out.push(recs[r].id); S.recs.add(recs[r++].id); }
+  S.queue = S.queue.slice(0, S.qi + 1).concat(out);
+  persist(); prefetchNext();
+  if (route().name === 'queue') render(true);
+}
+function dropRecs() {
+  if (!S.recs.size) return;
+  const cur = S.queue[S.qi];
+  S.queue = S.queue.filter((id, i) => i === S.qi || !S.recs.has(id));
+  S.qi = Math.max(0, S.queue.indexOf(cur));
+  S.recs.clear();
+}
+
+const DJ_NAME = 'DJ Tempo';
+const DJ = { on: false, lines: new Map(), voice: lsGet('tempo:djVoice', true), seg: 0, busy: false };
+function pickVoice() {
+  const vs = window.speechSynthesis?.getVoices?.() || [];
+  return vs.find((v) => /^en/i.test(v.lang) && /natural|neural|premium|enhanced|google us|samantha|daniel|aria|guy/i.test(v.name)) || vs.find((v) => /^en/i.test(v.lang));
+}
+function djSpeak(id) {
+  const line = DJ.lines.get(id);
+  DJ.lines.delete(id);
+  if (!line) return Promise.resolve();
+  const cap = $('#djCaption'); cap.textContent = line; cap.hidden = false;
+  clearTimeout(djSpeak.t); djSpeak.t = setTimeout(() => { cap.hidden = true; }, 9000);
+  if (!DJ.voice || !('speechSynthesis' in window)) return Promise.resolve();
+  return new Promise((res) => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; res(); } };
+    const u = new SpeechSynthesisUtterance(line);
+    const v = pickVoice(); if (v) u.voice = v;
+    u.rate = 1.04; u.onend = fin; u.onerror = fin;
+    setTimeout(fin, Math.min(15000, 2500 + line.length * 70));
+    P.pause();
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  });
+}
+function greeting() { const h = new Date().getHours(); return h < 5 ? 'Up late, huh' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+async function djSegment(first = false, only = '') {
+  const tp = taste();
+  const used = new Set(S.queue);
+  const kinds = only ? [only] : ['favorites', 'fresh', 'genre', 'throwback'];
+  const hello = first ? `Hey, it's ${DJ_NAME}. ${greeting()}. ` : '';
+  for (let tries = 0; tries < kinds.length; tries++) {
+    const kind = kinds[(DJ.seg++) % kinds.length];
+    let ts = [], line = '';
+    if (kind === 'favorites') {
+      ts = shuffleArr(tp.fav.filter((t) => !used.has(t.id)).slice(0, 15)).slice(0, 4);
+      if (ts.length >= 2) line = `${hello}Let's start with some songs you keep coming back to. Here's ${ts[0].title} by ${ts[0].artist}.`;
+    } else if (kind === 'fresh') {
+      ts = await recommend(tp.fav.slice(0, 20), 4, used);
+      if (ts.length) line = `${hello}Time for something new. I think ${ts[0].artist} fits your vibe. This is ${ts[0].title}.`;
+    } else if (kind === 'genre') {
+      const g = tp.genres[DJ.seg % Math.max(1, Math.min(3, tp.genres.length))] || au.GENRES[Math.floor(Math.random() * 12)];
+      ts = shuffleArr(ingest(await au.trending(g).catch(() => [])).filter((t) => !used.has(t.id)).slice(0, 15)).slice(0, 4);
+      if (ts.length) line = tp.genres.includes(g) ? `${hello}You've been in a ${g} mood lately, so here's what's hot in ${g} this week.` : `${hello}Let's dig into some ${g}. Starting with ${ts[0].artist}.`;
+    } else if (kind === 'throwback') {
+      const old = tp.fav.filter((t) => !used.has(t.id) && t.lastPlayed && Date.now() - t.lastPlayed > 2 * 864e5);
+      ts = shuffleArr(old).slice(0, 3);
+      if (ts.length >= 2) line = `${hello}Let's rewind a little. Remember this one? ${ts[0].title}.`;
+    }
+    if (line && ts.length) { DJ.lines.set(ts[0].id, line); return ts.map((t) => t.id); }
+  }
+  const ts = ingest(await au.trending()).filter((t) => !used.has(t.id)).slice(0, 5);
+  if (ts.length) DJ.lines.set(ts[0].id, `${hello}Here's what everyone's playing this week, starting with ${ts[0].artist}.`);
+  return ts.map((t) => t.id);
+}
+async function startDJ() {
+  if (DJ.busy) return;
+  DJ.busy = true;
+  const tst = toast(`${DJ_NAME} is picking your songs…`, 0);
+  try {
+    DJ.lines.clear(); DJ.seg = 0;
+    const ids = await djSegment(true);
+    if (!ids.length) throw new Error("Couldn't reach the music catalog. Try again in a moment");
+    if (S.shuffle) { S.shuffle = false; S.recs.clear(); updateModesUI(); }
+    DJ.on = true;
+    playList(ids, 0, { label: DJ_NAME, href: '#/home' });
+  } catch (e) { toast(e.message); } finally { DJ.busy = false; tst.close(); }
+}
+async function djExtend() {
+  if (DJ.busy || !DJ.on) return;
+  DJ.busy = true;
+  try { const ids = await djSegment(); if (DJ.on && ids.length) { await keep(ids); S.queue.push(...ids); persist(); prefetchNext(); } }
+  finally { DJ.busy = false; }
+}
+async function djSwitch() {
+  if (!DJ.on) return startDJ();
+  if (DJ.busy) return;
+  DJ.busy = true;
+  try {
+    const ids = await djSegment(false, ['fresh', 'genre'][Math.floor(Math.random() * 2)]);
+    if (!ids.length) return;
+    DJ.lines.set(ids[0], "Alright, let's switch it up. " + (DJ.lines.get(ids[0]) || ''));
+    await keep(ids);
+    S.queue = S.queue.slice(0, S.qi + 1).concat(ids);
+    next();
+  } finally { DJ.busy = false; }
+}
+function stopDJ() {
+  DJ.on = false; DJ.lines.clear();
+  try { speechSynthesis.cancel(); } catch {}
+  $('#djCaption').hidden = true; $('#npDJ').hidden = true; $('#djPill').hidden = true;
+}
+
 /* ================= accounts & sync ================= */
 let syncState = 'idle', lastSync = lsGet('tempo:lastSync', 0), pushTimer = null, pulling = null;
-const stripTrack = (t) => ({ id: t.id, source: t.source, rid: t.rid, url: t.url, permalink: t.permalink, artistUrl: t.artistUrl, title: t.title, artist: t.artist, artistId: t.artistId, album: '', albumArtist: '', genre: t.genre, duration: t.duration, track: 0, disc: 0, year: t.year || 0, art150: t.art150, art480: t.art480, art1000: t.art1000, permalink: t.permalink });
+const stripTrack = (t) => ({ inLib: t.inLib, id: t.id, source: t.source, rid: t.rid, vid: t.vid, q: t.q, from: t.from, url: t.url, permalink: t.permalink, artistUrl: t.artistUrl, title: t.title, artist: t.artist, artistId: t.artistId, album: '', albumArtist: '', genre: t.genre, duration: t.duration, track: 0, disc: 0, year: t.year || 0, art150: t.art150, art480: t.art480, art1000: t.art1000, permalink: t.permalink });
 function snapshot() {
   const pls = {};
   for (const [id, ts] of Object.entries(plTomb)) pls[id] = { id, deleted: true, updatedAt: ts };
   for (const p of S.playlists.values()) pls[p.id] = p;
-  const needed = new Set([...likedTracks().map((t) => t.id), ...[...S.playlists.values()].flatMap((p) => p.ids)]);
-  const tracks = [...needed].map((id) => S.tracks.get(id)).filter(isRemote).map(stripTrack);
+  const needed = new Set([...[...S.tracks.values()].filter((t) => t.inLib).map((t) => t.id), ...likedTracks().map((t) => t.id), ...[...S.playlists.values()].flatMap((p) => p.ids)]);
+  const tracks = [...needed].map((id) => S.tracks.get(id)).filter(isStream).map(stripTrack);
   for (const t of S.tracks.values()) if (isSC(t)) tracks.push({ ...stripTrack(t), addedAt: t.addedAt });
   return { v: 1, likes, playlists: pls, tracks, scDeleted, at: Date.now() };
 }
@@ -1035,7 +1394,7 @@ async function applyRemote(r) {
     const ts = likes[t.id];
     if (ts === undefined) continue;
     const liked = ts > 0;
-    if (t.liked !== liked || (liked && t.likedAt !== ts)) { t.liked = liked; t.likedAt = liked ? ts : 0; if (!isRemote(t) || t._saved) toSave.push(t); }
+    if (t.liked !== liked || (liked && t.likedAt !== ts)) { t.liked = liked; t.likedAt = liked ? ts : 0; if (!isStream(t) || t._saved) toSave.push(t); }
   }
   lsSet('tempo:likes', likes);
   if (toSave.length) await idb.putMany('tracks', [...new Set(toSave)].map((t) => ({ ...t, _saved: undefined })));
@@ -1214,6 +1573,7 @@ function openMenu(btn) {
   if (ctx.startsWith('pl:')) items.push(['rmpl', 'x', 'Remove from this playlist']);
   if (ctx === 'queue' && +i !== S.qi) items.push(['qremove', 'x', 'Remove from queue']);
   if (isRemote(t)) items.push(['openSource', 'link', 'Open on Audius']);
+  else if (isYT(t)) items.push(['openSource', 'link', 'Open on YouTube']);
   else if (isSC(t)) items.push(['openSource', 'link', 'Open on SoundCloud'], ['del', 'trash', 'Remove from library', 'danger']);
   else items.push(['del', 'trash', 'Delete from this device', 'danger']);
   menu.innerHTML = `<div class="mh">${trackArt(t, 'xs')}<div class="meta"><div class="ttl">${esc(t.title)}</div><div class="sub">${esc(t.artist)}</div></div></div>` +
@@ -1243,7 +1603,7 @@ const A = {
     if ((loadedId || S.queue[S.qi]) === el.dataset.id && S.from?.href === from.href && S.from?.label === from.label) { togglePlay(); return; }
     playList(ctxList(ctx), +i, from);
   },
-  playAll: (el) => { const ids = ctxList(el.dataset.ctx); if (S.shuffle) { S.shuffle = false; updateModesUI(); } playList(ids, 0, ctxFrom(el.dataset.ctx)); },
+  playAll: (el) => { const ids = ctxList(el.dataset.ctx); if (S.shuffle) { S.shuffle = false; S.recs.clear(); updateModesUI(); } playList(ids, 0, ctxFrom(el.dataset.ctx)); },
   shuffleAll: (el) => shufflePlay(ctxList(el.dataset.ctx), ctxFrom(el.dataset.ctx)),
   playAlbum: (el) => { const a = getAlbums().find((x) => x.key === el.dataset.key); if (a) playList(a.tracks.map((t) => t.id), 0, { label: a.name, href: `#/album/${enc(a.key)}` }); },
   async playRemotePl(el) {
@@ -1270,7 +1630,7 @@ const A = {
   rmpl: (el) => removeFromPlaylist(el.dataset.ctx.slice(3), +el.dataset.i),
   goAlbum: (el) => { location.hash = `#/album/${enc(albumKey(S.tracks.get(el.dataset.id)))}`; },
   goArtist: (el) => { location.hash = artistHref(S.tracks.get(el.dataset.id)); },
-  openSource: (el) => { const t = S.tracks.get(el.dataset.id); if (t?.permalink) open(t.permalink, '_blank', 'noopener'); },
+  openSource: (el) => { const t = S.tracks.get(el.dataset.id); const u = t && sourceURL(t); if (u) open(u, '_blank', 'noopener'); },
   del: (el) => deleteTrack(el.dataset.id),
   newPlaylist: () => newPlaylist(),
   async plRename(el) {
@@ -1287,12 +1647,20 @@ const A = {
   },
   import: () => $('#fileIn').click(),
   addSC: (el) => addSoundCloud(el.dataset.link),
-  scMin: () => { $('#scBox').classList.toggle('min'); },
+  embMin: () => { if (engine === 'sc') $('#embedBox').classList.toggle('min'); },
+  importPl: (el) => importPlaylist(el.dataset.link),
+  linkSC: () => linkSoundCloud(),
+  ytSearch: () => runYouTubeSearch(),
+  addYT: (el) => addYouTube(el.dataset.link),
+  dj: () => startDJ(),
+  djSwitch: () => djSwitch(),
+  djVoice: () => { DJ.voice = !DJ.voice; lsSet('tempo:djVoice', DJ.voice); if (!DJ.voice) speechSynthesis?.cancel(); toast(DJ.voice ? 'DJ voice on' : 'DJ voice off'); render(true); },
+  djStop: () => { stopDJ(); toast('DJ off'); },
   importDir: () => $('#dirIn').click(),
   openNP: () => { if (!current()) return; $('#np').hidden = false; },
   closeNP: () => { $('#np').hidden = true; },
   queue: () => { $('#np').hidden = true; location.hash = '#/queue'; },
-  mute: () => { audio.muted = !audio.muted; updateVolUI(); sc.volume(audio.muted ? 0 : audio.volume); persist(); },
+  mute: () => { audio.muted = !audio.muted; updateVolUI(); setVolumeAll(); persist(); },
   syncNow: () => syncNow(),
   async signOut() { await sync.signOut(); toast('Signed out'); },
   async forgot() {
@@ -1303,8 +1671,14 @@ const A = {
   async install() { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#installBtn').hidden = true; render(true); },
   hideInstall: () => { lsSet('tempo:hideInstall', true); render(true); },
 };
-const PLAY_ACTS = new Set(['play', 'toggle', 'next', 'prev', 'playAll', 'shuffleAll', 'playAlbum', 'playRemotePl', 'qnext', 'qadd']);
-addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'q' && sc.isLink(e.target.value)) addSoundCloud(e.target.value.trim()); });
+const PLAY_ACTS = new Set(['play', 'toggle', 'next', 'prev', 'playAll', 'shuffleAll', 'playAlbum', 'playRemotePl', 'qnext', 'qadd', 'dj', 'djSwitch']);
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.target.id !== 'q') return;
+  const v = e.target.value.trim();
+  const btn = $('#results [data-act=importPl], #results [data-act=addSC], #results [data-act=addYT]');
+  if (btn) btn.click();
+  else if (v && ytSearchOn && !sc.isLink(v) && !yt.isLink(v)) runYouTubeSearch();
+});
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   const inMenu = el?.closest('#menu');
@@ -1313,6 +1687,7 @@ document.addEventListener('click', (e) => {
   if (act !== 'go' && el.tagName !== 'A') e.preventDefault();
   if (act !== 'more' || !menu.hidden) closeMenu();
   if (PLAY_ACTS.has(act)) unlock();
+  if ((act === 'dj' || act === 'djSwitch') && DJ.voice && 'speechSynthesis' in window) { try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch {} }
   A[act]?.(el, e);
   if (inMenu) closeMenu();
 });
@@ -1333,7 +1708,7 @@ document.addEventListener('input', (e) => {
     const d = loadedId ? P.dur() : current()?.duration || 0;
     $$('[data-t=cur]').forEach((el) => { el.textContent = fmt((v / 100) * d); });
   }
-  if (e.target.id === 'vol') { audio.volume = +e.target.value; audio.muted = false; updateVolUI(); sc.volume(audio.volume); }
+  if (e.target.id === 'vol') { audio.volume = +e.target.value; audio.muted = false; updateVolUI(); setVolumeAll(); }
 });
 document.addEventListener('change', (e) => {
   if (e.target.classList.contains('seek')) {
@@ -1380,6 +1755,9 @@ addEventListener('keydown', (e) => {
   else if (e.key.toLowerCase() === 'l' && current()) toggleLike(current().id);
 });
 
+/* keep body.np-open in sync with the Now Playing sheet (the YouTube video moves into it) */
+new MutationObserver(() => document.body.classList.toggle('np-open', !$('#np').hidden)).observe($('#np'), { attributes: true, attributeFilter: ['hidden'] });
+
 /* swipe down to close the now-playing sheet */
 (() => {
   const np = $('#np'); let y0 = null;
@@ -1403,7 +1781,7 @@ async function boot() {
   scDeleted = lsGet('tempo:scDel', {});
   try {
     const [tracks, pls, ck] = await Promise.all([idb.all('tracks'), idb.all('playlists'), idb.keys('covers')]);
-    tracks.forEach((t) => { if (isRemote(t)) t._saved = true; else t.source ??= 'file'; S.tracks.set(t.id, t); if (t.liked && likes[t.id] === undefined) likes[t.id] = t.likedAt || 1; });
+    tracks.forEach((t) => { if (isStream(t)) t._saved = true; else t.source ??= 'file'; S.tracks.set(t.id, t); if (t.liked && likes[t.id] === undefined) likes[t.id] = t.likedAt || 1; });
     pls.forEach((p) => S.playlists.set(p.id, p));
     ck.forEach((k) => coverKeys.add(k));
   } catch (e) {
@@ -1424,6 +1802,7 @@ async function boot() {
   });
   addEventListener('online', () => { if (['home', 'search', 'genre', 'a', 'p'].includes(route().name)) render(true); });
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  yt.searchEnabled().then((on) => { ytSearchOn = on; if (['search', 'account'].includes(route().name)) render(true); });
   if (sync.enabled) {
     sync.onAuthChange((user) => {
       authMsg = '';
@@ -1442,4 +1821,4 @@ async function boot() {
 boot();
 
 // exposed for debugging in the browser console
-window.tempo = { S, importFiles, readTags, snapshot, syncNow, addSoundCloud };
+window.tempo = { S, importFiles, readTags, snapshot, syncNow, addSoundCloud, importPlaylist, addYouTube, startDJ, recommend, DJ };

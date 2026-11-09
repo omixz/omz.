@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Tempo">
 <link rel="preconnect" href="https://api.audius.co" crossorigin>
 <link rel="preconnect" href="https://w.soundcloud.com">
+<link rel="preconnect" href="https://www.youtube.com">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -57,6 +58,7 @@
       <div class="seek-row"><span class="time" data-t="cur">0:00</span><input type="range" class="seek" min="0" max="1000" value="0" aria-label="Seek"><span class="time" data-t="dur">0:00</span></div>
     </div>
     <div class="pl-right">
+      <button class="btn dj-pill" id="djPill" data-act="djSwitch" hidden>✦ Switch it up</button>
       <button class="ib" data-act="queue" aria-label="Queue"><i data-icon="queue"></i></button>
       <button class="ib" data-act="mute" id="muteBtn" aria-label="Mute"><i data-icon="volume"></i></button>
       <input type="range" id="vol" min="0" max="1" step="0.01" value="1" aria-label="Volume">
@@ -82,8 +84,9 @@
       <button class="ib" data-act="queue" aria-label="Queue"><i data-icon="queue"></i></button>
     </header>
     <div class="np-art-wrap"><div class="art xl" id="npArt"></div></div>
+    <div class="np-dj" id="npDJ" hidden><span>🎙 DJ Tempo</span><button class="chip" data-act="djSwitch">Switch it up</button><button class="chip" data-act="djStop">Stop DJ</button></div>
     <div class="np-info">
-      <div class="meta"><div class="ttl" id="npTitle">Nothing playing</div><a class="sub" id="npArtist" data-act="closeNP" href="#/home"></a></div>
+      <div class="meta"><div class="np-rec" id="npRec" hidden>✦ Smart shuffle pick</div><div class="ttl" id="npTitle">Nothing playing</div><a class="sub" id="npArtist" data-act="closeNP" href="#/home"></a></div>
       <button class="ib like big" id="npLike" data-act="likeCur" aria-label="Like"><i data-icon="heart"></i></button>
     </div>
     <div class="np-seek">
@@ -101,10 +104,12 @@
   </div>
 </section>
 
-<aside id="scBox" hidden aria-label="SoundCloud player">
-  <div class="sc-head"><span>Playing from SoundCloud</span><button class="ib" data-act="scMin" aria-label="Shrink player"><i data-icon="down"></i></button></div>
-  <div id="scFrame"></div>
+<aside id="embedBox" hidden aria-label="Embedded player">
+  <div class="emb-head"><span id="embedLabel">Playing from SoundCloud</span><button class="ib emb-min" data-act="embMin" aria-label="Shrink player"><i data-icon="down"></i></button></div>
+  <div id="scFrame" class="emb-frame"></div>
+  <div id="ytFrame" class="emb-frame" hidden></div>
 </aside>
+<div id="djCaption" class="dj-caption" hidden aria-live="polite"></div>
 <div id="menu" role="menu" hidden></div>
 <div id="scrim" hidden></div>
 <dialog id="dlg"></dialog>

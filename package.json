@@ -1,0 +1,7 @@
+{
+  "name": "tempo",
+  "private": true,
+  "type": "module",
+  "description": "Tempo music player. Static app plus three small serverless functions in api/.",
+  "engines": { "node": ">=20" }
+}

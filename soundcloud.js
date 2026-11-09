@@ -61,3 +61,40 @@ export const play = () => widget?.play();
 export const pause = () => widget?.pause();
 export const seek = (s) => widget?.seekTo(Math.max(0, s) * 1000);
 export const volume = (v) => widget?.setVolume(Math.round(v * 100));
+
+// List the songs behind a profile, playlist ("set") or album link without disturbing playback,
+// using a separate, off-screen copy of the player. Resolves to [{ id, title, artist, url, permalink, art, duration }].
+export async function listSounds(link) {
+  const SC = await loadApi();
+  let url = String(link).trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  url = url.replace('://m.soundcloud.com', '://soundcloud.com').split('?')[0];
+  const f = document.createElement('iframe');
+  f.style.cssText = 'position:fixed;left:-9999px;top:0;width:300px;height:300px;border:0';
+  f.src = 'https://w.soundcloud.com/player/?' + new URLSearchParams({ url, auto_play: 'false' });
+  document.body.appendChild(f);
+  try {
+    const w = SC.Widget(f);
+    await new Promise((res, rej) => { const t = setTimeout(() => rej(new Error("SoundCloud didn't respond. Check the link")), 20000); w.bind(SC.Widget.Events.READY, () => { clearTimeout(t); res(); }); });
+    let sounds = [];
+    for (let i = 0; i < 12; i++) {
+      sounds = await new Promise((r) => w.getSounds(r));
+      if (sounds.length && sounds.every((s) => s.title)) break;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    const user = await new Promise((r) => w.getCurrentSound((s) => r(s?.user?.username || '')));
+    return {
+      owner: user,
+      sounds: sounds.filter((s) => s.title && s.streamable !== false).map((s) => {
+        const art = s.artwork_url || s.user?.avatar_url || '';
+        return {
+          id: s.id, title: s.title, artist: s.user?.username || user || 'SoundCloud', artistUrl: s.user?.permalink_url || '',
+          url: 'https://api.soundcloud.com/tracks/' + s.id, permalink: s.permalink_url,
+          art150: art.replace('-large', '-t200x200'), art480: art.replace('-large', '-t500x500'), art1000: art.replace('-large', '-t500x500'),
+          duration: Math.round((s.duration || 0) / 1000), genre: s.genre || '',
+        };
+      }),
+    };
+  } finally { f.remove(); }
+}
+export const isCollectionLink = (s) => /soundcloud\.com\/[^/?#]+\/?(?:$|[?#])|\/sets\/|\/albums|\/tracks\/?$|\/popular-tracks/i.test(String(s).trim());

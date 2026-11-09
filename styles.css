@@ -348,18 +348,52 @@ dialog input:focus{border-color:var(--accent)}
 .np-source{align-self:center;font-size:12px;color:var(--muted);font-weight:600}
 .np-source:hover{color:var(--text)}
 
-/* ---------- SoundCloud player ---------- */
-#scBox{position:fixed;right:16px;bottom:calc(var(--player-h) + 24px);width:360px;z-index:40;background:var(--surface2);border-radius:12px;padding:6px 8px 8px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.sc-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);padding-left:4px}
-.sc-head .ib{width:28px;height:28px}
-.sc-head .ic{width:18px;height:18px;transition:transform .2s}
+/* ---------- embedded players (SoundCloud / YouTube) ---------- */
+#embedBox{position:fixed;right:16px;bottom:calc(var(--player-h) + 24px);width:360px;z-index:40;background:var(--surface2);border-radius:12px;padding:6px 8px 8px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.emb-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);padding-left:4px;min-height:28px}
+.emb-head .ib{width:28px;height:28px}
+.emb-head .ic{width:18px;height:18px;transition:transform .2s}
+#embedBox[data-kind=yt] .emb-min{display:none}
 #scFrame iframe{display:block;width:100%;height:116px;border:0;border-radius:8px;transition:height .2s}
-#scBox.min #scFrame iframe{height:20px}
-#scBox.min .sc-head .ic{transform:rotate(180deg)}
+#embedBox.min #scFrame iframe{height:20px}
+#embedBox.min .emb-head .ic{transform:rotate(180deg)}
+/* YouTube's rules: the player must stay visible and at least 200x200 */
+#ytFrame{width:100%;aspect-ratio:16/9;min-height:200px;border-radius:8px;overflow:hidden;background:#000}
+#ytFrame iframe{display:block;width:100%;height:100%;border:0}
 .head-btns{display:flex;gap:8px;flex-wrap:wrap}
+/* while Now Playing is open, the YouTube video takes the artwork's place */
+body.np-open[data-engine=yt] #embedBox{z-index:60;top:calc(84px + var(--safe-t));bottom:auto;left:50%;right:auto;transform:translateX(-50%);width:min(480px,calc(100vw - 32px));background:transparent;box-shadow:none;padding:0}
+body.np-open[data-engine=yt] #embedBox .emb-head{display:none}
+body.np-open[data-engine=yt] #npArt{visibility:hidden}
 @media (max-width:760px){
-  #scBox{left:8px;right:8px;width:auto;bottom:calc(var(--player-h) + var(--tab-h) + var(--safe-b) + 12px)}
+  #embedBox{left:8px;right:8px;width:auto;bottom:calc(var(--player-h) + var(--tab-h) + var(--safe-b) + 12px)}
   #scFrame iframe{height:20px}
-  #scBox:not(.min) #scFrame iframe{height:116px}
+  #embedBox:not(.min) #scFrame iframe{height:116px}
+  #embedBox[data-kind=yt]{left:auto;width:min(380px,calc(100vw - 16px))}
   .head-btns .btn{padding:0 12px;font-size:13px}
 }
+
+/* ---------- DJ, smart shuffle, services ---------- */
+.ib.tgl.smart{color:var(--accent2)}
+.ib.tgl.smart::before{content:"✦";position:absolute;top:0;right:2px;font-size:10px;line-height:1;color:var(--accent2)}
+.rec{color:var(--accent);font-weight:700;font-size:12px}
+.np-rec{color:var(--accent);font-weight:700;font-size:12px;letter-spacing:.02em;margin-bottom:2px}
+.dj-card{display:flex;align-items:center;gap:16px;margin-top:18px;padding:16px 18px;border-radius:16px;cursor:pointer;background:radial-gradient(120% 140% at 0% 0%,rgba(255,154,90,.35),transparent 55%),radial-gradient(120% 140% at 100% 100%,rgba(160,61,255,.35),transparent 55%),var(--surface);transition:transform .15s}
+.dj-card:hover{transform:translateY(-1px)}
+.dj-card .fab{margin-left:auto}
+.dj-text b{font-size:18px;letter-spacing:-.01em}
+.dj-text p{color:var(--muted);font-size:13px;max-width:440px}
+.dj-orb{width:56px;height:56px;border-radius:50%;flex:none;background:conic-gradient(from 0deg,#ff9a5a,#ff4f6d,#a03dff,#ff9a5a);display:grid;place-items:center;animation:spin 6s linear infinite}
+.dj-orb span{width:40px;height:40px;border-radius:50%;background:var(--surface)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dj-caption{position:fixed;left:50%;transform:translateX(-50%);top:calc(16px + var(--safe-t));z-index:85;max-width:min(560px,calc(100vw - 32px));background:rgba(20,20,26,.92);border:1px solid rgba(255,255,255,.08);color:var(--text);padding:12px 16px 12px 44px;border-radius:14px;font-size:14px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:pop .2s ease-out}
+.dj-caption::before{content:"🎙";position:absolute;left:14px;top:11px;font-size:18px}
+.dj-pill{height:32px;padding:0 12px;font-size:12px;background:var(--grad);color:#fff;margin-right:6px}
+.np-dj{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700}
+.np-dj span{margin-right:auto}
+.np-dj .chip{padding:6px 12px;font-size:12px}
+.svc{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.svc:first-of-type{border-top:0}
+.svc p{margin:2px 0 0;font-size:13px;display:flex;gap:4px;align-items:flex-start}
+.svc p .ic{width:15px;height:15px;color:#4ade80;margin-top:2px}
+@media (max-width:760px){ .dj-card{padding:14px} .dj-text p{font-size:12px} .dj-orb{width:46px;height:46px} .dj-orb span{width:32px;height:32px} }
