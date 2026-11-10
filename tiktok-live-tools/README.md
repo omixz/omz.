@@ -46,20 +46,24 @@ TikTok gifts ─▶ LIVE Tools ─▶ RCON commands ─▶ real Minecraft server
 
 **Default actions.** They switch on by themselves the first time Steve joins, and you can edit them in the dashboard's **Actions** tab.
 
-| Viewer sends | Spawned at Steve, named after the viewer |
+| Viewers send | Steve gets (named after the viewer) |
 |---|---|
-| Gift 1–4 🪙 (Rose…) | 🧟 a zombie, one per gift in a combo (5 roses = 5 zombies) |
-| Gift 5–9 🪙 | 🏹 a skeleton archer |
-| Gift 10–29 🪙 | 🏃 2 speedy baby zombies |
-| Gift 30–98 🪙 | 💥 a squad of 3 creepers |
-| Gift 99–198 🪙 | 🧪 2 witches and poison on Steve |
-| Gift 199–499 🪙 | 🧨 TNT rain |
-| Gift 500+ 🪙 | 👹 boss raid: lightning, a ravager, vindicators and a witch |
-| Follow / Share | 🧟 a zombie / 🏹 a skeleton archer |
-| Every 100 likes | 🧟 a zombie |
-| Chat `!zombie` | 🧟 a zombie (15-second cooldown) |
+| ❤️ Every 100 likes | 🧟 Zombie |
+| Gift 1–4 🪙 (Rose…) | 🧟 Zombie, one per gift in a combo |
+| Gift 5–9 🪙 | 🏹 Skeleton archer |
+| Gift 10–19 🪙 | 🕷️ Spider |
+| Gift 20–29 🪙 | 🏃 2 speedy baby zombies |
+| Gift 30–49 🪙 | 💥 Creeper |
+| Gift 50–98 🪙 | 🧪 Witch + poison |
+| Gift 99–198 🪙 | 🛡️ 3 armored zombies |
+| Gift 199–298 🪙 | 🧨 TNT rain |
+| Gift 299–498 🪙 | 🪓 Vindicator gang |
+| Gift 499–998 🪙 | 🐗 Ravager |
+| Gift 999–1998 🪙 | 👹 Boss raid (lightning, ravager, vindicators, evoker) |
+| Gift 1999+ 🪙 | 🌑 THE WARDEN |
+| Follow / Share / chat `!zombie` | 🧟 Zombie / 🏹 Skeleton / 🧟 Zombie |
 
-**Built to run for days.** Only viewers spawn mobs, and a lone zombie wanders in when chat is quiet so the stream never looks frozen. Creepers don't break blocks, and TNT holes are repaired every minute. Dropped items are cleared, and a world border keeps everything on camera. The bot, camera, server and stream all restart themselves. Tune it with `MC_BOT_NAME`, `MC_FIRST_PERSON=0` (camera behind Steve instead), `MC_LEVEL_UP_SECONDS` (150, 0 = off), `MC_RESPAWN_KIT` and `MC_ARENA_RADIUS`.
+**Each round starts fresh**: leftover mobs are cleared when Steve respawns, and mobs are capped at 60 (`MC_MOB_CAP`) so gift storms can't lag the stream. **Built to run for days.** Only viewers spawn mobs, and a lone zombie wanders in when chat is quiet so the stream never looks frozen. Creepers don't break blocks, and TNT holes are repaired every minute. Dropped items are cleared, and a world border keeps everything on camera. The bot, camera, server and stream all restart themselves. Tune it with `MC_BOT_NAME`, `MC_FIRST_PERSON=0` (camera behind Steve instead), `MC_LEVEL_UP_SECONDS` (150, 0 = off), `MC_RESPAWN_KIT` and `MC_ARENA_RADIUS`.
 
 **Write your own actions.** Any action can run Minecraft commands, one per line. Placeholders:
 - `{bot}`: Steve
@@ -86,7 +90,7 @@ Example: `execute at {bot} run summon minecraft:zombie ~{rx} ~1 ~{rz} {CustomNam
    curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash
    ```
    (If the repo is private, clone it first with a GitHub token, then run `bash omz/tiktok-live-tools/setup-vm.sh`.)
-3. Open the dashboard address it prints on your phone, enter the password it prints, and go to **Settings → Cloud streaming** to paste the Server URL and Stream key.
+3. Open the **hub** address it prints on your phone (add it to your home screen). Enter the password it prints, then paste the Server URL and Stream key in **Setup**. The hub shows three status lights (TikTok, Minecraft, stream), a **Watch what viewers see** button, the gift ladder and test buttons. Everything else is under **Advanced settings**.
 
 Run the same command again any time to update.
 

@@ -126,6 +126,12 @@ function setupArena() {
 }
 
 // Repairs TNT holes and clears clutter so the arena survives days of gifts.
+// Too many mobs make the server (and the stream) lag: remove the furthest ones.
+const MOB_CAP = Number(env('MC_MOB_CAP', 60));
+setInterval(() => {
+  if (stats.hostiles > MOB_CAP) rcon.run(`kill @e[type=!minecraft:player,type=!minecraft:item,limit=${stats.hostiles - MOB_CAP},sort=furthest]`);
+}, 5000);
+
 function maintainArena() {
   const r = CFG.arena + 6;
   rcon.run(`fill -${r} -63 -${r} ${r} -62 ${r} minecraft:dirt replace minecraft:air`);
@@ -237,6 +243,8 @@ function createBot() {
   b.on('respawn', () => {
     stats.aliveSince = Date.now();
     stats.level = 1;
+    // fresh round: clear the mobs left over from the last one
+    rcon.run('kill @e[type=!minecraft:player]');
     giveKit();
     setTimeout(gearUp, 1000);
   });

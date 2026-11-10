@@ -26,7 +26,8 @@ const MAX_FEED = 200;
 const DEFAULT_SETTINGS = {
   username: process.env.TIKTOK_USERNAME || '',
   autoConnect: true,
-  mcPresetApplied: false, // Minecraft actions are added automatically the first time the hero joins
+  mcPresetApplied: false, // Minecraft actions are added automatically the first time Steve joins
+  mcPresetVersion: 0,
   tts: {
     mode: 'command', // off | all | command
     command: '!tts',
@@ -154,6 +155,7 @@ function sanitizeSettings(input) {
   s.username = String(s.username || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/, '').replace(/\/live.*$/, '');
   s.autoConnect = Boolean(s.autoConnect);
   s.mcPresetApplied = Boolean(s.mcPresetApplied);
+  s.mcPresetVersion = Number(s.mcPresetVersion) || 0;
   s.tts.maxLength = clamp(Number(s.tts.maxLength) || 150, 10, 500);
   s.goal.target = Math.max(1, Number(s.goal.target) || 1);
   const g = s.game;
@@ -208,26 +210,35 @@ const mcRule = (id, name, trigger, mc, cooldown = 0) => ({
   keys: '',
   cooldown,
 });
+const ARMOR = `,ArmorItems:[{},{},{id:"minecraft:iron_chestplate",count:1},{id:"minecraft:iron_helmet",count:1}],HandItems:[{id:"minecraft:iron_sword",count:1},{}]`;
+// The gift ladder: every more expensive gift sends a harder mob.
 const MINECRAFT_PRESET = [
+  mcRule('likes', '🧟 Zombie', { type: 'likes', every: 100 }, [mob('zombie')]),
   mcRule('zombie', '🧟 Zombie', { minCoins: 1, maxCoins: 4 }, [mob('zombie')]),
   mcRule('skeleton', '🏹 Skeleton archer', { minCoins: 5, maxCoins: 9 }, [mob('skeleton')]),
-  mcRule('babies', '🏃 2 speedy baby zombies', { minCoins: 10, maxCoins: 29 }, [mob('zombie', ',IsBaby:1b'), mob('zombie', ',IsBaby:1b')]),
-  mcRule('creepers', '💥 Creeper squad', { minCoins: 30, maxCoins: 98 }, [mob('creeper'), mob('creeper'), mob('creeper')]),
-  mcRule('witches', '🧪 Witch coven + poison', { minCoins: 99, maxCoins: 198 }, [mob('witch'), mob('witch'), 'effect give {bot} minecraft:poison 6 1']),
-  mcRule('tnt', '🧨 TNT rain', { minCoins: 199, maxCoins: 499 }, Array(6).fill('execute at {bot} run summon minecraft:tnt ~{rx} ~5 ~{rz} {fuse:50}')),
-  mcRule('boss', '👹 Boss raid', { minCoins: 500 }, [
-    'execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('ravager'), mob('vindicator'), mob('vindicator'), mob('witch'),
+  mcRule('spider', '🕷️ Spider', { minCoins: 10, maxCoins: 19 }, [mob('spider')]),
+  mcRule('babies', '🏃 2 speedy baby zombies', { minCoins: 20, maxCoins: 29 }, [mob('zombie', ',IsBaby:1b'), mob('zombie', ',IsBaby:1b')]),
+  mcRule('creeper', '💥 Creeper', { minCoins: 30, maxCoins: 49 }, [mob('creeper')]),
+  mcRule('witch', '🧪 Witch + poison', { minCoins: 50, maxCoins: 98 }, [mob('witch'), 'effect give {bot} minecraft:poison 5 0']),
+  mcRule('armored', '🛡️ 3 armored zombies', { minCoins: 99, maxCoins: 198 }, [mob('zombie', ARMOR), mob('zombie', ARMOR), mob('zombie', ARMOR)]),
+  mcRule('tnt', '🧨 TNT rain', { minCoins: 199, maxCoins: 298 }, Array(6).fill('execute at {bot} run summon minecraft:tnt ~{rx} ~5 ~{rz} {fuse:50}')),
+  mcRule('vindicators', '🪓 Vindicator gang', { minCoins: 299, maxCoins: 498 }, [mob('vindicator'), mob('vindicator'), mob('vindicator')]),
+  mcRule('ravager', '🐗 Ravager', { minCoins: 499, maxCoins: 998 }, [mob('ravager')]),
+  mcRule('boss', '👹 Boss raid', { minCoins: 999, maxCoins: 1998 }, [
+    'execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('ravager'), mob('vindicator'), mob('vindicator'), mob('evoker'),
   ]),
+  mcRule('warden', '🌑 THE WARDEN', { minCoins: 1999 }, ['execute at {bot} run summon minecraft:lightning_bolt ~{rx} ~ ~{rz}', mob('warden')]),
   mcRule('follow', '🧟 Zombie', { type: 'follow' }, [mob('zombie')]),
   mcRule('share', '🏹 Skeleton archer', { type: 'share' }, [mob('skeleton')]),
-  mcRule('likes', '🧟 Zombie', { type: 'likes', every: 100 }, [mob('zombie')]),
   mcRule('cmd-zombie', '🧟 Zombie', { type: 'command', command: '!zombie' }, [mob('zombie')], 15),
 ];
+const MINECRAFT_PRESET_VERSION = 2; // bump to roll a new ladder out to existing installs
 
 function applyMinecraftPreset() {
   settings = sanitizeSettings({
     ...settings,
     mcPresetApplied: true,
+    mcPresetVersion: MINECRAFT_PRESET_VERSION,
     rules: [...settings.rules.filter((r) => !r.id.startsWith('mc-')), ...MINECRAFT_PRESET],
   });
   saveSettings();
@@ -283,6 +294,16 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 app.get('/healthz', (_req, res) => res.json({ ok: true, status: status.state }));
+
+// stream.sh reports whether the video is actually going out to TikTok (localhost only).
+let streamState = { state: process.env.STREAM_MANAGED ? 'starting' : 'not-managed', since: Date.now() };
+app.post('/internal/stream', express.urlencoded({ extended: false }), (req, res) => {
+  const ip = req.socket.remoteAddress || '';
+  if (!/^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(ip)) return res.sendStatus(403);
+  streamState = { state: String(req.body?.state || 'unknown').slice(0, 20), since: Date.now() };
+  io.emit('streamState', streamState);
+  res.json({ ok: true });
+});
 
 function publicStats() {
   const top = Object.values(stats.gifters)
@@ -804,6 +825,7 @@ io.on('connection', (socket) => {
       legend: gameLegend(),
       keysAvailable: HAS_XDOTOOL,
       stream: isAdmin ? streamInfo() : undefined,
+      streamState,
       admin: isAdmin,
       keyRequired: Boolean(ADMIN_KEY),
     }),
@@ -875,7 +897,9 @@ io.on('connection', (socket) => {
     // hands-free: the first time a hero joins, switch on the Minecraft actions
     if (st?.online && !settings.mcPresetApplied) {
       if (!settings.rules.some((r) => r.mc)) applyMinecraftPreset();
-      else ((settings.mcPresetApplied = true), saveSettings());
+      else ((settings.mcPresetApplied = true), (settings.mcPresetVersion = MINECRAFT_PRESET_VERSION), saveSettings());
+    } else if (st?.online && (settings.mcPresetVersion || 1) < MINECRAFT_PRESET_VERSION && settings.rules.some((r) => r.id.startsWith('mc-'))) {
+      applyMinecraftPreset(); // roll out the newer gift ladder (only the built-in mc- actions are replaced)
     }
     io.emit('mcStatus', mcStatus);
   });
