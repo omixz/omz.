@@ -44,6 +44,6 @@ sudo docker compose up -d --build
 IP=$(curl -fs ifconfig.me || echo YOUR-SERVER-IP)
 echo
 echo "✅ Running, and it restarts by itself after crashes and reboots."
-echo "   Dashboard:  http://$IP:3000"
+echo "   Hub (open on your phone, add to home screen):  http://$IP:3000"
 echo "   Password:   $(grep '^ADMIN_KEY=' .env | cut -d= -f2)"
-echo "   Next: open the dashboard on your phone → Settings → Cloud streaming → paste your TikTok stream key."
+echo "   Next: in the hub, paste your TikTok Server URL + Stream key, then press Go LIVE in TikTok LIVE Producer."

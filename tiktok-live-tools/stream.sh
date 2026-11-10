@@ -22,6 +22,9 @@ DISP=${STREAM_DISPLAY:-:99}
 CHROME=${CHROME_BIN:-$(command -v chromium || command -v chromium-browser || command -v google-chrome || true)}
 RUN_DIR=$(mktemp -d)
 log() { echo "[stream] $*"; }
+export STREAM_MANAGED=1
+# tell the app (hub) whether the video is going out: no-key | streaming | reconnecting
+report() { curl -fs -X POST -d "state=$1" "http://localhost:${PORT}/internal/stream" >/dev/null 2>&1 || true; }
 
 DATA_DIR=${DATA_DIR:-./data}
 STREAM_FILE="$DATA_DIR/stream.json"   # written by the dashboard (Settings -> Cloud streaming)
@@ -90,7 +93,8 @@ sleep 4
 while true; do
   TARGET=$(target)
   if [ -z "$TARGET" ]; then
-    log "no stream key yet: add it in the dashboard (Settings -> Cloud streaming). The game is running meanwhile."
+    log "no stream key yet: add it in the hub (Stream key). The game is running meanwhile."
+    report no-key
     while [ -z "$(target)" ]; do sleep 10; done
     continue
   fi
@@ -105,11 +109,14 @@ while true; do
     -c:a aac -b:a 128k -ar 44100 -ac 2 \
     ${STREAM_SECONDS:+-t "$STREAM_SECONDS"} "${OUT_FMT[@]}" "$TARGET" &
   FF=$!
+  ticks=0
   while kill -0 "$FF" 2>/dev/null; do
     sleep 5
+    ticks=$((ticks + 1)); [ "$ticks" -eq 2 ] && report streaming   # still sending after ~10s
     if [ "$(mtime)" != "$M" ]; then log "stream key changed in the dashboard, switching"; kill "$FF" 2>/dev/null; fi
   done
   wait "$FF" 2>/dev/null
   [ -n "${STREAM_SECONDS:-}" ] && { log "test recording finished"; cleanup; }
+  report reconnecting
   log "stream stopped, reconnecting in 5s"; sleep 5
 done
