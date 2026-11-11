@@ -1,0 +1,5550 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+<Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item>
+<Item class="Lighting" referent="RBX00000002"><Properties><string name="Name">Lighting</string><token name="Technology">4</token></Properties></Item>
+<Item class="Players" referent="RBX00000003"><Properties><string name="Name">Players</string><bool name="CharacterAutoLoads">false</bool></Properties></Item>
+<Item class="ReplicatedStorage" referent="RBX00000014"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000013"><Properties><string name="Name">Shared</string></Properties><Item class="Folder" referent="RBX0000000C"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">Characters</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The crew. Each character has a signature ability, a starting loadout, an innate perk and a
+-- choice of ONE starting perk. All characters are free to play (docs/03-monetisation.md).
+--
+-- Perk modifier keys (see Shared/Stats.luau for defaults):
+--   noiseMult, crouchNoiseMult, waterNoiseMult, takedownTimeMult, shoveCooldownMult, healMult,
+--   throwCapBonus (+n), damageTakenMult, abilityCooldownMult, abilityRadiusMult,
+--   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
+--   throwNoiseMult, craftDiscount (+n), ammoBonus (+n start shot)
+
+local Characters = {}
+
+Characters.Order = { "mara", "tobias", "ines", "sefa" }
+
+Characters.List = {
+	mara = {
+		name = "Mara Kell",
+		role = "Stealth & scouting",
+		bio = "Former harbour pilot. Reads the fog like a tide chart.",
+		height = 1.02,
+		colors = {
+			skin = Color3.fromRGB(198, 160, 130),
+			torso = Color3.fromRGB(58, 76, 84), -- oilskin teal
+			arms = Color3.fromRGB(58, 76, 84),
+			legs = Color3.fromRGB(48, 46, 42),
+		},
+		ability = {
+			id = "TideSense",
+			name = "Tide Sense",
+			desc = "Salt glints reveal every Hushed nearby, through walls, for a few seconds.",
+			cooldown = 25,
+			radius = 70,
+			duration = 4,
+		},
+		loadout = { shot = 8, bottle = 2, bandage = 1 },
+		innate = {
+			id = "ShallowStep",
+			name = "Shallow Step",
+			desc = "Wading makes no extra noise.",
+			mods = { waterNoiseMult = 0 },
+		},
+		perks = {
+			{ id = "QuietHands", name = "Quiet Hands", desc = "Quietings are 40% faster.", mods = { takedownTimeMult = 0.6 } },
+			{ id = "LongSense", name = "Long Sense", desc = "Tide Sense reaches 50% further.", mods = { abilityRadiusMult = 1.5 } },
+			{ id = "LightFoot", name = "Light Foot", desc = "Crouched movement is 30% quieter.", mods = { crouchNoiseMult = 0.7 } },
+		},
+	},
+
+	tobias = {
+		name = "Tobias Ruane",
+		role = "Traps & distraction",
+		bio = "Ferry engineer. Kept the Meridian's generator alive for eleven years.",
+		height = 1.05,
+		colors = {
+			skin = Color3.fromRGB(150, 108, 82),
+			torso = Color3.fromRGB(112, 74, 44), -- canvas work jacket
+			arms = Color3.fromRGB(112, 74, 44),
+			legs = Color3.fromRGB(52, 58, 66),
+		},
+		ability = {
+			id = "RattleBox",
+			name = "Rattle Box",
+			desc = "Set down a clockwork noisemaker that pulls Hushed to it.",
+			cooldown = 30,
+			radius = 36,
+			duration = 9,
+		},
+		loadout = { shot = 5, bottle = 2, bandage = 1, scrap = 3 },
+		innate = {
+			id = "Tinkerer",
+			name = "Tinkerer",
+			desc = "Every recipe costs one part less (minimum 1).",
+			mods = { craftDiscount = 1 },
+		},
+		perks = {
+			{ id = "LoudDecoy", name = "Loud Decoy", desc = "Rattle Box is heard 40% further away.", mods = { abilityRadiusMult = 1.4 } },
+			{ id = "ThickSkin", name = "Thick Skin", desc = "Take 15% less damage.", mods = { damageTakenMult = 0.85 } },
+			{ id = "SpareShot", name = "Spare Shot", desc = "Start with 4 extra Salt Shot.", mods = { ammoBonus = 4 } },
+		},
+	},
+
+	ines = {
+		name = "Ines Okafor-Hale",
+		role = "Sustain & co-op support",
+		bio = "Paramedic. Runs the Meridian's sick bay out of a car deck.",
+		height = 0.98,
+		colors = {
+			skin = Color3.fromRGB(110, 76, 58),
+			torso = Color3.fromRGB(122, 40, 38), -- faded medic red
+			arms = Color3.fromRGB(122, 40, 38),
+			legs = Color3.fromRGB(40, 44, 50),
+		},
+		ability = {
+			id = "SteadyHands",
+			name = "Steady Hands",
+			desc = "Heal yourself and nearby crew, and breathe quietly for a few seconds.",
+			cooldown = 35,
+			radius = 15,
+			duration = 6,
+		},
+		loadout = { shot = 4, bottle = 1, bandage = 3 },
+		innate = {
+			id = "FieldMedic",
+			name = "Field Medic",
+			desc = "Healing +25%. Crew you revive get up with +30 HP.",
+			mods = { healMult = 1.25, reviveHPBonus = 30 },
+		},
+		perks = {
+			{ id = "CalmBreath", name = "Calm Breath", desc = "All your movement is 10% quieter.", mods = { noiseMult = 0.9 } },
+			{ id = "SecondOpinion", name = "Second Opinion", desc = "You bleed out 15 seconds slower.", mods = { bleedOutBonus = 15 } },
+			{ id = "Triage", name = "Triage", desc = "Steady Hands recharges 25% faster.", mods = { abilityCooldownMult = 0.75 } },
+		},
+	},
+
+	sefa = {
+		name = "Sefa Talataina",
+		role = "Control & escapes",
+		bio = "Fisher and net-maker. Has never once lost a catch.",
+		height = 1.0,
+		colors = {
+			skin = Color3.fromRGB(134, 94, 66),
+			torso = Color3.fromRGB(150, 118, 52), -- mustard fishing smock
+			arms = Color3.fromRGB(150, 118, 52),
+			legs = Color3.fromRGB(56, 62, 58),
+		},
+		ability = {
+			id = "ThrowNet",
+			name = "Throw Net",
+			desc = "Pin the Hushed in front of you for a few seconds. Pinned Hushed can be Quieted from any side.",
+			cooldown = 28,
+			radius = 25,
+			duration = 5,
+		},
+		loadout = { shot = 6, bottle = 3, bandage = 1 },
+		innate = {
+			id = "DeepPockets",
+			name = "Deep Pockets",
+			desc = "Carry one extra bottle.",
+			mods = { throwCapBonus = 1 },
+		},
+		perks = {
+			{ id = "StrongArm", name = "Strong Arm", desc = "Thrown bottles are heard 30% further away.", mods = { throwNoiseMult = 1.3 } },
+			{ id = "HeavyNet", name = "Heavy Net", desc = "Throw Net pins 50% longer.", mods = { abilityDurationMult = 1.5 } },
+			{ id = "SeaLegs", name = "Sea Legs", desc = "Sprint 8% faster.", mods = { sprintSpeedMult = 1.08 } },
+		},
+	},
+}
+
+return Characters
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">Commerce</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Developer products. Create each one in Creator Hub > your experience > Monetization >
+-- Developer Products, then paste its ID below (docs/06-publishing.md, step 5).
+-- An ID of 0 means "not configured": the shop shows the item but will not prompt a purchase.
+--
+-- `price` is only a fallback label: the shop always shows the live price Roblox reports.
+-- Rules (docs/03-monetisation.md): fixed contents, never random; Second Wind max once per
+-- crossing; every aid can also be earned free by playing.
+return {
+	Products = {
+		SecondWind = {
+			productId = 0,
+			name = "Second Wind",
+			price = 49,
+			desc = "Get back up once when you're downed. Max one per crossing.",
+			grant = { secondWind = 1 },
+		},
+		SecondWind3 = {
+			productId = 0,
+			name = "Second Wind x3",
+			price = 129,
+			desc = "Three Second Wind tokens. Same limit: one per crossing.",
+			grant = { secondWind = 3 },
+		},
+		Resupply = {
+			productId = 0,
+			name = "Resupply Satchel",
+			price = 29,
+			desc = "+4 Salt Shot, +1 Bottle, +1 Bandage, once per crossing.",
+			grant = { resupply = 1 },
+		},
+	},
+	Order = { "SecondWind", "SecondWind3", "Resupply" },
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">Enemies</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Hushed. Only the Drifter exists in Slice 0; other types (Lantern-eye, Bellwether,
+-- Tidewalker, Mire) arrive in Stage 6.
+return {
+	TickRate = 10, -- brain updates per second
+
+	Drifter = {
+		patrolSpeed = 5.5,
+		investigateSpeed = 9,
+		chaseSpeed = 16.5, -- slower than a sprint (20), so you CAN break away, loudly
+		sightRange = 70,
+		fovDeg = 110,
+		closeRange = 9, -- inside this, sight builds suspicion much faster
+		suspicionGain = 1.1,
+		suspicionDecay = 0.18,
+		noticeThreshold = 0.15, -- stops and stares
+		investigateThreshold = 0.35,
+		alertThreshold = 1,
+		loseSightTime = 4,
+		searchTime = 10,
+		grabRange = 3.6,
+		grabDamage = 34,
+		grabRecover = 2.2,
+	},
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">Game</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Global tuning for a Crossing. Everything a designer may want to change lives in Config/.
+local Game = {
+	MaxPartySize = 4, -- per server; also set "Server size" to this in Creator Hub (docs/06-publishing.md)
+	CratesRequired = 5,
+	StartCountdown = 5,
+	ResultsDuration = 15,
+	MaxHP = 100,
+	BleedOutTime = 30,
+	ReviveTime = 2.5, -- seconds a teammate holds the revive prompt
+	ReviveHP = 40,
+	ExtractionRadius = 12,
+	BaseEnemies = 5,
+	EnemiesPerExtraPlayer = 2,
+	MaxEnemies = 13,
+
+	-- Paid / earnable run aids (Second Wind, Resupply). Set false to make the game cosmetics-only.
+	RunAidsEnabled = true,
+	SecondWindHP = 60,
+	StartingTokens = { secondWind = 1, resupply = 1 }, -- new players
+	WinReward = { resupply = 1 }, -- every successful crossing
+	DailyWinReward = { secondWind = 1 }, -- first successful crossing each UTC day
+
+	FerryOrigin = Vector3.new(0, 0, 700),
+}
+
+return Game
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">Items</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Items, satchel caps and crafting recipes. The satchel is deliberately small: choices matter.
+-- Satchel size is NEVER sold (docs/03-monetisation.md).
+return {
+	Items = {
+		shot = { name = "Salt Shot", cap = 12, desc = "Slingshot ammo. Stuns a Hushed, or makes noise where it lands." },
+		bottle = { name = "Bottle", cap = 3, throwable = true, desc = "Throw it. The noise pulls Hushed away." },
+		bandage = { name = "Bandage", cap = 3, desc = "Heals over a short, interruptible channel." },
+		glass = { name = "Glass", cap = 6, part = true },
+		cloth = { name = "Cloth", cap = 6, part = true },
+		scrap = { name = "Scrap", cap = 6, part = true },
+	},
+	Order = { "shot", "bottle", "bandage", "glass", "cloth", "scrap" },
+
+	Recipes = {
+		bottle = { name = "Bottle", output = "bottle", amount = 1, cost = { glass = 2 } },
+		bandage = { name = "Bandage", output = "bandage", amount = 1, cost = { cloth = 2 } },
+		shot = { name = "Salt Shot x3", output = "shot", amount = 3, cost = { scrap = 1 } },
+	},
+	RecipeOrder = { "bottle", "bandage", "shot" },
+	CraftTime = 1,
+
+	Bandage = { heal = 35, channel = 1.5 },
+	Bottle = { noiseRadius = 45, speed = 75, lift = 16 },
+	Slingshot = { range = 140, stun = 3, cooldown = 0.7, impactNoise = 22, hitNoise = 14 },
+	Quieting = { range = 4.5, time = 0.9, noise = 6 },
+	Shove = { range = 5.5, cooldown = 4, stun = 2.2, noise = 12 },
+
+	-- What one Resupply token gives (fixed, never random).
+	Resupply = { shot = 4, bottle = 1, bandage = 1 },
+
+	-- Loot scattered per encounter.
+	PartsPerType = 4,
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">Modifiers</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Environmental modifiers. One is rolled per encounter (or none) for replayability.
+-- Fields: sightMult, noiseMult (all noise), footstepMult, partsMult, fogDensity, ambientBoost, lightning
+return {
+	None = { id = "None", name = "Still Water", desc = "An ordinary night on the Marrow Coast.", fogDensity = 0.45 },
+	List = {
+		{ id = "HeavyPall", name = "Heavy Pall", desc = "Thick fog. Everyone sees less.", sightMult = 0.65, fogDensity = 0.62 },
+		{ id = "Squall", name = "Squall", desc = "Wind masks your footsteps.", footstepMult = 0.6, sightMult = 0.9, fogDensity = 0.5, lightning = true },
+		{ id = "Echoing", name = "Echoing", desc = "Every sound carries further.", noiseMult = 1.5, fogDensity = 0.42 },
+		{ id = "Moonbreak", name = "Moonbreak", desc = "The fog thins. You see them. They see you.", sightMult = 1.3, fogDensity = 0.24, ambientBoost = 0.35 },
+		{ id = "ScavengedOut", name = "Scavenged Out", desc = "Someone got here first. Half the parts.", partsMult = 0.5, fogDensity = 0.45 },
+	},
+	NoneChance = 0.2,
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000000A"><Properties><string name="Name">Movement</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Speeds are studs/second. Noise values are the radius (studs) in which Hushed can hear you.
+return {
+	Speeds = {
+		Crouch = 6.5,
+		Walk = 9,
+		Jog = 14,
+		Sprint = 20,
+		Aim = 7,
+		Downed = 2.5,
+	},
+	Noise = {
+		Crouch = 3,
+		Walk = 9,
+		Jog = 16,
+		Sprint = 30,
+	},
+	Accel = 38, -- how fast WalkSpeed ramps up (studs/s^2): gives weight to starts
+	Decel = 70,
+	WaterNoiseMult = 1.6, -- wading is louder...
+	WaterSpeedMult = 0.75, -- ...and slower
+	CrouchHipMult = 0.66, -- procedural crouch pose lowers hips to this fraction
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">Sounds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Placeholder sounds use files that ship inside the Roblox client (rbxasset://).
+-- Replace with original or Roblox-licensed audio (Creator Store > Audio) and log each one in
+-- the asset register (docs/04-ip-compliance.md). An empty string disables that sound.
+return {
+	Quieting = "rbxasset://sounds/swordslash.wav",
+	Shove = "rbxasset://sounds/swordlunge.wav",
+	BottleBreak = "rbxasset://sounds/impact_water.mp3",
+	SlingshotFire = "rbxasset://sounds/swordlunge.wav",
+	Spotted = "rbxasset://sounds/electronicpingshort.wav",
+	Rattle = "rbxasset://sounds/electronicpingshort.wav",
+	Splash = "rbxasset://sounds/impact_water.mp3",
+}
+]]></ProtectedString></Properties></Item>
+</Item>
+<Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Every client<->server message goes through these RemoteEvents. The server creates them;
+-- clients wait for them. Server handlers are rate-limited and wrapped in pcall so a bad
+-- payload can never crash a service. Validate EVERY argument in the handler.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Net = {}
+
+local EVENTS = {
+	"SelectCharacter", -- client -> server (charId, perkId)
+	"SetMoveState", -- client -> server (stance, sprinting, aiming)
+	"Action", -- client -> server (actionName, payload)
+	"ReturnToFerry", -- client -> server ()
+	"Notify", -- server -> client (kind, data)
+}
+
+local folder
+if RunService:IsServer() then
+	folder = ReplicatedStorage:FindFirstChild("Net")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Net"
+	end
+	for _, name in EVENTS do
+		if not folder:FindFirstChild(name) then
+			local remote = Instance.new("RemoteEvent")
+			remote.Name = name
+			remote.Parent = folder
+		end
+	end
+	folder.Parent = ReplicatedStorage
+else
+	folder = ReplicatedStorage:WaitForChild("Net")
+end
+
+function Net.event(name)
+	return folder:WaitForChild(name)
+end
+
+local buckets = {}
+
+-- Server only. `rate` = max messages per second per player (token bucket).
+function Net.onServer(name, rate, handler)
+	local remote = Net.event(name)
+	remote.OnServerEvent:Connect(function(player, ...)
+		local key = player.UserId
+		local perPlayer = buckets[key]
+		if not perPlayer then
+			perPlayer = {}
+			buckets[key] = perPlayer
+		end
+		local now = os.clock()
+		local bucket = perPlayer[name]
+		if not bucket then
+			bucket = { tokens = rate, t = now }
+			perPlayer[name] = bucket
+		end
+		bucket.tokens = math.min(rate, bucket.tokens + (now - bucket.t) * rate)
+		bucket.t = now
+		if bucket.tokens < 1 then
+			return -- dropped: flooding
+		end
+		bucket.tokens -= 1
+		local ok, err = pcall(handler, player, ...)
+		if not ok then
+			warn(("[Net] %s handler error for %s: %s"):format(name, player.Name, tostring(err)))
+		end
+	end)
+end
+
+function Net.notify(player, kind, data)
+	Net.event("Notify"):FireClient(player, kind, data)
+end
+
+function Net.notifyAll(kind, data)
+	Net.event("Notify"):FireAllClients(kind, data)
+end
+
+if RunService:IsServer() then
+	Players.PlayerRemoving:Connect(function(player)
+		buckets[player.UserId] = nil
+	end)
+end
+
+return Net
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Combines a character's innate perk and chosen perk into one modifier table.
+local Characters = require(script.Parent.Config.Characters)
+
+local Stats = {}
+
+local DEFAULTS = {
+	noiseMult = 1,
+	crouchNoiseMult = 1,
+	waterNoiseMult = 1,
+	takedownTimeMult = 1,
+	shoveCooldownMult = 1,
+	healMult = 1,
+	throwCapBonus = 0,
+	damageTakenMult = 1,
+	abilityCooldownMult = 1,
+	abilityRadiusMult = 1,
+	abilityDurationMult = 1,
+	sprintSpeedMult = 1,
+	reviveHPBonus = 0,
+	bleedOutBonus = 0,
+	throwNoiseMult = 1,
+	craftDiscount = 0,
+	ammoBonus = 0,
+}
+
+local ADDITIVE = {
+	throwCapBonus = true,
+	reviveHPBonus = true,
+	bleedOutBonus = true,
+	craftDiscount = true,
+	ammoBonus = true,
+}
+
+local function apply(result, mods)
+	for key, value in mods do
+		if DEFAULTS[key] == nil then
+			warn("[Stats] unknown perk modifier: " .. tostring(key))
+		elseif ADDITIVE[key] then
+			result[key] += value
+		else
+			result[key] *= value
+		end
+	end
+end
+
+function Stats.findPerk(charId, perkId)
+	local def = Characters.List[charId]
+	if not def then
+		return nil
+	end
+	for _, perk in def.perks do
+		if perk.id == perkId then
+			return perk
+		end
+	end
+	return nil
+end
+
+function Stats.compute(charId, perkId)
+	local result = table.clone(DEFAULTS)
+	local def = Characters.List[charId]
+	if not def then
+		return result
+	end
+	apply(result, def.innate.mods)
+	local perk = Stats.findPerk(charId, perkId)
+	if perk then
+		apply(result, perk.mods)
+	end
+	return result
+end
+
+return Stats
+]]></ProtectedString></Properties></Item>
+<Item class="Folder" referent="RBX00000012"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+local CollectionService = game:GetService("CollectionService")
+
+local Geometry = {}
+
+function Geometry.pointInPart(point, part)
+	local rel = part.CFrame:PointToObjectSpace(point)
+	local half = part.Size * 0.5
+	return math.abs(rel.X) <= half.X and math.abs(rel.Y) <= half.Y and math.abs(rel.Z) <= half.Z
+end
+
+-- True if `point` lies inside any part tagged `tag` (volumes such as TallGrass, LitZone, Shallows).
+function Geometry.inTagged(point, tag)
+	for _, part in CollectionService:GetTagged(tag) do
+		if part:IsA("BasePart") and Geometry.pointInPart(point, part) then
+			return true
+		end
+	end
+	return false
+end
+
+function Geometry.flat(v)
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+function Geometry.flatDistance(a, b)
+	local dx, dz = a.X - b.X, a.Z - b.Z
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- Rejects NaN, infinities and absurd values sent by clients.
+function Geometry.isSaneVector(v, maxMagnitude)
+	if typeof(v) ~= "Vector3" then
+		return false
+	end
+	if v.X ~= v.X or v.Y ~= v.Y or v.Z ~= v.Z then
+		return false
+	end
+	return v.Magnitude <= (maxMagnitude or 1e5)
+end
+
+return Geometry
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000010"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Plays a one-shot 3D sound at a position (server: everyone hears it; client: only you).
+local Debris = game:GetService("Debris")
+local Workspace = game:GetService("Workspace")
+
+local Sounds = require(script.Parent.Parent.Config.Sounds)
+
+local Sfx = {}
+
+function Sfx.at(position, soundKey, volume, maxDistance)
+	local id = Sounds[soundKey]
+	if not id or id == "" then
+		return
+	end
+	local holder = Instance.new("Part")
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Transparency = 1
+	holder.Size = Vector3.new(0.2, 0.2, 0.2)
+	holder.CFrame = CFrame.new(position)
+	local sound = Instance.new("Sound")
+	sound.SoundId = id
+	sound.Volume = volume or 0.6
+	sound.RollOffMaxDistance = maxDistance or 120
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.Parent = holder
+	holder.Parent = Workspace
+	sound:Play()
+	Debris:AddItem(holder, 4)
+end
+
+return Sfx
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Critically damped spring. Works for numbers and Vector3s.
+-- frequency = how quickly it settles (higher = snappier).
+local Spring = {}
+Spring.__index = Spring
+
+function Spring.new(initial, frequency)
+	return setmetatable({
+		position = initial,
+		velocity = initial * 0,
+		target = initial,
+		frequency = frequency or 8,
+	}, Spring)
+end
+
+function Spring:reset(value)
+	self.position = value
+	self.velocity = value * 0
+	self.target = value
+end
+
+function Spring:update(dt)
+	local w = self.frequency * 2 * math.pi
+	local disp = self.position - self.target
+	local decay = math.exp(-w * dt)
+	local k = self.velocity + disp * w
+	self.position = self.target + (disp + k * dt) * decay
+	self.velocity = (self.velocity - k * w * dt) * decay
+	return self.position
+end
+
+return Spring
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+</Item>
+<Item class="ServerScriptService" referent="RBX00000022"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000021"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000015"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- AFTERTIDE server bootstrap. Every service exposes optional init(registry) and start().
+-- init wires dependencies (no yielding); start begins loops and connections.
+local Players = game:GetService("Players")
+
+Players.CharacterAutoLoads = false -- CharacterService spawns the crew rigs itself
+
+local Services = script.Parent:WaitForChild("Services")
+
+local ORDER = {
+	"PlayerDataService",
+	"MapService",
+	"PerceptionService",
+	"InventoryService",
+	"CharacterService",
+	"EnemyService",
+	"ActionService",
+	"CommerceService",
+	"MatchService",
+	"AntiCheatService",
+}
+
+local registry = {}
+for _, name in ORDER do
+	registry[name] = require(Services:WaitForChild(name))
+end
+for _, name in ORDER do
+	local service = registry[name]
+	if service.init then
+		service.init(registry)
+	end
+end
+for _, name in ORDER do
+	local service = registry[name]
+	if service.start then
+		task.spawn(service.start)
+	end
+end
+
+print("[AFTERTIDE] server ready")
+]]></ProtectedString></Properties></Item>
+<Item class="Folder" referent="RBX00000020"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Every player action, validated server-side. The client only sends intent:
+--   Action("Quiet")                     takedown from behind, else shove
+--   Action("Fire", aimDirection)        slingshot (Salt Shot)
+--   Action("Throw", aimDirection)       bottle
+--   Action("Ability")                   character signature ability
+--   Action("Heal") / ("Torch") / ("Craft", recipeId)
+--   Action("SecondWind") / ("Resupply") run aids (tokens; limited to once per crossing)
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
+local Commerce = require(Shared.Config.Commerce)
+local Game = require(Shared.Config.Game)
+local Items = require(Shared.Config.Items)
+local Net = require(Shared.Net)
+local Geometry = require(Shared.Util.Geometry)
+local Sfx = require(Shared.Util.Sfx)
+
+local ActionService = {}
+local Services
+
+local function serverTime()
+	return Workspace:GetServerTimeNow()
+end
+
+local function toast(player, text)
+	Net.notify(player, "Toast", { text = text })
+end
+
+local function setBusy(info, seconds)
+	info.session.busyUntil = os.clock() + seconds
+	info.char:SetAttribute("BusyUntil", serverTime() + seconds)
+end
+
+local function isBusy(info)
+	return os.clock() < info.session.busyUntil
+end
+
+-- Runs `fn` after `seconds` unless the player was hurt/downed meanwhile (channelId changes).
+local function channel(info, seconds, fn)
+	local session = info.session
+	session.channelId += 1
+	local id = session.channelId
+	setBusy(info, seconds)
+	task.delay(seconds, function()
+		if session.channelId == id and not session.downed and not session.out then
+			fn()
+		end
+	end)
+end
+
+local function rayParamsFor(char)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char }
+	return params
+end
+
+local function tracer(from, to, color)
+	local length = (to - from).Magnitude
+	if length < 0.1 then
+		return
+	end
+	local beam = Instance.new("Part")
+	beam.Anchored = true
+	beam.CanCollide = false
+	beam.CanQuery = false
+	beam.CanTouch = false
+	beam.CastShadow = false
+	beam.Material = Enum.Material.Neon
+	beam.Color = color
+	beam.Transparency = 0.4
+	beam.Size = Vector3.new(0.08, 0.08, length)
+	beam.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -length / 2)
+	beam.Parent = Workspace
+	Debris:AddItem(beam, 0.12)
+end
+
+-- Actions ---------------------------------------------------------------------------------
+
+local function quiet(player, info)
+	if isBusy(info) then
+		return
+	end
+	local pos = info.root.Position
+	local near = Services.EnemyService.findNear(pos, math.max(Items.Quieting.range, Items.Shove.range))
+	for _, entry in near do
+		local e = entry.enemy
+		if entry.distance <= Items.Quieting.range and Services.EnemyService.canQuiet(e, pos) then
+			local duration = Items.Quieting.time * info.session.mods.takedownTimeMult
+			Services.EnemyService.stun(e, duration + 5, nil, "Quieted")
+			setBusy(info, duration)
+			Net.notify(player, "Takedown", { duration = duration })
+			task.delay(duration, function()
+				Services.EnemyService.disperse(e)
+				Services.PerceptionService.emitNoise(e.root.Position, Items.Quieting.noise, "quieting", nil)
+			end)
+			info.session.stats.takedowns += 1
+			return
+		end
+	end
+	-- no takedown available: shove whatever is in front
+	if os.clock() < info.session.shoveReadyAt then
+		return
+	end
+	local look = info.root.CFrame.LookVector
+	for _, entry in near do
+		local e = entry.enemy
+		local to = Geometry.flat(e.root.Position - pos)
+		if entry.distance <= Items.Shove.range and to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.3 then
+			info.session.shoveReadyAt = os.clock() + Items.Shove.cooldown * info.session.mods.shoveCooldownMult
+			Services.EnemyService.stun(e, Items.Shove.stun, player)
+			e.root.AssemblyLinearVelocity = to.Unit * 30
+			Sfx.at(e.root.Position, "Shove", 0.5, 60)
+			Services.PerceptionService.emitNoise(pos, Items.Shove.noise, "shove", player)
+			setBusy(info, 0.4)
+			return
+		end
+	end
+end
+
+local function fire(player, info, direction)
+	if not Geometry.isSaneVector(direction, 2) or direction.Magnitude < 0.5 then
+		return
+	end
+	direction = direction.Unit
+	if isBusy(info) or os.clock() < info.session.fireReadyAt then
+		return
+	end
+	if not Services.InventoryService.take(player, "shot", 1) then
+		toast(player, "Out of Salt Shot")
+		return
+	end
+	local cfg = Items.Slingshot
+	info.session.fireReadyAt = os.clock() + cfg.cooldown
+	local head = info.char:FindFirstChild("Head")
+	local origin = (head and head.Position or info.root.Position) + direction * 1.2
+	local result = Workspace:Raycast(origin, direction * cfg.range, rayParamsFor(info.char))
+	local hitPos = result and result.Position or origin + direction * cfg.range
+	tracer(origin, hitPos, Color3.fromRGB(230, 230, 220))
+	Sfx.at(origin, "SlingshotFire", 0.35, 40)
+	local e = result and Services.EnemyService.fromInstance(result.Instance)
+	if e then
+		Services.EnemyService.stun(e, cfg.stun, player)
+		Services.PerceptionService.emitNoise(hitPos, cfg.hitNoise, "impact", nil)
+	elseif result then
+		Services.PerceptionService.emitNoise(hitPos, cfg.impactNoise, "impact", nil)
+	end
+end
+
+local function shatter(position, player, mods)
+	local radius = Items.Bottle.noiseRadius * mods.throwNoiseMult
+	Services.PerceptionService.emitNoise(position, radius, "bottle", nil)
+	Sfx.at(position, "BottleBreak", 0.8, 160)
+	local holder = Instance.new("Part")
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.Transparency = 1
+	holder.Size = Vector3.new(0.2, 0.2, 0.2)
+	holder.CFrame = CFrame.new(position)
+	holder.Parent = Workspace
+	local shards = Instance.new("ParticleEmitter")
+	shards.Rate = 0
+	shards.Lifetime = NumberRange.new(0.4, 0.8)
+	shards.Speed = NumberRange.new(8, 16)
+	shards.SpreadAngle = Vector2.new(70, 70)
+	shards.Acceleration = Vector3.new(0, -40, 0)
+	shards.Color = ColorSequence.new(Color3.fromRGB(150, 200, 170))
+	shards.Size = NumberSequence.new(0.15)
+	shards.Parent = holder
+	shards:Emit(25)
+	Debris:AddItem(holder, 2)
+	Net.notify(player, "Toast", { text = "Bottle shattered: Hushed nearby will come to look" })
+end
+
+local function throw(player, info, direction)
+	if not Geometry.isSaneVector(direction, 2) or direction.Magnitude < 0.5 then
+		return
+	end
+	direction = direction.Unit
+	if isBusy(info) then
+		return
+	end
+	if not Services.InventoryService.take(player, "bottle", 1) then
+		toast(player, "No bottles")
+		return
+	end
+	setBusy(info, 0.35)
+	local head = info.char:FindFirstChild("Head")
+	local position = (head and head.Position or info.root.Position) + direction * 1.5
+	local velocity = direction * Items.Bottle.speed + Vector3.new(0, Items.Bottle.lift, 0)
+	local bottle = Instance.new("Part")
+	bottle.Anchored = true
+	bottle.CanCollide = false
+	bottle.CanQuery = false
+	bottle.Shape = Enum.PartType.Cylinder
+	bottle.Size = Vector3.new(0.9, 0.4, 0.4)
+	bottle.Material = Enum.Material.Glass
+	bottle.Color = Color3.fromRGB(70, 120, 90)
+	bottle.Transparency = 0.2
+	bottle.CFrame = CFrame.new(position)
+	bottle.Parent = Workspace
+	local params = rayParamsFor(info.char)
+	local mods = info.session.mods
+	local age = 0
+	local conn
+	conn = RunService.Heartbeat:Connect(function(dt)
+		age += dt
+		velocity += Vector3.new(0, -Workspace.Gravity * 0.5, 0) * dt
+		local step = velocity * dt
+		local result = Workspace:Raycast(position, step, params)
+		if result or age > 4 then
+			conn:Disconnect()
+			bottle:Destroy()
+			shatter(result and result.Position or position, player, mods)
+			return
+		end
+		position += step
+		bottle.CFrame = CFrame.new(position) * CFrame.Angles(age * 9, age * 5, 0)
+	end)
+end
+
+local abilities = {}
+
+function abilities.TideSense(player, info, ability, mods)
+	Net.notify(player, "TideSense", {
+		radius = ability.radius * mods.abilityRadiusMult,
+		duration = ability.duration * mods.abilityDurationMult,
+	})
+	return true
+end
+
+function abilities.RattleBox(player, info, ability, mods)
+	local look = Geometry.flat(info.root.CFrame.LookVector)
+	look = look.Magnitude > 0.01 and look.Unit or Vector3.new(0, 0, -1)
+	local spot = info.root.Position + look * 3
+	local down = Workspace:Raycast(spot + Vector3.new(0, 3, 0), Vector3.new(0, -12, 0), rayParamsFor(info.char))
+	local ground = down and down.Position or Vector3.new(spot.X, 0, spot.Z)
+	local box = Instance.new("Part")
+	box.Name = "RattleBox"
+	box.Anchored = true
+	box.CanCollide = false
+	box.Size = Vector3.new(1, 0.8, 1)
+	box.Material = Enum.Material.Metal
+	box.Color = Color3.fromRGB(150, 120, 60)
+	box.CFrame = CFrame.new(ground + Vector3.new(0, 0.4, 0))
+	box.Parent = Workspace
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 200, 120)
+	light.Range = 6
+	light.Parent = box
+	local radius = ability.radius * mods.abilityRadiusMult
+	local duration = ability.duration * mods.abilityDurationMult
+	task.spawn(function()
+		local elapsed = 0
+		while elapsed < duration and box.Parent do
+			light.Enabled = not light.Enabled
+			Services.PerceptionService.emitNoise(box.Position, radius, "rattle", nil)
+			Sfx.at(box.Position, "Rattle", 0.4, radius * 2)
+			task.wait(1.5)
+			elapsed += 1.5
+		end
+		box:Destroy()
+	end)
+	return true
+end
+
+function abilities.SteadyHands(player, info, ability, mods)
+	Services.CharacterService.heal(player, 40 * mods.healMult)
+	for _, other in Services.MatchService.getActivePlayers() do
+		if other.player ~= player and (other.root.Position - info.root.Position).Magnitude <= ability.radius then
+			Services.CharacterService.heal(other.player, 20 * mods.healMult)
+			toast(other.player, player.DisplayName .. " patched you up")
+		end
+	end
+	info.session.calmUntil = os.clock() + ability.duration * mods.abilityDurationMult
+	return true
+end
+
+function abilities.ThrowNet(player, info, ability, mods)
+	local look = info.root.CFrame.LookVector
+	local params = rayParamsFor(info.char)
+	for _, entry in Services.EnemyService.findNear(info.root.Position, ability.radius) do
+		local e = entry.enemy
+		local to = e.root.Position - info.root.Position
+		if to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.8 then
+			local hit = Workspace:Raycast(info.root.Position, to, params)
+			if not hit or Services.EnemyService.fromInstance(hit.Instance) == e then
+				Services.EnemyService.pin(e, ability.duration * mods.abilityDurationMult)
+				return true
+			end
+		end
+	end
+	toast(player, "No Hushed in front of you to net")
+	return false
+end
+
+local function useAbility(player, info)
+	local session = info.session
+	if isBusy(info) or os.clock() < session.abilityReadyAt then
+		return
+	end
+	local def = Characters.List[session.charId]
+	local ability = def.ability
+	local handler = abilities[ability.id]
+	if handler and handler(player, info, ability, session.mods) then
+		local cooldown = ability.cooldown * session.mods.abilityCooldownMult
+		session.abilityReadyAt = os.clock() + cooldown
+		info.char:SetAttribute("AbilityReadyAt", serverTime() + cooldown)
+	end
+end
+
+local function heal(player, info)
+	if isBusy(info) then
+		return
+	end
+	if info.session.hp >= Game.MaxHP then
+		toast(player, "Already at full health")
+		return
+	end
+	if Services.InventoryService.count(player, "bandage") < 1 then
+		toast(player, "No bandages")
+		return
+	end
+	channel(info, Items.Bandage.channel, function()
+		if Services.InventoryService.take(player, "bandage", 1) then
+			Services.CharacterService.heal(player, Items.Bandage.heal * info.session.mods.healMult)
+		end
+	end)
+end
+
+local function toggleTorch(player, info)
+	local head = info.char:FindFirstChild("Head")
+	local torch = head and head:FindFirstChild("Torch")
+	if torch then
+		torch.Enabled = not torch.Enabled
+		info.char:SetAttribute("Torch", torch.Enabled)
+	end
+end
+
+local function craft(player, info, recipeId)
+	if type(recipeId) ~= "string" or not Items.Recipes[recipeId] or isBusy(info) then
+		return
+	end
+	local ok, reason = Services.InventoryService.canCraft(player, recipeId)
+	if not ok then
+		toast(player, reason)
+		return
+	end
+	channel(info, Items.CraftTime, function()
+		local crafted, why = Services.InventoryService.craft(player, recipeId)
+		toast(player, crafted and ("Crafted " .. Items.Recipes[recipeId].name) or why)
+	end)
+end
+
+-- Run aids --------------------------------------------------------------------------------
+
+function ActionService.useSecondWind(player)
+	if not Game.RunAidsEnabled then
+		return false
+	end
+	local session = Services.CharacterService.getSession(player)
+	if not session or not session.downed or session.out or Services.MatchService.state ~= "Encounter" then
+		return false
+	end
+	if session.usedSecondWind then
+		toast(player, "Second Wind is limited to once per crossing")
+		return false
+	end
+	if not Services.PlayerDataService.useToken(player, "secondWind") then
+		Net.notify(player, "NeedProduct", { productKey = "SecondWind" })
+		return false
+	end
+	session.usedSecondWind = true
+	Services.CharacterService.revive(player, Game.SecondWindHP)
+	return true
+end
+
+function ActionService.useResupply(player)
+	if not Game.RunAidsEnabled then
+		return false
+	end
+	local info = Services.MatchService.getActiveInfo(player)
+	if not info then
+		toast(player, "Resupply works during a crossing")
+		return false
+	end
+	if info.session.usedResupply then
+		toast(player, "Resupply is limited to once per crossing")
+		return false
+	end
+	if not Services.PlayerDataService.useToken(player, "resupply") then
+		Net.notify(player, "NeedProduct", { productKey = "Resupply" })
+		return false
+	end
+	info.session.usedResupply = true
+	for itemId, amount in Items.Resupply do
+		Services.InventoryService.add(player, itemId, amount)
+	end
+	toast(player, "Resupplied")
+	return true
+end
+
+-- Dispatcher ------------------------------------------------------------------------------
+
+local HANDLERS = {
+	Quiet = quiet,
+	Fire = fire,
+	Throw = throw,
+	Ability = useAbility,
+	Heal = heal,
+	Torch = toggleTorch,
+	Craft = craft,
+}
+
+function ActionService.init(registry)
+	Services = registry
+end
+
+function ActionService.start()
+	Net.onServer("Action", 20, function(player, action, payload)
+		if type(action) ~= "string" then
+			return
+		end
+		if action == "SecondWind" then
+			ActionService.useSecondWind(player)
+			return
+		elseif action == "Resupply" then
+			ActionService.useResupply(player)
+			return
+		end
+		local handler = HANDLERS[action]
+		if not handler then
+			return
+		end
+		local info = Services.MatchService.getActiveInfo(player)
+		if not info then
+			-- Torch works on the ferry too
+			if action == "Torch" then
+				local session = Services.CharacterService.getSession(player)
+				local char = player.Character
+				if session and char and char:FindFirstChild("HumanoidRootPart") then
+					toggleTorch(player, { char = char, session = session })
+				end
+			end
+			return
+		end
+		handler(player, info, payload)
+	end)
+	-- keep Commerce referenced for product keys used in NeedProduct
+	assert(Commerce.Products.SecondWind and Commerce.Products.Resupply, "Commerce config missing run aids")
+end
+
+return ActionService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Lightweight movement sanity checks. Roblox lets clients simulate their own character, so
+-- speed hacks are possible; we detect impossible displacement and pull the player back.
+-- PvE-only design keeps the stakes low (docs/02-technical-architecture.md section 2.4).
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Movement = require(Shared.Config.Movement)
+
+local AntiCheatService = {}
+local Services
+
+local INTERVAL = 0.5
+local track = {} -- [Player] = { pos, t, strikes, lastGood }
+
+function AntiCheatService.init(registry)
+	Services = registry
+end
+
+function AntiCheatService.start()
+	Players.PlayerRemoving:Connect(function(player)
+		track[player] = nil
+	end)
+	while true do
+		task.wait(INTERVAL)
+		local now = os.clock()
+		for _, player in Players:GetPlayers() do
+			local char = player.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local session = Services.CharacterService.getSession(player)
+			if root and session then
+				local t = track[player]
+				if not t or t.char ~= char or now < session.graceUntil then
+					track[player] = { char = char, pos = root.Position, t = now, strikes = 0, lastGood = root.CFrame }
+				else
+					local dt = now - t.t
+					local moved = Vector3.new(root.Position.X - t.pos.X, 0, root.Position.Z - t.pos.Z).Magnitude
+					local allowed = (Movement.Speeds.Sprint * session.mods.sprintSpeedMult * 1.5 + 6) * dt
+					if moved > allowed then
+						t.strikes += 1
+						if t.strikes >= 2 then
+							warn(("[AntiCheat] %s moved %.1f studs in %.2fs; resetting"):format(player.Name, moved, dt))
+							char:PivotTo(t.lastGood)
+							t.strikes = 0
+						end
+					else
+						t.strikes = math.max(0, t.strikes - 1)
+						t.lastGood = root.CFrame
+					end
+					t.pos = root.Position
+					t.t = now
+				end
+			end
+		end
+	end
+end
+
+return AntiCheatService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
+-- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
+--
+-- Slice 0 uses a scaled, faceless R15 mannequin coloured per character. Stage 5 swaps in the
+-- custom skinned-mesh rigs; nothing else in the code needs to change.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
+local Game = require(Shared.Config.Game)
+local Stats = require(Shared.Stats)
+local Net = require(Shared.Net)
+local Geometry = require(Shared.Util.Geometry)
+
+local CharacterService = {}
+local Services
+
+local sessions = {} -- [Player] = session
+
+local function newSession()
+	return {
+		charId = nil,
+		perkId = nil,
+		mods = Stats.compute(nil, nil),
+		hp = Game.MaxHP,
+		downed = false,
+		out = false,
+		bleedOutAt = 0,
+		busyUntil = 0,
+		channelId = 0,
+		abilityReadyAt = 0,
+		fireReadyAt = 0,
+		shoveReadyAt = 0,
+		calmUntil = 0,
+		graceUntil = 0,
+		usedSecondWind = false,
+		usedResupply = false,
+		stats = { takedowns = 0, detections = 0, crates = 0 },
+	}
+end
+
+function CharacterService.getSession(player)
+	local session = sessions[player]
+	if not session and player.Parent then
+		session = newSession()
+		sessions[player] = session
+	end
+	return session
+end
+
+function CharacterService.setCharacter(player, charId, perkId)
+	local session = sessions[player]
+	if not session or not Characters.List[charId] then
+		return false
+	end
+	if not Stats.findPerk(charId, perkId) then
+		perkId = Characters.List[charId].perks[1].id
+	end
+	session.charId = charId
+	session.perkId = perkId
+	session.mods = Stats.compute(charId, perkId)
+	player:SetAttribute("CharId", charId)
+	player:SetAttribute("PerkId", perkId)
+	return true
+end
+
+function CharacterService.setGrace(player, seconds)
+	local session = sessions[player]
+	if session then
+		session.graceUntil = math.max(session.graceUntil, os.clock() + seconds)
+	end
+end
+
+local function buildDescription(def)
+	local desc = Instance.new("HumanoidDescription")
+	desc.HeightScale = def.height or 1
+	desc.WidthScale = 0.82
+	desc.DepthScale = 0.85
+	desc.HeadScale = 0.88
+	desc.ProportionScale = 0
+	desc.BodyTypeScale = 0
+	local c = def.colors
+	desc.HeadColor = c.skin
+	desc.TorsoColor = c.torso
+	desc.LeftArmColor = c.arms
+	desc.RightArmColor = c.arms
+	desc.LeftLegColor = c.legs
+	desc.RightLegColor = c.legs
+	return desc
+end
+
+local function setupCharacter(player, char, session)
+	local humanoid = char:WaitForChild("Humanoid")
+	local root = char:WaitForChild("HumanoidRootPart")
+	local head = char:WaitForChild("Head")
+
+	humanoid.UseJumpPower = true
+	humanoid.JumpPower = 0 -- grounded movement; vaulting comes in Stage 5
+	humanoid.BreakJointsOnDeath = false
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.NameDisplayDistance = 60
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+
+	local face = head:FindFirstChild("face")
+	if face then
+		face:Destroy()
+	end
+
+	local torch = Instance.new("SpotLight")
+	torch.Name = "Torch"
+	torch.Angle = 55
+	torch.Range = 45
+	torch.Brightness = 2.4
+	torch.Color = Color3.fromRGB(255, 236, 205)
+	torch.Shadows = true
+	torch.Enabled = false
+	torch.Parent = head
+
+	char:SetAttribute("HP", session.hp)
+	char:SetAttribute("MaxHP", Game.MaxHP)
+	char:SetAttribute("Downed", false)
+	char:SetAttribute("Out", false)
+	char:SetAttribute("Torch", false)
+	char:SetAttribute("Stance", "Stand")
+	char:SetAttribute("Sprint", false)
+	char:SetAttribute("Aim", false)
+	char:SetAttribute("BusyUntil", 0)
+	char:SetAttribute("Noise", 0)
+	char:SetAttribute("AbilityReadyAt", 0)
+	char:SetAttribute("CharId", session.charId)
+	return root
+end
+
+-- (Re)spawns the player's chosen crew member at `cframe`. `freshRun` resets run-only state.
+function CharacterService.spawn(player, cframe, freshRun)
+	local session = sessions[player]
+	if not session or not session.charId then
+		return nil
+	end
+	local def = Characters.List[session.charId]
+
+	session.hp = Game.MaxHP
+	session.downed = false
+	session.out = false
+	session.busyUntil = 0
+	session.channelId += 1
+	session.abilityReadyAt = 0
+	session.calmUntil = 0
+	if freshRun then
+		session.usedSecondWind = false
+		session.usedResupply = false
+		session.stats = { takedowns = 0, detections = 0, crates = 0 }
+	end
+
+	local spawned
+	local conn = player.CharacterAdded:Connect(function(c)
+		spawned = c
+	end)
+	local ok, err = pcall(function()
+		player:LoadCharacterWithHumanoidDescription(buildDescription(def))
+	end)
+	local deadline = os.clock() + 8
+	while ok and not spawned and player.Parent and os.clock() < deadline do
+		task.wait()
+	end
+	conn:Disconnect()
+	if not ok then
+		warn("[CharacterService] spawn failed: " .. tostring(err))
+		return nil
+	end
+	local char = spawned or player.Character
+	if not char then
+		return nil
+	end
+	setupCharacter(player, char, session)
+	CharacterService.setGrace(player, 3)
+	char:PivotTo(cframe)
+	Services.InventoryService.reset(player, def.loadout, session.mods)
+	return char
+end
+
+function CharacterService.heal(player, amount)
+	local session = sessions[player]
+	local char = player.Character
+	if not session or not char or session.downed or session.out then
+		return
+	end
+	session.hp = math.min(Game.MaxHP, session.hp + amount)
+	char:SetAttribute("HP", session.hp)
+end
+
+local function removeRevivePrompt(char)
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local prompt = root and root:FindFirstChild("Revive")
+	if prompt then
+		prompt:Destroy()
+	end
+end
+
+function CharacterService.revive(player, hp)
+	local session = sessions[player]
+	local char = player.Character
+	if not session or not char or not session.downed or session.out then
+		return false
+	end
+	session.downed = false
+	session.hp = math.clamp(hp, 1, Game.MaxHP)
+	char:SetAttribute("Downed", false)
+	char:SetAttribute("HP", session.hp)
+	removeRevivePrompt(char)
+	Net.notifyAll("Toast", { text = player.DisplayName .. " is back up" })
+	return true
+end
+
+function CharacterService.markOut(player)
+	local session = sessions[player]
+	if not session or session.out then
+		return
+	end
+	session.out = true
+	local char = player.Character
+	if char then
+		char:SetAttribute("Out", true)
+		removeRevivePrompt(char)
+	end
+	Net.notifyAll("Toast", { text = player.DisplayName .. " was lost to the Pall" })
+	Services.MatchService.onPlayerDowned(player)
+end
+
+function CharacterService.down(player)
+	local session = sessions[player]
+	local char = player.Character
+	if not session or not char or session.downed then
+		return
+	end
+	session.downed = true
+	session.hp = 0
+	session.channelId += 1
+	local bleed = Game.BleedOutTime + session.mods.bleedOutBonus
+	session.bleedOutAt = os.clock() + bleed
+	char:SetAttribute("Downed", true)
+	char:SetAttribute("HP", 0)
+	char:SetAttribute("BleedOutAt", Workspace:GetServerTimeNow() + bleed)
+	char:SetAttribute("Torch", false)
+	local head = char:FindFirstChild("Head")
+	local torch = head and head:FindFirstChild("Torch")
+	if torch then
+		torch.Enabled = false
+	end
+
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if root then
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "Revive"
+		prompt.ActionText = "Revive"
+		prompt.ObjectText = player.DisplayName
+		prompt.HoldDuration = Game.ReviveTime
+		prompt.MaxActivationDistance = 8
+		prompt.RequiresLineOfSight = false
+		prompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+		prompt.Parent = root
+		prompt.Triggered:Connect(function(reviver)
+			if reviver == player then
+				return
+			end
+			local info = Services.MatchService.getActiveInfo(reviver)
+			if not info or (info.root.Position - root.Position).Magnitude > 12 then
+				return
+			end
+			local reviverSession = sessions[reviver]
+			CharacterService.revive(player, Game.ReviveHP + reviverSession.mods.reviveHPBonus)
+		end)
+	end
+
+	Net.notifyAll("Toast", { text = player.DisplayName .. " is down!" })
+	Services.MatchService.onPlayerDowned(player)
+end
+
+-- Damage from a Hushed grab. `fromPosition` drives the knockback direction.
+function CharacterService.damage(player, amount, fromPosition)
+	local session = sessions[player]
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not session or not root or session.downed or session.out then
+		return
+	end
+	amount *= session.mods.damageTakenMult
+	session.hp = math.max(0, session.hp - amount)
+	session.channelId += 1 -- interrupts healing/crafting
+	char:SetAttribute("HP", session.hp)
+	char:SetAttribute("BusyUntil", 0)
+	session.busyUntil = 0
+
+	if fromPosition then
+		local away = Geometry.flat(root.Position - fromPosition)
+		if away.Magnitude > 0.01 then
+			CharacterService.setGrace(player, 1.5)
+			Net.notify(player, "Knockback", { velocity = away.Unit * 38 + Vector3.new(0, 14, 0) })
+		end
+	end
+	Net.notify(player, "Hurt", { amount = amount })
+
+	if session.hp <= 0 then
+		CharacterService.down(player)
+	end
+end
+
+function CharacterService.init(registry)
+	Services = registry
+end
+
+function CharacterService.start()
+	Players.PlayerAdded:Connect(function(player)
+		CharacterService.getSession(player)
+	end)
+	for _, player in Players:GetPlayers() do
+		if not sessions[player] then
+			sessions[player] = newSession()
+		end
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		sessions[player] = nil
+	end)
+
+	-- Stance/sprint/aim replicate as character attributes (used by AI, noise and other clients).
+	Net.onServer("SetMoveState", 15, function(player, stance, sprinting, aiming)
+		if stance ~= "Stand" and stance ~= "Crouch" then
+			return
+		end
+		local char = player.Character
+		local session = sessions[player]
+		if not char or not session or session.downed then
+			return
+		end
+		char:SetAttribute("Stance", stance)
+		char:SetAttribute("Sprint", sprinting == true and stance == "Stand")
+		char:SetAttribute("Aim", aiming == true)
+	end)
+
+	while true do
+		task.wait(0.5)
+		local now = os.clock()
+		for player, session in sessions do
+			if session.downed and not session.out and now >= session.bleedOutAt then
+				CharacterService.markOut(player)
+			end
+		end
+	end
+end
+
+return CharacterService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Developer product receipts. Rules that matter:
+--   * Idempotent: a receipt (PurchaseId) is granted exactly once, even if Roblox retries.
+--   * Only report PurchaseGranted once the grant is saved (or we're in memory-only Studio mode).
+--   * Purchases grant TOKENS (persistent). Using a token is a separate, limited action
+--     (Second Wind: once per crossing). If you're downed when a Second Wind purchase
+--     completes, it is used straight away.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Commerce = require(Shared.Config.Commerce)
+local Net = require(Shared.Net)
+
+local CommerceService = {}
+local Services
+
+local byProductId = {}
+
+local function processReceipt(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	if not player then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local data = Services.PlayerDataService.waitFor(player, 10)
+	if not data then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local entry = byProductId[receipt.ProductId]
+	if not entry then
+		warn("[Commerce] unknown product id " .. tostring(receipt.ProductId) .. ": add it to Config/Commerce.luau")
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if Services.PlayerDataService.hasReceipt(player, receipt.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
+	for kind, amount in entry.product.grant do
+		Services.PlayerDataService.addTokens(player, kind, amount)
+	end
+	Services.PlayerDataService.recordReceipt(player, receipt.PurchaseId)
+
+	if not Services.PlayerDataService.save(player) and not Services.PlayerDataService.isMemoryOnly() then
+		-- Granted in memory and receipt recorded, so a retry in this session won't double-grant.
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
+	if entry.key == "SecondWind" or entry.key == "SecondWind3" then
+		task.defer(function()
+			local session = Services.CharacterService.getSession(player)
+			if session and session.downed and not session.usedSecondWind then
+				Services.ActionService.useSecondWind(player)
+			end
+		end)
+	end
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+function CommerceService.init(registry)
+	Services = registry
+	for key, product in Commerce.Products do
+		if product.productId and product.productId ~= 0 then
+			byProductId[product.productId] = { key = key, product = product }
+		end
+	end
+end
+
+function CommerceService.start()
+	MarketplaceService.ProcessReceipt = processReceipt
+end
+
+return CommerceService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Hushed (Slice 0: Drifters). Server-simulated, one state machine per enemy:
+--   Patrol -> (notice) -> Investigate -> Search -> Patrol
+--   any    -> (suspicion >= 1) -> Chase -> (lost sight) -> Search
+--   Stunned / Pinned / Quieted are timed overrides.
+-- Per-player suspicion is published as model attributes "Sus_<UserId>" so each client can draw
+-- its own detection indicators. "State" and "Target" (UserId) are published too.
+local PathfindingService = game:GetService("PathfindingService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local EnemyConfig = require(Shared.Config.Enemies)
+local Geometry = require(Shared.Util.Geometry)
+local Sfx = require(Shared.Util.Sfx)
+
+local EnemyService = {}
+local Services
+
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+local SALT = Color3.fromRGB(206, 201, 189)
+
+local folder
+local enemies = {} -- array of enemy records
+local byModel = {} -- [Model] = record
+local rng = Random.new()
+local occlusionParams = RaycastParams.new()
+occlusionParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- Model -----------------------------------------------------------------------------------
+
+local function buildModel(position)
+	local model = Instance.new("Model")
+	model.Name = "Hushed"
+
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Transparency = 1
+	root.CanCollide = true
+	root.CFrame = CFrame.new(position + Vector3.new(0, 4, 0))
+	root.Parent = model
+	model.PrimaryPart = root
+
+	local function limb(name, size, offset, color)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color or SALT
+		p.Material = Enum.Material.Sand
+		p.CanCollide = false
+		p.CanTouch = false
+		p.Massless = true
+		p.CFrame = root.CFrame * offset
+		p.Parent = model
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = p
+		weld.Parent = p
+		return p
+	end
+
+	local torso = limb("Torso", Vector3.new(1.7, 2.4, 0.9), CFrame.new(0, 0.7, 0) * CFrame.Angles(math.rad(-8), 0, 0))
+	local head = limb("Head", Vector3.new(1.1, 1.45, 1.1), CFrame.new(0, 2.5, -0.3) * CFrame.Angles(math.rad(-18), 0, 0), Color3.fromRGB(222, 218, 207))
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = head
+	limb("LeftArm", Vector3.new(0.45, 3.1, 0.45), CFrame.new(-1.12, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(-4)))
+	limb("RightArm", Vector3.new(0.45, 3.1, 0.45), CFrame.new(1.12, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(4)))
+	limb("LeftLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(-0.45, -2.5, 0))
+	limb("RightLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(0.45, -2.5, 0))
+
+	-- faint salt drifting off them: their visual signature
+	local drift = Instance.new("ParticleEmitter")
+	drift.Rate = 4
+	drift.Lifetime = NumberRange.new(2, 3)
+	drift.Speed = NumberRange.new(0.4, 1.2)
+	drift.SpreadAngle = Vector2.new(180, 180)
+	drift.Acceleration = Vector3.new(0, 0.8, 0)
+	drift.Color = ColorSequence.new(SALT)
+	drift.LightInfluence = 1
+	drift.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0) })
+	drift.Parent = torso
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R15 -- R15 so HipHeight (not leg parts) sets floor height
+	humanoid.HipHeight = 3
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.WalkSpeed = 5
+	humanoid.UseJumpPower = true
+	humanoid.JumpPower = 0
+	humanoid.AutoJumpEnabled = false
+	humanoid.RequiresNeck = false
+	humanoid.BreakJointsOnDeath = false
+	humanoid.Parent = model
+	for _, state in {
+		Enum.HumanoidStateType.Climbing,
+		Enum.HumanoidStateType.FallingDown,
+		Enum.HumanoidStateType.Ragdoll,
+		Enum.HumanoidStateType.Seated,
+		Enum.HumanoidStateType.Jumping,
+	} do
+		humanoid:SetStateEnabled(state, false)
+	end
+
+	return model, humanoid, root, head
+end
+
+-- Helpers ---------------------------------------------------------------------------------
+
+local function setState(e, state)
+	if e.state == state then
+		return
+	end
+	e.state = state
+	e.stateTime = os.clock()
+	e.waypoints = nil
+	e.pathGoal = nil
+	e.searchPoint = nil
+	e.model:SetAttribute("State", state)
+end
+
+local function face(e, position)
+	local pos = e.root.Position
+	local flatTarget = Vector3.new(position.X, pos.Y, position.Z)
+	if (flatTarget - pos).Magnitude < 0.1 then
+		return
+	end
+	e.root.CFrame = e.root.CFrame:Lerp(CFrame.lookAt(pos, flatTarget), 0.3)
+end
+
+local function stop(e)
+	e.humanoid.WalkSpeed = 0
+	e.humanoid:MoveTo(e.root.Position)
+end
+
+local function computePath(e, goal)
+	e.computing = true
+	e.lastPathTime = os.clock()
+	local start = e.root.Position
+	task.spawn(function()
+		local ok = pcall(function()
+			e.path:ComputeAsync(start, goal)
+		end)
+		e.computing = false
+		if e.dead then
+			return
+		end
+		if ok and e.path.Status == Enum.PathStatus.Success then
+			e.waypoints = e.path:GetWaypoints()
+			e.wpIndex = math.min(2, #e.waypoints)
+		else
+			e.waypoints = nil
+		end
+		e.pathGoal = goal
+	end)
+end
+
+-- Walks toward `goal` using pathfinding. Returns true on arrival.
+local function moveTo(e, goal, speed)
+	local now = os.clock()
+	local pos = e.root.Position
+	e.humanoid.WalkSpeed = speed
+	if Geometry.flatDistance(pos, goal) < 2.5 then
+		e.humanoid:MoveTo(pos)
+		return true
+	end
+	local goalChanged = not e.pathGoal or Geometry.flatDistance(e.pathGoal, goal) > 4
+	if not e.computing and (goalChanged or now - e.lastPathTime > 4) then
+		computePath(e, goal)
+	end
+	local target = goal
+	if e.waypoints and e.pathGoal and Geometry.flatDistance(e.pathGoal, goal) <= 4 then
+		local wp = e.waypoints[e.wpIndex]
+		while wp and e.wpIndex < #e.waypoints and Geometry.flatDistance(pos, wp.Position) < 2.2 do
+			e.wpIndex += 1
+			wp = e.waypoints[e.wpIndex]
+		end
+		if wp then
+			target = wp.Position
+		end
+	end
+	e.humanoid:MoveTo(target)
+
+	if now - e.progressTime > 2 then
+		if (pos - e.progressPos).Magnitude < 1 then
+			e.pathGoal = nil -- stuck: force a re-path next tick
+			e.lastPathTime = 0
+		end
+		e.progressPos = pos
+		e.progressTime = now
+	end
+	return false
+end
+
+local function findInfo(list, player)
+	for _, info in list do
+		if info.player == player then
+			return info
+		end
+	end
+	return nil
+end
+
+local function publishSuspicion(e, active)
+	for _, info in active do
+		local value = math.floor((e.suspicion[info.player] or 0) * 20 + 0.5) / 20
+		local key = "Sus_" .. info.player.UserId
+		if e.model:GetAttribute(key) ~= value then
+			e.model:SetAttribute(key, value)
+		end
+	end
+	local targetId = e.target and e.target.UserId or 0
+	if e.model:GetAttribute("Target") ~= targetId then
+		e.model:SetAttribute("Target", targetId)
+	end
+end
+
+-- Brain -----------------------------------------------------------------------------------
+
+local function update(e, dt, now, active)
+	local cfg = e.cfg
+
+	if now < e.stunUntil then
+		stop(e)
+		publishSuspicion(e, active)
+		return
+	elseif e.state == "Stunned" or e.state == "Pinned" then
+		e.net = e.net and e.net:Destroy()
+		setState(e, e.investigatePos and "Investigate" or "Search")
+		e.searchOrigin = e.root.Position
+	end
+
+	-- perception
+	local bestPlayer, bestSus = nil, 0
+	for _, info in active do
+		local p = info.player
+		local sus = e.suspicion[p] or 0
+		local vis = Services.PerceptionService.sightFactor(e, info)
+		if vis > 0 then
+			sus += vis * cfg.suspicionGain * dt
+			e.lastSeen[p] = now
+			if sus >= cfg.investigateThreshold then
+				e.investigatePos = info.root.Position
+			end
+		elseif not (e.state == "Chase" and e.target == p) then
+			sus -= cfg.suspicionDecay * dt
+		end
+		sus = math.clamp(sus, 0, 1.2)
+		e.suspicion[p] = sus
+		if sus > bestSus then
+			bestPlayer, bestSus = p, sus
+		end
+	end
+	for p in e.suspicion do
+		if not findInfo(active, p) then
+			e.suspicion[p] = nil
+		end
+	end
+
+	if e.state ~= "Chase" and bestPlayer and bestSus >= cfg.alertThreshold then
+		e.target = bestPlayer
+		e.lastKnown = findInfo(active, bestPlayer).root.Position
+		setState(e, "Chase")
+		Services.MatchService.onSpotted(bestPlayer, e)
+	end
+
+	if e.state == "Chase" then
+		local info = e.target and findInfo(active, e.target)
+		if not info then
+			e.target = nil
+			e.searchOrigin = e.lastKnown or e.root.Position
+			setState(e, "Search")
+		else
+			local seenRecently = now - (e.lastSeen[e.target] or 0) < 0.35
+			if seenRecently then
+				e.lastKnown = info.root.Position
+			end
+			local dist = (info.root.Position - e.root.Position).Magnitude
+			if dist <= cfg.grabRange and now >= e.recoverUntil then
+				e.recoverUntil = now + cfg.grabRecover
+				Services.CharacterService.damage(info.player, cfg.grabDamage, e.root.Position)
+			end
+			if now < e.recoverUntil - cfg.grabRecover + 0.9 then
+				stop(e) -- brief stagger after a grab so you can break away
+			elseif now - (e.lastSeen[e.target] or 0) > cfg.loseSightTime then
+				e.suspicion[e.target] = 0.6
+				e.target = nil
+				e.searchOrigin = e.lastKnown
+				setState(e, "Search")
+			elseif seenRecently and dist < 35 then
+				e.humanoid.WalkSpeed = cfg.chaseSpeed
+				e.humanoid:MoveTo(info.root.Position)
+			else
+				moveTo(e, e.lastKnown, cfg.chaseSpeed)
+			end
+		end
+		publishSuspicion(e, active)
+		return
+	end
+
+	if e.investigatePos and e.state ~= "Investigate" then
+		setState(e, "Investigate")
+	end
+
+	if e.state == "Investigate" then
+		if not e.investigatePos then
+			setState(e, "Search")
+		elseif bestSus >= cfg.noticeThreshold and bestSus < cfg.investigateThreshold and bestPlayer then
+			-- something's there: stop and stare before committing
+			stop(e)
+			face(e, findInfo(active, bestPlayer).root.Position)
+		elseif moveTo(e, e.investigatePos, cfg.investigateSpeed) then
+			e.searchOrigin = e.investigatePos
+			e.investigatePos = nil
+			setState(e, "Search")
+		end
+	elseif e.state == "Search" then
+		if now - e.stateTime > cfg.searchTime then
+			setState(e, "Patrol")
+		elseif e.searchPoint then
+			if moveTo(e, e.searchPoint, cfg.patrolSpeed + 1.5) then
+				e.searchPoint = nil
+				e.searchPause = now + 1.2
+			end
+		elseif now >= (e.searchPause or 0) then
+			local origin = e.searchOrigin or e.root.Position
+			e.searchPoint = origin + Vector3.new(rng:NextNumber(-14, 14), 0, rng:NextNumber(-14, 14))
+		else
+			stop(e)
+			face(e, e.root.Position + e.root.CFrame.RightVector * (rng:NextNumber() < 0.5 and -4 or 4))
+		end
+	else -- Patrol
+		if bestPlayer and bestSus >= cfg.noticeThreshold then
+			stop(e)
+			face(e, findInfo(active, bestPlayer).root.Position)
+		else
+			local waypoint = e.route[e.routeIndex]
+			if moveTo(e, waypoint, cfg.patrolSpeed) then
+				e.routeIndex = e.routeIndex % #e.route + 1
+			end
+		end
+	end
+
+	publishSuspicion(e, active)
+end
+
+-- Public API ------------------------------------------------------------------------------
+
+function EnemyService.spawnWave(count, routes)
+	for i = 1, count do
+		local route = routes[(i - 1) % #routes + 1]
+		local startIndex = rng:NextInteger(1, #route)
+		local spawnAt = route[startIndex] + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3))
+		local model, humanoid, root, head = buildModel(spawnAt)
+		model.Parent = folder
+		pcall(function()
+			root:SetNetworkOwner(nil)
+		end)
+		local cfg = EnemyConfig.Drifter
+		local e = {
+			model = model,
+			humanoid = humanoid,
+			root = root,
+			head = head,
+			cfg = cfg,
+			fovCos = math.cos(math.rad(cfg.fovDeg / 2)),
+			route = route,
+			routeIndex = startIndex % #route + 1,
+			path = PathfindingService:CreatePath({
+				AgentRadius = 2,
+				AgentHeight = 7,
+				AgentCanJump = false,
+				WaypointSpacing = 6,
+			}),
+			lastPathTime = 0,
+			progressPos = root.Position,
+			progressTime = os.clock(),
+			stunUntil = 0,
+			recoverUntil = 0,
+			suspicion = {},
+			lastSeen = {},
+			state = "",
+			stateTime = os.clock(),
+		}
+		setState(e, "Patrol")
+		table.insert(enemies, e)
+		byModel[model] = e
+	end
+end
+
+function EnemyService.clear()
+	for _, e in enemies do
+		e.dead = true
+		e.model:Destroy()
+	end
+	table.clear(enemies)
+	table.clear(byModel)
+end
+
+function EnemyService.fromInstance(instance)
+	local model = instance and instance:FindFirstAncestorOfClass("Model")
+	while model and not byModel[model] do
+		model = model.Parent and model.Parent:FindFirstAncestorOfClass("Model")
+	end
+	return model and byModel[model] or nil
+end
+
+function EnemyService.getAll()
+	return enemies
+end
+
+-- Living enemies within radius of position, nearest first.
+function EnemyService.findNear(position, radius)
+	local found = {}
+	for _, e in enemies do
+		if not e.dead then
+			local d = (e.root.Position - position).Magnitude
+			if d <= radius then
+				table.insert(found, { enemy = e, distance = d })
+			end
+		end
+	end
+	table.sort(found, function(a, b)
+		return a.distance < b.distance
+	end)
+	return found
+end
+
+function EnemyService.stun(e, duration, byPlayer, state)
+	if e.dead then
+		return
+	end
+	e.stunUntil = math.max(e.stunUntil, os.clock() + duration)
+	if byPlayer then
+		e.suspicion[byPlayer] = math.max(e.suspicion[byPlayer] or 0, 0.6)
+		local char = byPlayer.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if root then
+			e.investigatePos = root.Position
+		end
+	end
+	if e.state == "Chase" then
+		e.target = nil
+	end
+	setState(e, state or "Stunned")
+	stop(e)
+end
+
+function EnemyService.pin(e, duration)
+	EnemyService.stun(e, duration, nil, "Pinned")
+	local net = Instance.new("Part")
+	net.Name = "Net"
+	net.Size = Vector3.new(3.4, 7.4, 2.4)
+	net.CFrame = e.root.CFrame * CFrame.new(0, -0.6, 0)
+	net.Material = Enum.Material.Fabric
+	net.Color = Color3.fromRGB(150, 130, 90)
+	net.Transparency = 0.55
+	net.CanCollide = false
+	net.CanQuery = false
+	net.Massless = true
+	net.Parent = e.model
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = e.root
+	weld.Part1 = net
+	weld.Parent = net
+	e.net = net
+end
+
+-- True if a Quieting is allowed: from behind and unaware, or any side while stunned/pinned.
+function EnemyService.canQuiet(e, playerPosition)
+	if e.dead or e.state == "Chase" or e.state == "Quieted" then
+		return false
+	end
+	if e.state == "Stunned" or e.state == "Pinned" then
+		return true
+	end
+	local toPlayer = Geometry.flat(playerPosition - e.root.Position)
+	if toPlayer.Magnitude < 0.01 then
+		return true
+	end
+	return e.root.CFrame.LookVector:Dot(toPlayer.Unit) < -0.2
+end
+
+function EnemyService.disperse(e)
+	if e.dead then
+		return
+	end
+	e.dead = true
+	byModel[e.model] = nil
+	local index = table.find(enemies, e)
+	if index then
+		table.remove(enemies, index)
+	end
+	e.model:SetAttribute("State", "Dispersed")
+	e.root.Anchored = true
+
+	local attachment = Instance.new("Attachment")
+	attachment.Position = Vector3.new(0, 0.8, 0)
+	attachment.Parent = e.root
+	local burst = Instance.new("ParticleEmitter")
+	burst.Texture = SMOKE
+	burst.Rate = 0
+	burst.Lifetime = NumberRange.new(1.4, 2.4)
+	burst.Speed = NumberRange.new(3, 8)
+	burst.SpreadAngle = Vector2.new(180, 180)
+	burst.Drag = 3
+	burst.Acceleration = Vector3.new(0, 2.5, 0)
+	burst.Color = ColorSequence.new(SALT)
+	burst.LightInfluence = 1
+	burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 4) })
+	burst.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	burst.Parent = attachment
+	burst:Emit(70)
+
+	for _, part in e.model:GetDescendants() do
+		if part:IsA("BasePart") and part ~= e.root then
+			TweenService:Create(part, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 }):Play()
+		elseif part:IsA("ParticleEmitter") and part ~= burst then
+			part.Enabled = false
+		end
+	end
+	Sfx.at(e.root.Position, "Quieting", 0.5, 60)
+	local model = e.model
+	task.delay(2.6, function()
+		model:Destroy()
+	end)
+end
+
+-- Called by PerceptionService for every noise event.
+function EnemyService.onNoise(event)
+	for _, e in enemies do
+		if not e.dead and e.state ~= "Chase" and e.state ~= "Quieted" and os.clock() >= e.stunUntil then
+			local eyes = e.head.Position
+			local dist = (event.position - eyes).Magnitude
+			local radius = event.radius
+			if dist <= radius then
+				local hit = Workspace:Raycast(eyes, event.position - eyes, occlusionParams)
+				if hit and (hit.Position - event.position).Magnitude > 3 then
+					radius *= 0.5 -- muffled through walls
+				end
+				if dist <= radius then
+					local loud = 1 - dist / radius
+					if event.player then
+						local footstep = event.kind == "footstep"
+						local add = (footstep and 0.08 or 0.3) + loud * (footstep and 0.3 or 0.6)
+						e.suspicion[event.player] = math.min(1.2, (e.suspicion[event.player] or 0) + add)
+					end
+					e.investigatePos = event.position
+				end
+			end
+		end
+	end
+end
+
+function EnemyService.init(registry)
+	Services = registry
+end
+
+function EnemyService.start()
+	folder = Instance.new("Folder")
+	folder.Name = "Enemies"
+	folder.Parent = Workspace
+	occlusionParams.FilterDescendantsInstances = { folder }
+	Services.PerceptionService.setEnemyFolder(folder)
+
+	local step = 1 / EnemyConfig.TickRate
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulator += dt
+		if accumulator < step then
+			return
+		end
+		accumulator = 0
+		if Services.MatchService.state ~= "Encounter" then
+			return
+		end
+		local now = os.clock()
+		local active = Services.MatchService.getActivePlayers()
+		for i = #enemies, 1, -1 do
+			local e = enemies[i]
+			if e and not e.dead then
+				local ok, err = pcall(update, e, step, now, active)
+				if not ok then
+					warn("[EnemyService] brain error: " .. tostring(err))
+				end
+			end
+		end
+	end)
+end
+
+return EnemyService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The satchel. Server-owned truth; replicated to the owner as player attributes "Inv_<item>".
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Items = require(Shared.Config.Items)
+local Net = require(Shared.Net)
+
+local InventoryService = {}
+local Services
+
+local inventories = {} -- [Player] = { [itemId] = count }
+
+local function publish(player)
+	local inv = inventories[player]
+	if not inv then
+		return
+	end
+	for _, itemId in Items.Order do
+		player:SetAttribute("Inv_" .. itemId, inv[itemId] or 0)
+	end
+	player:SetAttribute("Cap_bottle", InventoryService.cap(player, "bottle"))
+end
+
+function InventoryService.cap(player, itemId)
+	local def = Items.Items[itemId]
+	if not def then
+		return 0
+	end
+	local cap = def.cap
+	if def.throwable then
+		local session = Services.CharacterService.getSession(player)
+		if session and session.mods then
+			cap += session.mods.throwCapBonus
+		end
+	end
+	return cap
+end
+
+function InventoryService.reset(player, loadout, mods)
+	local inv = {}
+	for _, itemId in Items.Order do
+		inv[itemId] = 0
+	end
+	inventories[player] = inv
+	for itemId, amount in loadout do
+		InventoryService.add(player, itemId, amount)
+	end
+	if mods and mods.ammoBonus > 0 then
+		InventoryService.add(player, "shot", mods.ammoBonus)
+	end
+	publish(player)
+end
+
+function InventoryService.count(player, itemId)
+	local inv = inventories[player]
+	return inv and inv[itemId] or 0
+end
+
+-- Returns how many were actually added (caps apply).
+function InventoryService.add(player, itemId, amount)
+	local inv = inventories[player]
+	if not inv or not Items.Items[itemId] then
+		return 0
+	end
+	local space = InventoryService.cap(player, itemId) - inv[itemId]
+	local added = math.clamp(amount, 0, math.max(space, 0))
+	inv[itemId] += added
+	publish(player)
+	return added
+end
+
+function InventoryService.take(player, itemId, amount)
+	local inv = inventories[player]
+	if not inv or (inv[itemId] or 0) < amount then
+		return false
+	end
+	inv[itemId] -= amount
+	publish(player)
+	return true
+end
+
+function InventoryService.recipeCost(player, recipe)
+	local session = Services.CharacterService.getSession(player)
+	local discount = session and session.mods and session.mods.craftDiscount or 0
+	local cost = {}
+	for itemId, amount in recipe.cost do
+		cost[itemId] = math.max(1, amount - discount)
+	end
+	return cost
+end
+
+function InventoryService.canCraft(player, recipeId)
+	local recipe = Items.Recipes[recipeId]
+	local inv = inventories[player]
+	if not recipe or not inv then
+		return false, "Unknown recipe"
+	end
+	if inv[recipe.output] >= InventoryService.cap(player, recipe.output) then
+		return false, "Satchel full"
+	end
+	for itemId, amount in InventoryService.recipeCost(player, recipe) do
+		if inv[itemId] < amount then
+			return false, "Not enough " .. Items.Items[itemId].name
+		end
+	end
+	return true
+end
+
+function InventoryService.craft(player, recipeId)
+	local ok, reason = InventoryService.canCraft(player, recipeId)
+	if not ok then
+		return false, reason
+	end
+	local recipe = Items.Recipes[recipeId]
+	for itemId, amount in InventoryService.recipeCost(player, recipe) do
+		inventories[player][itemId] -= amount
+	end
+	InventoryService.add(player, recipe.output, recipe.amount)
+	return true
+end
+
+function InventoryService.pickup(player, pickupPart, itemId, amount)
+	if not pickupPart.Parent then
+		return
+	end
+	local info = Services.MatchService.getActiveInfo(player)
+	if not info then
+		return
+	end
+	if (info.root.Position - pickupPart.Position).Magnitude > 12 then
+		return
+	end
+	local added = InventoryService.add(player, itemId, amount)
+	if added > 0 then
+		pickupPart:Destroy()
+		Net.notify(player, "Toast", { text = "+" .. added .. " " .. Items.Items[itemId].name })
+	else
+		Net.notify(player, "Toast", { text = "Satchel full: " .. Items.Items[itemId].name })
+	end
+end
+
+function InventoryService.init(registry)
+	Services = registry
+end
+
+function InventoryService.start()
+	Players.PlayerRemoving:Connect(function(player)
+		inventories[player] = nil
+	end)
+end
+
+return InventoryService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Builds the grey-box world in code so the project is fully self-contained:
+--   * The Meridian (ferry hideout deck) far from the encounter
+--   * "Cannery Row" encounter map (cannery, container yard, shallows, reed beds, net shed)
+-- and resets per-encounter objects (supply crates, part pickups, extraction flare).
+-- Stage 4+ replaces the grey-box with hand-built art (docs/05-roadmap-and-prototype.md).
+local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Game = require(Shared.Config.Game)
+local Items = require(Shared.Config.Items)
+
+local MapService = {}
+local Services
+
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+
+local C = {
+	ground = Color3.fromRGB(58, 62, 64),
+	wall = Color3.fromRGB(84, 86, 84),
+	wallDark = Color3.fromRGB(62, 64, 64),
+	roof = Color3.fromRGB(74, 70, 64),
+	metal = Color3.fromRGB(46, 48, 50),
+	crate = Color3.fromRGB(92, 72, 52),
+	machine = Color3.fromRGB(70, 78, 80),
+	supply = Color3.fromRGB(150, 92, 44),
+	bone = Color3.fromRGB(226, 220, 206),
+	water = Color3.fromRGB(52, 70, 74),
+	reed = Color3.fromRGB(92, 94, 70),
+	warm = Color3.fromRGB(255, 190, 120),
+	flare = Color3.fromRGB(255, 70, 50),
+	containers = {
+		Color3.fromRGB(110, 54, 42),
+		Color3.fromRGB(42, 78, 80),
+		Color3.fromRGB(52, 62, 82),
+		Color3.fromRGB(128, 104, 52),
+	},
+}
+
+local PART_COLORS = {
+	glass = Color3.fromRGB(120, 170, 150),
+	cloth = Color3.fromRGB(170, 160, 140),
+	scrap = Color3.fromRGB(120, 110, 100),
+}
+
+-- Encounter layout data -------------------------------------------------------------------
+
+MapService.StartSpawns = {
+	Vector3.new(-6, 3, 100),
+	Vector3.new(-2, 3, 102),
+	Vector3.new(2, 3, 102),
+	Vector3.new(6, 3, 100),
+}
+
+MapService.ExtractionPos = Vector3.new(-92, 0, -100)
+
+MapService.SupplyCandidates = {
+	Vector3.new(24, 0, -45), -- cannery, north aisle
+	Vector3.new(5, 0, -5), -- cannery, south-west corner
+	Vector3.new(52, 0, -10), -- cannery, east bay
+	Vector3.new(88, 0, -38), -- container yard
+	Vector3.new(90, 0, 62), -- container yard, south
+	Vector3.new(-80, 0, 20), -- shallows
+	Vector3.new(-45, 0, -100), -- net shed
+	Vector3.new(-40, 0, 75), -- south-west reed bed
+	Vector3.new(30, 0, 75), -- south lot
+	Vector3.new(-30, 0, -50), -- mid-west
+}
+
+MapService.LootSpots = {
+	Vector3.new(-25, 0, 45), Vector3.new(-15, 0, 60), Vector3.new(15, 0, 50), Vector3.new(35, 0, 65),
+	Vector3.new(45, 0, 25), Vector3.new(-40, 0, 15), Vector3.new(-30, 0, -25), Vector3.new(-45, 0, -75),
+	Vector3.new(-15, 0, -85), Vector3.new(15, 0, -80), Vector3.new(35, 0, -95), Vector3.new(55, 0, -75),
+	Vector3.new(70, 0, 30), Vector3.new(88, 0, 0), Vector3.new(108, 0, -40), Vector3.new(88, 0, 78),
+	Vector3.new(0, 0, -30), Vector3.new(30, 0, -5), Vector3.new(45, 0, -45), Vector3.new(10, 0, -45),
+	Vector3.new(-90, 0, -30), Vector3.new(-85, 0, 50), Vector3.new(-60, 0, 80), Vector3.new(60, 0, 90),
+}
+
+MapService.PatrolRoutes = {
+	{ Vector3.new(24, 0, -30), Vector3.new(24, 0, -2), Vector3.new(52, 0, -30), Vector3.new(5, 0, -35) }, -- cannery
+	{ Vector3.new(88, 0, -80), Vector3.new(88, 0, -38), Vector3.new(88, 0, 20), Vector3.new(88, 0, 62) }, -- yard
+	{ Vector3.new(-30, 0, 50), Vector3.new(30, 0, 55), Vector3.new(40, 0, 25), Vector3.new(-20, 0, 35) }, -- south lot
+	{ Vector3.new(-90, 0, -60), Vector3.new(-90, 0, 40), Vector3.new(-75, 0, 60), Vector3.new(-80, 0, -20) }, -- shallows
+	{ Vector3.new(-40, 0, -60), Vector3.new(0, 0, -85), Vector3.new(50, 0, -85), Vector3.new(-20, 0, -70) }, -- north
+	{ Vector3.new(-45, 0, -10), Vector3.new(-45, 0, 30), Vector3.new(-25, 0, 0) }, -- mid-west
+}
+
+-- Builders --------------------------------------------------------------------------------
+
+local function block(parent, size, position, color, material, props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = typeof(position) == "CFrame" and position or CFrame.new(position)
+	p.Color = color
+	p.Material = material or Enum.Material.Concrete
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	if props then
+		for key, value in props do
+			p[key] = value
+		end
+	end
+	p.Parent = parent
+	return p
+end
+
+local function volume(parent, size, position, tag)
+	local p = block(parent, size, position, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, {
+		Name = tag,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	CollectionService:AddTag(p, tag)
+	return p
+end
+
+local function splitGaps(a, b, gaps)
+	local segments, cursor = {}, a
+	table.sort(gaps, function(x, y)
+		return x[1] < y[1]
+	end)
+	for _, gap in gaps do
+		if gap[1] > cursor then
+			table.insert(segments, { cursor, gap[1] })
+		end
+		cursor = math.max(cursor, gap[2])
+	end
+	if b > cursor then
+		table.insert(segments, { cursor, b })
+	end
+	return segments
+end
+
+-- Wall running along X at depth z, with door gaps {{x1, x2}, ...} and lintels above them.
+local function wallX(parent, z, x1, x2, height, gaps, color, material)
+	for _, s in splitGaps(x1, x2, gaps) do
+		block(parent, Vector3.new(s[2] - s[1], height, 2), Vector3.new((s[1] + s[2]) / 2, height / 2, z), color, material)
+	end
+	for _, g in gaps do
+		if height > 9 then
+			block(parent, Vector3.new(g[2] - g[1], height - 9, 2), Vector3.new((g[1] + g[2]) / 2, 9 + (height - 9) / 2, z), color, material)
+		end
+	end
+end
+
+local function wallZ(parent, x, z1, z2, height, gaps, color, material)
+	for _, s in splitGaps(z1, z2, gaps) do
+		block(parent, Vector3.new(2, height, s[2] - s[1]), Vector3.new(x, height / 2, (s[1] + s[2]) / 2), color, material)
+	end
+	for _, g in gaps do
+		if height > 9 then
+			block(parent, Vector3.new(2, height - 9, g[2] - g[1]), Vector3.new(x, 9 + (height - 9) / 2, (g[1] + g[2]) / 2), color, material)
+		end
+	end
+end
+
+local function lamp(parent, base)
+	block(parent, Vector3.new(0.6, 12, 0.6), base + Vector3.new(0, 6, 0), C.metal, Enum.Material.Metal)
+	local head = block(parent, Vector3.new(1.6, 0.8, 1.6), base + Vector3.new(0, 12.2, 0), C.warm, Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Range = 24
+	light.Brightness = 1.8
+	light.Color = C.warm
+	light.Shadows = true
+	light.Parent = head
+	volume(parent, Vector3.new(20, 10, 20), base + Vector3.new(0, 5, 0), "LitZone")
+end
+
+local function hangingBulb(parent, position)
+	local bulb = block(parent, Vector3.new(0.8, 0.8, 0.8), position, C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball })
+	local light = Instance.new("PointLight")
+	light.Range = 18
+	light.Brightness = 1.2
+	light.Color = C.warm
+	light.Shadows = true
+	light.Parent = bulb
+	volume(parent, Vector3.new(14, 10, 14), Vector3.new(position.X, 5, position.Z), "LitZone")
+end
+
+local function reeds(parent, center, size, rng)
+	volume(parent, Vector3.new(size.X, 6, size.Z), center + Vector3.new(0, 3, 0), "TallGrass")
+	local count = math.floor(size.X * size.Z * 0.3)
+	for _ = 1, count do
+		local h = rng:NextNumber(3.6, 5.6)
+		local x = center.X + rng:NextNumber(-size.X / 2, size.X / 2)
+		local z = center.Z + rng:NextNumber(-size.Z / 2, size.Z / 2)
+		local tilt = CFrame.Angles(rng:NextNumber(-0.18, 0.18), rng:NextNumber(0, 6.28), rng:NextNumber(-0.18, 0.18))
+		local shade = rng:NextNumber(0.8, 1.15)
+		block(parent, Vector3.new(0.22, h, 0.22), CFrame.new(x, h / 2, z) * tilt, Color3.new(C.reed.R * shade, C.reed.G * shade, C.reed.B * shade), Enum.Material.Grass, {
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+		})
+	end
+end
+
+local function fog(parent, position, size)
+	local p = block(parent, Vector3.new(size.X, 1, size.Z), position, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = SMOKE
+	e.Rate = 1.4
+	e.Lifetime = NumberRange.new(14, 20)
+	e.Speed = NumberRange.new(0.3, 1)
+	e.SpreadAngle = Vector2.new(60, 60)
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-4, 4)
+	e.LightInfluence = 1
+	e.Color = ColorSequence.new(Color3.fromRGB(205, 212, 212))
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 16), NumberSequenceKeypoint.new(1, 28) })
+	e.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.3, 0.86),
+		NumberSequenceKeypoint.new(0.7, 0.9),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	e.Parent = p
+end
+
+-- The Meridian (hideout) ------------------------------------------------------------------
+
+local function buildFerry(parent)
+	local o = Game.FerryOrigin
+	local deckColor = Color3.fromRGB(70, 66, 60)
+	local hull = Color3.fromRGB(176, 176, 166)
+	-- sea + sandbar
+	block(parent, Vector3.new(700, 1, 700), o + Vector3.new(0, -7, 0), Color3.fromRGB(30, 40, 44), Enum.Material.Glass, { Reflectance = 0.12, CanQuery = false })
+	block(parent, Vector3.new(120, 4, 60), o + Vector3.new(0, -6, 0), Color3.fromRGB(120, 112, 96), Enum.Material.Sand)
+	-- deck and railings
+	block(parent, Vector3.new(64, 2, 28), o + Vector3.new(0, -1, 0), deckColor, Enum.Material.DiamondPlate)
+	block(parent, Vector3.new(64, 3.5, 0.5), o + Vector3.new(0, 1.75, -14), C.metal, Enum.Material.Metal)
+	block(parent, Vector3.new(64, 3.5, 0.5), o + Vector3.new(0, 1.75, 14), C.metal, Enum.Material.Metal)
+	block(parent, Vector3.new(0.5, 3.5, 28), o + Vector3.new(32, 1.75, 0), C.metal, Enum.Material.Metal)
+	block(parent, Vector3.new(0.5, 3.5, 28), o + Vector3.new(-32, 1.75, 0), C.metal, Enum.Material.Metal)
+	-- bridge superstructure + hull flank
+	block(parent, Vector3.new(14, 12, 20), o + Vector3.new(-23, 6, 0), hull, Enum.Material.CorrodedMetal)
+	block(parent, Vector3.new(16, 1, 22), o + Vector3.new(-23, 12.5, 0), C.metal, Enum.Material.Metal)
+	block(parent, Vector3.new(64, 8, 1), o + Vector3.new(0, -5, 14.5), hull, Enum.Material.CorrodedMetal)
+	block(parent, Vector3.new(64, 8, 1), o + Vector3.new(0, -5, -14.5), hull, Enum.Material.CorrodedMetal)
+	-- containers on deck
+	block(parent, Vector3.new(16, 8.6, 7), o + Vector3.new(16, 4.3, -9), C.containers[2], Enum.Material.CorrodedMetal)
+	block(parent, Vector3.new(7, 8.6, 7), o + Vector3.new(26, 4.3, 9), C.containers[1], Enum.Material.CorrodedMetal)
+	-- string lights
+	for i = 0, 7 do
+		local x = -14 + i * 6
+		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 3.5) * 0.25, 0), C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+		local light = Instance.new("PointLight")
+		light.Range = 12
+		light.Brightness = 0.9
+		light.Color = C.warm
+		light.Parent = bulb
+	end
+	block(parent, Vector3.new(44, 0.15, 0.15), o + Vector3.new(7, 7.6, 0), C.metal, Enum.Material.Metal, { CanCollide = false })
+
+	-- Chart table: starts the crossing
+	local chart = block(parent, Vector3.new(5, 3, 3), o + Vector3.new(4, 1.5, -4), Color3.fromRGB(96, 70, 48), Enum.Material.WoodPlanks, { Name = "ChartTable" })
+	block(parent, Vector3.new(4.4, 0.1, 2.4), o + Vector3.new(4, 3.05, -4), Color3.fromRGB(214, 204, 176), Enum.Material.SmoothPlastic)
+	local chartPrompt = Instance.new("ProximityPrompt")
+	chartPrompt.Name = "ChartPrompt"
+	chartPrompt.ActionText = "Begin the Crossing"
+	chartPrompt.ObjectText = "Tide chart"
+	chartPrompt.HoldDuration = 0.8
+	chartPrompt.MaxActivationDistance = 9
+	chartPrompt.RequiresLineOfSight = false
+	chartPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	chartPrompt.Parent = chart
+	chartPrompt.Triggered:Connect(function(player)
+		Services.MatchService.requestStart(player)
+	end)
+
+	-- Crew cabin door: change character
+	local cabin = block(parent, Vector3.new(4, 8, 0.6), o + Vector3.new(-15.8, 4, 6), Color3.fromRGB(90, 96, 92), Enum.Material.Metal, { Name = "CabinDoor" })
+	local cabinPrompt = Instance.new("ProximityPrompt")
+	cabinPrompt.ActionText = "Change crew member"
+	cabinPrompt.ObjectText = "Crew cabins"
+	cabinPrompt.MaxActivationDistance = 9
+	cabinPrompt.RequiresLineOfSight = false
+	cabinPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	cabinPrompt.Parent = cabin
+	cabinPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openCharacterSelect(player)
+	end)
+
+	-- The Purser's Office: the in-world shop
+	local booth = block(parent, Vector3.new(7, 8, 5), o + Vector3.new(24, 4, -1), Color3.fromRGB(150, 146, 134), Enum.Material.CorrodedMetal, { Name = "PursersOffice" })
+	for i = -2, 2 do
+		block(parent, Vector3.new(0.15, 3, 0.15), o + Vector3.new(24 + i * 0.7, 4.5, 1.6), C.metal, Enum.Material.Metal, { CanCollide = false })
+	end
+	local boothLight = Instance.new("PointLight")
+	boothLight.Range = 10
+	boothLight.Brightness = 1
+	boothLight.Color = C.warm
+	boothLight.Parent = booth
+	local shopPrompt = Instance.new("ProximityPrompt")
+	shopPrompt.ActionText = "Open the ledger"
+	shopPrompt.ObjectText = "The Purser's Office"
+	shopPrompt.MaxActivationDistance = 9
+	shopPrompt.RequiresLineOfSight = false
+	shopPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	shopPrompt.Parent = booth
+	shopPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openShop(player)
+	end)
+end
+
+-- Cannery Row (encounter) -----------------------------------------------------------------
+
+local function buildCannery(parent)
+	local rng = Random.new(1137) -- fixed seed: the static layout never changes between runs
+	block(parent, Vector3.new(230, 2, 230), Vector3.new(0, -1, 0), C.ground, Enum.Material.Concrete, { Name = "Ground" })
+
+	-- perimeter
+	block(parent, Vector3.new(232, 16, 2), Vector3.new(0, 8, -116), C.wallDark, Enum.Material.Concrete)
+	block(parent, Vector3.new(232, 16, 2), Vector3.new(0, 8, 116), C.wallDark, Enum.Material.Concrete)
+	block(parent, Vector3.new(2, 16, 232), Vector3.new(116, 8, 0), C.wallDark, Enum.Material.Concrete)
+	block(parent, Vector3.new(2, 16, 232), Vector3.new(-116, 8, 0), C.wallDark, Enum.Material.Concrete)
+
+	-- the cannery (x -10..60, z -50..10)
+	local h = 16
+	wallX(parent, -50, -10, 60, h, { { 20, 28 } }, C.wall, Enum.Material.Brick)
+	wallX(parent, 10, -10, 60, h, { { 5, 13 }, { 40, 48 } }, C.wall, Enum.Material.Brick)
+	wallZ(parent, -10, -50, 10, h, { { -24, -16 } }, C.wall, Enum.Material.Brick)
+	wallZ(parent, 60, -50, 10, h, { { -30, -22 } }, C.wall, Enum.Material.Brick)
+	block(parent, Vector3.new(72, 1, 62), Vector3.new(25, h + 0.5, -20), C.roof, Enum.Material.CorrodedMetal)
+	for _, x in { 5, 14, 34, 46 } do
+		block(parent, Vector3.new(6, 4, 16), Vector3.new(x, 2, -20), C.machine, Enum.Material.Metal)
+		block(parent, Vector3.new(2, 2.5, 2), Vector3.new(x, 5.25, -24), C.metal, Enum.Material.Metal)
+	end
+	block(parent, Vector3.new(50, 2.5, 2), Vector3.new(25, 1.25, -40), C.machine, Enum.Material.DiamondPlate) -- conveyor
+	hangingBulb(parent, Vector3.new(24, 13, -20))
+	hangingBulb(parent, Vector3.new(3, 13, -2))
+
+	-- container yard (east)
+	local containers = {
+		{ Vector3.new(78, 0, -85), Vector3.new(8, 8.6, 20) },
+		{ Vector3.new(96, 0, -60), Vector3.new(20, 8.6, 8) },
+		{ Vector3.new(78, 0, -35), Vector3.new(8, 8.6, 20) },
+		{ Vector3.new(100, 0, -15), Vector3.new(8, 8.6, 20) },
+		{ Vector3.new(80, 0, 10), Vector3.new(20, 8.6, 8) },
+		{ Vector3.new(100, 0, 40), Vector3.new(8, 8.6, 20) },
+		{ Vector3.new(78, 0, 60), Vector3.new(8, 8.6, 20) },
+		{ Vector3.new(96, 0, 85), Vector3.new(20, 8.6, 8) },
+	}
+	for i, c in containers do
+		block(parent, c[2], c[1] + Vector3.new(0, 4.3, 0), C.containers[(i - 1) % #C.containers + 1], Enum.Material.CorrodedMetal)
+	end
+	block(parent, Vector3.new(8, 8.6, 20), Vector3.new(78, 12.9, -35), C.containers[4], Enum.Material.CorrodedMetal) -- stacked
+
+	-- net shed (north-west, x -60..-30, z -112..-84)
+	wallX(parent, -84, -60, -30, 10, {}, C.wall, Enum.Material.WoodPlanks)
+	wallZ(parent, -60, -112, -84, 10, {}, C.wall, Enum.Material.WoodPlanks)
+	wallZ(parent, -30, -112, -84, 10, { { -100, -94 } }, C.wall, Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(32, 1, 30), Vector3.new(-45, 10.5, -98), C.roof, Enum.Material.CorrodedMetal)
+
+	-- shallows (west): visual water + noise/slow volume
+	block(parent, Vector3.new(42, 1, 160), Vector3.new(-91, 0.5, -10), C.water, Enum.Material.Glass, {
+		Name = "Water",
+		Transparency = 0.35,
+		Reflectance = 0.15,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+	})
+	volume(parent, Vector3.new(42, 6, 160), Vector3.new(-91, 3, -10), "Shallows")
+
+	-- reed beds (concealment)
+	reeds(parent, Vector3.new(-66, 0, -60), Vector3.new(10, 0, 30), rng)
+	reeds(parent, Vector3.new(-66, 0, 30), Vector3.new(10, 0, 30), rng)
+	reeds(parent, Vector3.new(-40, 0, 70), Vector3.new(30, 0, 14), rng)
+	reeds(parent, Vector3.new(62, 0, 40), Vector3.new(10, 0, 20), rng)
+
+	-- cover: crates, pallets, low walls
+	local crates = {
+		Vector3.new(-30, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
+		Vector3.new(40, 0, 32), Vector3.new(-45, 0, 8), Vector3.new(-35, 0, -32), Vector3.new(-50, 0, -70),
+		Vector3.new(-20, 0, -80), Vector3.new(10, 0, -72), Vector3.new(30, 0, -90), Vector3.new(50, 0, -68),
+		Vector3.new(64, 0, 22), Vector3.new(-5, 0, 80), Vector3.new(68, 0, -95), Vector3.new(-70, 0, -100),
+	}
+	for _, pos in crates do
+		block(parent, Vector3.new(4, 4, 4), pos + Vector3.new(0, 2, 0), C.crate, Enum.Material.WoodPlanks)
+		if rng:NextNumber() < 0.4 then
+			block(parent, Vector3.new(3, 3, 3), pos + Vector3.new(0.4, 5.5, -0.3), C.crate, Enum.Material.WoodPlanks)
+		end
+	end
+	block(parent, Vector3.new(24, 3.5, 1.5), Vector3.new(-20, 1.75, 25), C.wall, Enum.Material.Concrete)
+	block(parent, Vector3.new(1.5, 3.5, 18), Vector3.new(20, 1.75, 30), C.wall, Enum.Material.Concrete)
+	block(parent, Vector3.new(18, 3.5, 1.5), Vector3.new(-40, 1.75, -45), C.wall, Enum.Material.Concrete)
+
+	-- lamp posts: light pools are dangerous (you are easier to see inside them)
+	lamp(parent, Vector3.new(0, 0, 70))
+	lamp(parent, Vector3.new(65, 0, -50))
+	lamp(parent, Vector3.new(-50, 0, -20))
+	lamp(parent, Vector3.new(40, 0, 18))
+
+	-- ground fog
+	for _, f in {
+		{ Vector3.new(-60, 1, 40), Vector3.new(60, 0, 60) },
+		{ Vector3.new(30, 1, 60), Vector3.new(80, 0, 60) },
+		{ Vector3.new(-60, 1, -70), Vector3.new(60, 0, 60) },
+		{ Vector3.new(85, 1, 0), Vector3.new(40, 0, 200) },
+		{ Vector3.new(15, 1, -85), Vector3.new(60, 0, 40) },
+	} do
+		fog(parent, f[1], f[2])
+	end
+end
+
+-- Lighting --------------------------------------------------------------------------------
+
+local atmosphere, colorCorrection
+
+local function setupLighting()
+	Lighting.ClockTime = 1.4
+	Lighting.Brightness = 1.2
+	Lighting.Ambient = Color3.fromRGB(24, 28, 32)
+	Lighting.OutdoorAmbient = Color3.fromRGB(58, 66, 72)
+	Lighting.EnvironmentDiffuseScale = 0.4
+	Lighting.EnvironmentSpecularScale = 0.6
+	Lighting.GlobalShadows = true
+	Lighting.ExposureCompensation = 0.1
+
+	atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+	atmosphere.Density = 0.45
+	atmosphere.Offset = 0.1
+	atmosphere.Color = Color3.fromRGB(199, 206, 206)
+	atmosphere.Decay = Color3.fromRGB(92, 108, 112)
+	atmosphere.Glare = 0
+	atmosphere.Haze = 2.2
+	atmosphere.Parent = Lighting
+
+	colorCorrection = Instance.new("ColorCorrectionEffect")
+	colorCorrection.Name = "AftertideGrade"
+	colorCorrection.Saturation = -0.25
+	colorCorrection.Contrast = 0.12
+	colorCorrection.Brightness = -0.02
+	colorCorrection.TintColor = Color3.fromRGB(225, 235, 240)
+	colorCorrection.Parent = Lighting
+
+	local bloom = Instance.new("BloomEffect")
+	bloom.Intensity = 0.6
+	bloom.Size = 24
+	bloom.Threshold = 1.6
+	bloom.Parent = Lighting
+end
+
+function MapService.applyModifier(modifier)
+	if not atmosphere then
+		return
+	end
+	TweenService:Create(atmosphere, TweenInfo.new(3), { Density = modifier.fogDensity or 0.45 }):Play()
+	local boost = modifier.ambientBoost or 0
+	Lighting.OutdoorAmbient = Color3.fromRGB(58 + boost * 80, 66 + boost * 80, 72 + boost * 80)
+end
+
+-- Encounter objects -----------------------------------------------------------------------
+
+local encounterFolder
+local extraction
+
+local function shuffled(list, rng)
+	local copy = table.clone(list)
+	for i = #copy, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		copy[i], copy[j] = copy[j], copy[i]
+	end
+	return copy
+end
+
+local function makePrompt(parent, action, object, hold)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = action
+	prompt.ObjectText = object
+	prompt.HoldDuration = hold or 0
+	prompt.MaxActivationDistance = 8
+	prompt.RequiresLineOfSight = false
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	prompt.Parent = parent
+	return prompt
+end
+
+function MapService.resetEncounter(modifier, rng)
+	encounterFolder:ClearAllChildren()
+
+	-- supply crates (objective)
+	local picks = shuffled(MapService.SupplyCandidates, rng)
+	for i = 1, Game.CratesRequired do
+		local pos = picks[i]
+		local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
+		block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })
+		local glint = Instance.new("PointLight")
+		glint.Range = 5
+		glint.Brightness = 0.35
+		glint.Color = C.warm
+		glint.Parent = crate
+		local prompt = makePrompt(crate, "Salvage", "Supply crate", 1.2)
+		prompt.Triggered:Connect(function(player)
+			Services.MatchService.onCrateSalvaged(player, crate)
+		end)
+	end
+
+	-- crafting parts
+	local spots = shuffled(MapService.LootSpots, rng)
+	local perType = math.max(1, math.floor(Items.PartsPerType * (modifier.partsMult or 1) + 0.5))
+	local index = 1
+	for _, itemId in { "glass", "cloth", "scrap" } do
+		for _ = 1, perType do
+			local pos = spots[index]
+			index += 1
+			if not pos then
+				break
+			end
+			local jitter = Vector3.new(rng:NextNumber(-1.5, 1.5), 0, rng:NextNumber(-1.5, 1.5))
+			local pickup = block(encounterFolder, Vector3.new(1.2, 0.6, 1.2), pos + jitter + Vector3.new(0, 0.3, 0), PART_COLORS[itemId], Enum.Material.SmoothPlastic, {
+				Name = "Pickup_" .. itemId,
+				CanCollide = false,
+			})
+			local prompt = makePrompt(pickup, "Pick up", Items.Items[itemId].name, 0)
+			prompt.MaxActivationDistance = 7
+			prompt.Triggered:Connect(function(player)
+				Services.InventoryService.pickup(player, pickup, itemId, 1)
+			end)
+		end
+	end
+
+	-- extraction: the Slipway flare (inactive until the quota is met)
+	local base = MapService.ExtractionPos
+	local ring = block(encounterFolder, Vector3.new(0.2, Game.ExtractionRadius * 2, Game.ExtractionRadius * 2), CFrame.new(base + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), C.flare, Enum.Material.Neon, {
+		Name = "ExtractionRing",
+		Shape = Enum.PartType.Cylinder,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+	})
+	local flare = block(encounterFolder, Vector3.new(0.6, 1.4, 0.6), base + Vector3.new(0, 0.7, 0), C.flare, Enum.Material.Neon, {
+		Name = "Flare",
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local light = Instance.new("PointLight")
+	light.Color = C.flare
+	light.Range = 32
+	light.Brightness = 3
+	light.Shadows = true
+	light.Enabled = false
+	light.Parent = flare
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = SMOKE
+	smoke.Enabled = false
+	smoke.Rate = 6
+	smoke.Lifetime = NumberRange.new(5, 7)
+	smoke.Speed = NumberRange.new(6, 9)
+	smoke.SpreadAngle = Vector2.new(8, 8)
+	smoke.Color = ColorSequence.new(Color3.fromRGB(255, 120, 100))
+	smoke.LightEmission = 0.4
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 9) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Parent = flare
+	extraction = { ring = ring, flare = flare, light = light, smoke = smoke }
+end
+
+function MapService.activateExtraction()
+	if not extraction then
+		return
+	end
+	extraction.ring.Transparency = 0.8
+	extraction.flare.Transparency = 0
+	extraction.light.Enabled = true
+	extraction.smoke.Enabled = true
+end
+
+function MapService.cleanupEncounter()
+	if encounterFolder then
+		encounterFolder:ClearAllChildren()
+	end
+	extraction = nil
+end
+
+function MapService.ferrySpawn(index)
+	local o = Game.FerryOrigin
+	local pos = o + Vector3.new(-4 + ((index - 1) % 4) * 3, 3, 6)
+	return CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0))
+end
+
+function MapService.encounterSpawn(index)
+	local pos = MapService.StartSpawns[(index - 1) % #MapService.StartSpawns + 1]
+	return CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1))
+end
+
+function MapService.init(registry)
+	Services = registry
+end
+
+function MapService.start()
+	local world = Instance.new("Folder")
+	world.Name = "World"
+	world.Parent = Workspace
+
+	local ferry = Instance.new("Folder")
+	ferry.Name = "Meridian"
+	ferry.Parent = world
+	buildFerry(ferry)
+
+	local cannery = Instance.new("Folder")
+	cannery.Name = "CanneryRow"
+	cannery.Parent = world
+	buildCannery(cannery)
+
+	encounterFolder = Instance.new("Folder")
+	encounterFolder.Name = "Encounter"
+	encounterFolder.Parent = world
+
+	setupLighting()
+	MapService.ready = true
+end
+
+return MapService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Crossing loop for Slice 0:
+--   Ferry (the Meridian: pick crew, shop, chart table) -> Starting (countdown)
+--   -> Encounter (Salvage: find supply crates, then reach the Slipway flare)
+--   -> Results -> back to the Ferry.
+-- Stage 7 replaces the single encounter with the branching tide chart of several encounters.
+-- Replicated state lives as attributes on ReplicatedStorage (MatchState, Crates, ...).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
+local Game = require(Shared.Config.Game)
+local Modifiers = require(Shared.Config.Modifiers)
+local Net = require(Shared.Net)
+local Sfx = require(Shared.Util.Sfx)
+
+local MatchService = {}
+local Services
+
+MatchService.state = "Ferry"
+MatchService.modifier = Modifiers.None
+
+local participants = {} -- [Player] = true for the current encounter
+local cratesCollected = 0
+local extractionOpen = false
+local encounterStartedAt = 0
+local resultsAcknowledged = {}
+
+local function setState(state)
+	MatchService.state = state
+	ReplicatedStorage:SetAttribute("MatchState", state)
+end
+
+local function publish()
+	ReplicatedStorage:SetAttribute("Crates", cratesCollected)
+	ReplicatedStorage:SetAttribute("CratesRequired", Game.CratesRequired)
+	ReplicatedStorage:SetAttribute("ExtractionOpen", extractionOpen)
+	ReplicatedStorage:SetAttribute("ModifierName", MatchService.modifier.name)
+	ReplicatedStorage:SetAttribute("ModifierDesc", MatchService.modifier.desc)
+	ReplicatedStorage:SetAttribute("ModifierId", MatchService.modifier.id)
+end
+
+-- Players currently in the encounter, alive and not downed: { player, char, root, session }.
+function MatchService.getActivePlayers()
+	local list = {}
+	if MatchService.state ~= "Encounter" then
+		return list
+	end
+	for player in participants do
+		local info = MatchService.getActiveInfo(player)
+		if info then
+			table.insert(list, info)
+		end
+	end
+	return list
+end
+
+function MatchService.getActiveInfo(player)
+	if MatchService.state ~= "Encounter" or not participants[player] then
+		return nil
+	end
+	local session = Services.CharacterService.getSession(player)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not session or not root or session.downed or session.out then
+		return nil
+	end
+	return { player = player, char = char, root = root, session = session }
+end
+
+function MatchService.isParticipant(player)
+	return participants[player] == true
+end
+
+-- Ferry -----------------------------------------------------------------------------------
+
+local function spawnAtFerry(player, index)
+	return Services.CharacterService.spawn(player, Services.MapService.ferrySpawn(index or 1), false)
+end
+
+function MatchService.openCharacterSelect(player)
+	if MatchService.state == "Encounter" and participants[player] then
+		return
+	end
+	Net.notify(player, "OpenCharacterSelect", {})
+end
+
+function MatchService.openShop(player)
+	Net.notify(player, "OpenShop", {})
+end
+
+local function onSelectCharacter(player, charId, perkId)
+	if type(charId) ~= "string" or (perkId ~= nil and type(perkId) ~= "string") then
+		return
+	end
+	if not Characters.List[charId] then
+		return
+	end
+	if MatchService.state == "Encounter" and participants[player] then
+		Net.notify(player, "Toast", { text = "You can change crew back on the Meridian" })
+		return
+	end
+	if not Services.CharacterService.setCharacter(player, charId, perkId) then
+		return
+	end
+	spawnAtFerry(player, #Players:GetPlayers())
+	if MatchService.state == "Encounter" then
+		Net.notify(player, "Toast", { text = "A crossing is underway. You'll join the next one from the chart table." })
+	end
+end
+
+function MatchService.requestStart(player)
+	if MatchService.state ~= "Ferry" then
+		return
+	end
+	local session = Services.CharacterService.getSession(player)
+	if not session or not session.charId then
+		Net.notify(player, "OpenCharacterSelect", {})
+		return
+	end
+	setState("Starting")
+	ReplicatedStorage:SetAttribute("StartsAt", Workspace:GetServerTimeNow() + Game.StartCountdown)
+	Net.notifyAll("Toast", { text = player.DisplayName .. " is plotting a crossing. Gather at the chart table!" })
+	task.delay(Game.StartCountdown, function()
+		if MatchService.state == "Starting" then
+			MatchService.beginEncounter()
+		end
+	end)
+end
+
+-- Encounter -------------------------------------------------------------------------------
+
+local function rollModifier(rng)
+	if rng:NextNumber() < Modifiers.NoneChance then
+		return Modifiers.None
+	end
+	return Modifiers.List[rng:NextInteger(1, #Modifiers.List)]
+end
+
+function MatchService.beginEncounter()
+	local rng = Random.new()
+	table.clear(participants)
+	table.clear(resultsAcknowledged)
+	local index = 0
+	for _, player in Players:GetPlayers() do
+		local session = Services.CharacterService.getSession(player)
+		if session and session.charId and index < Game.MaxPartySize then
+			index += 1
+			participants[player] = true
+		end
+	end
+	if index == 0 then
+		setState("Ferry")
+		return
+	end
+
+	MatchService.modifier = rollModifier(rng)
+	cratesCollected = 0
+	extractionOpen = false
+	Services.MapService.resetEncounter(MatchService.modifier, rng)
+	Services.MapService.applyModifier(MatchService.modifier)
+	publish()
+
+	local i = 0
+	for player in participants do
+		i += 1
+		player:SetAttribute("InCrossing", true)
+		Services.CharacterService.spawn(player, Services.MapService.encounterSpawn(i), true)
+		local data = Services.PlayerDataService.get(player)
+		if data then
+			data.stats.runs += 1
+		end
+	end
+
+	local count = math.min(Game.MaxEnemies, Game.BaseEnemies + (index - 1) * Game.EnemiesPerExtraPlayer)
+	Services.EnemyService.spawnWave(count, Services.MapService.PatrolRoutes)
+
+	encounterStartedAt = os.clock()
+	setState("Encounter")
+	Net.notifyAll("EncounterStart", {
+		name = "Cannery Row",
+		objective = ("Salvage %d supply crates, then reach the Slipway flare."):format(Game.CratesRequired),
+		modifierName = MatchService.modifier.name,
+		modifierDesc = MatchService.modifier.desc,
+	})
+end
+
+function MatchService.onCrateSalvaged(player, crate)
+	if MatchService.state ~= "Encounter" or not crate.Parent then
+		return
+	end
+	local info = MatchService.getActiveInfo(player)
+	if not info or (info.root.Position - crate.Position).Magnitude > 12 then
+		return
+	end
+	crate:Destroy()
+	cratesCollected += 1
+	info.session.stats.crates += 1
+	Services.PerceptionService.emitNoise(info.root.Position, 7, "salvage", player)
+	publish()
+	if cratesCollected >= Game.CratesRequired and not extractionOpen then
+		extractionOpen = true
+		Services.MapService.activateExtraction()
+		publish()
+		Net.notifyAll("Toast", { text = "Quota met. The Slipway flare is lit: get everyone there." })
+	else
+		Net.notifyAll("Toast", { text = ("Supply crate %d/%d"):format(cratesCollected, Game.CratesRequired) })
+	end
+end
+
+function MatchService.onSpotted(player, enemy)
+	local session = Services.CharacterService.getSession(player)
+	if session then
+		session.stats.detections += 1
+	end
+	Net.notify(player, "Spotted", {})
+	Sfx.at(enemy.root.Position, "Spotted", 0.25, 40)
+end
+
+function MatchService.onPlayerDowned(_player)
+	-- checked by the encounter loop; kept as a hook for analytics
+end
+
+local function today()
+	return os.date("!%Y-%m-%d")
+end
+
+local function grant(player, rewards, list)
+	for kind, amount in rewards do
+		if Services.PlayerDataService.addTokens(player, kind, amount) then
+			table.insert(list, ("+%d %s"):format(amount, kind == "secondWind" and "Second Wind" or "Resupply"))
+		end
+	end
+end
+
+function MatchService.endEncounter(win)
+	if MatchService.state ~= "Encounter" then
+		return
+	end
+	setState("Results")
+	local elapsed = os.clock() - encounterStartedAt
+	for player in participants do
+		if player.Parent then
+			local session = Services.CharacterService.getSession(player)
+			local data = Services.PlayerDataService.get(player)
+			local rewards = {}
+			if session and data then
+				data.stats.takedowns += session.stats.takedowns
+				if win and not session.out then
+					data.stats.wins += 1
+					if Game.RunAidsEnabled then
+						grant(player, Game.WinReward, rewards)
+						if data.lastDailyWin ~= today() then
+							data.lastDailyWin = today()
+							grant(player, Game.DailyWinReward, rewards)
+						end
+					end
+				end
+				task.spawn(Services.PlayerDataService.save, player)
+			end
+			Net.notify(player, "Results", {
+				win = win,
+				seconds = math.floor(elapsed),
+				crates = cratesCollected,
+				takedowns = session and session.stats.takedowns or 0,
+				detections = session and session.stats.detections or 0,
+				rewards = rewards,
+			})
+		end
+	end
+	Services.EnemyService.clear()
+
+	local token = {}
+	MatchService.resultsToken = token
+	task.delay(Game.ResultsDuration, function()
+		if MatchService.resultsToken == token then
+			MatchService.returnToFerry()
+		end
+	end)
+end
+
+function MatchService.returnToFerry()
+	if MatchService.state ~= "Results" then
+		return
+	end
+	MatchService.resultsToken = nil
+	Services.MapService.cleanupEncounter()
+	MatchService.modifier = Modifiers.None
+	Services.MapService.applyModifier(Modifiers.None)
+	for player in participants do
+		if player.Parent then
+			player:SetAttribute("InCrossing", false)
+		end
+	end
+	table.clear(participants)
+	setState("Ferry")
+	publish()
+	local i = 0
+	for _, player in Players:GetPlayers() do
+		local session = Services.CharacterService.getSession(player)
+		if session and session.charId then
+			i += 1
+			spawnAtFerry(player, i)
+		end
+	end
+end
+
+local function checkEncounter()
+	if MatchService.state ~= "Encounter" then
+		return
+	end
+	local anyStanding = false
+	local allStandingInZone = true
+	local extraction = Services.MapService.ExtractionPos
+	for player in participants do
+		if not player.Parent then
+			participants[player] = nil
+		else
+			local session = Services.CharacterService.getSession(player)
+			local char = player.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			if session and root and not session.out and not session.downed then
+				anyStanding = true
+				local flat = Vector3.new(root.Position.X - extraction.X, 0, root.Position.Z - extraction.Z)
+				if flat.Magnitude > Game.ExtractionRadius then
+					allStandingInZone = false
+				end
+			end
+		end
+	end
+	if not anyStanding then
+		MatchService.endEncounter(false)
+	elseif extractionOpen and allStandingInZone then
+		MatchService.endEncounter(true)
+	end
+end
+
+function MatchService.init(registry)
+	Services = registry
+end
+
+function MatchService.start()
+	setState("Ferry")
+	publish()
+
+	Net.onServer("SelectCharacter", 2, onSelectCharacter)
+	Net.onServer("ReturnToFerry", 2, function(player)
+		if MatchService.state ~= "Results" then
+			return
+		end
+		resultsAcknowledged[player] = true
+		for p in participants do
+			if p.Parent and not resultsAcknowledged[p] then
+				return
+			end
+		end
+		MatchService.returnToFerry()
+	end)
+
+	local function onJoin(player)
+		task.defer(function()
+			Net.notify(player, "OpenCharacterSelect", {})
+		end)
+	end
+	Players.PlayerAdded:Connect(onJoin)
+	for _, player in Players:GetPlayers() do
+		onJoin(player)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		participants[player] = nil
+		resultsAcknowledged[player] = nil
+	end)
+
+	while true do
+		task.wait(0.5)
+		local ok, err = pcall(checkEncounter)
+		if not ok then
+			warn("[MatchService] " .. tostring(err))
+		end
+	end
+end
+
+return MatchService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- How the Hushed sense players.
+--   Sight: range + field-of-view cone + line-of-sight raycasts, scaled by stance, cover (reeds),
+--          light (lamp pools, your torch), movement and fog.
+--   Hearing: every gameplay sound is a server "noise event" {position, radius, kind, player}.
+--          Footsteps are generated here from real velocity + stance, 4 times a second.
+-- The current footstep noise radius is published as the character attribute "Noise" for the HUD.
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Movement = require(Shared.Config.Movement)
+local Geometry = require(Shared.Util.Geometry)
+
+local PerceptionService = {}
+local Services
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+function PerceptionService.setEnemyFolder(folder)
+	rayParams.FilterDescendantsInstances = { folder }
+end
+
+-- Returns 0 (unseen) or a positive visibility factor (higher = noticed faster).
+function PerceptionService.sightFactor(enemy, info)
+	local cfg = enemy.cfg
+	local char, root = info.char, info.root
+	local head = char:FindFirstChild("Head")
+	if not head then
+		return 0
+	end
+	local modifier = Services.MatchService.modifier or {}
+	local eyes = enemy.head.Position
+	local toPlayer = root.Position - eyes
+	local dist = toPlayer.Magnitude
+	local range = cfg.sightRange * (modifier.sightMult or 1)
+	local lit = char:GetAttribute("Torch") == true or Geometry.inTagged(root.Position, "LitZone")
+	if lit then
+		range *= 1.45
+	end
+	if dist > range or dist < 0.01 then
+		return 0
+	end
+	if dist > 4.5 and enemy.root.CFrame.LookVector:Dot(toPlayer.Unit) < enemy.fovCos then
+		return 0
+	end
+
+	local visible = false
+	for _, target in { head.Position, root.Position } do
+		local result = Workspace:Raycast(eyes, target - eyes, rayParams)
+		if not result or result.Instance:IsDescendantOf(char) then
+			visible = true
+			break
+		end
+	end
+	if not visible then
+		return 0
+	end
+
+	local f = 1 - (dist / range) * 0.75
+	if char:GetAttribute("Stance") == "Crouch" then
+		f *= 0.55
+	end
+	if Geometry.inTagged(root.Position, "TallGrass") then
+		f *= 0.35
+	end
+	if lit then
+		f *= 1.8
+	end
+	local speed = Geometry.flat(root.AssemblyLinearVelocity).Magnitude
+	if speed < 1 then
+		f *= 0.6
+	elseif speed > 17 then
+		f *= 1.3
+	end
+	if dist < cfg.closeRange then
+		f *= 2.5
+	end
+	return f
+end
+
+-- Any sound in the world that Hushed may react to.
+function PerceptionService.emitNoise(position, radius, kind, player)
+	local modifier = Services.MatchService.modifier or {}
+	radius *= modifier.noiseMult or 1
+	if radius <= 0 then
+		return
+	end
+	Services.EnemyService.onNoise({ position = position, radius = radius, kind = kind, player = player })
+end
+
+local function footstepRadius(info, now)
+	local char, root, session = info.char, info.root, info.session
+	local mods = session.mods
+	local speed = Geometry.flat(root.AssemblyLinearVelocity).Magnitude
+	if speed < 1 or char:GetAttribute("Downed") then
+		return 0
+	end
+	local radius
+	if char:GetAttribute("Stance") == "Crouch" then
+		radius = Movement.Noise.Crouch * mods.crouchNoiseMult
+	elseif speed < 10.5 then
+		radius = Movement.Noise.Walk
+	elseif speed < 17 then
+		radius = Movement.Noise.Jog
+	else
+		radius = Movement.Noise.Sprint
+	end
+	if Geometry.inTagged(root.Position, "Shallows") then
+		radius *= 1 + (Movement.WaterNoiseMult - 1) * mods.waterNoiseMult
+	end
+	local modifier = Services.MatchService.modifier or {}
+	radius *= mods.noiseMult * (modifier.footstepMult or 1)
+	if (session.calmUntil or 0) > now then
+		radius *= 0.5
+	end
+	return radius
+end
+
+function PerceptionService.init(registry)
+	Services = registry
+end
+
+function PerceptionService.start()
+	while true do
+		task.wait(0.25)
+		if Services.MatchService.state == "Encounter" then
+			local now = os.clock()
+			for _, info in Services.MatchService.getActivePlayers() do
+				local radius = footstepRadius(info, now)
+				info.char:SetAttribute("Noise", math.floor(radius + 0.5))
+				if radius > 0 then
+					PerceptionService.emitNoise(info.root.Position, radius, "footstep", info.player)
+				end
+			end
+		end
+	end
+end
+
+return PerceptionService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Persistent player data (tokens, stats, purchase receipts) in a DataStore.
+-- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
+-- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Game = require(Shared.Config.Game)
+
+local PlayerDataService = {}
+
+local STORE_NAME = "Aftertide_Player_v1"
+local AUTOSAVE_INTERVAL = 120
+local MAX_RECEIPTS = 50
+
+local store = nil
+local memoryOnly = false
+local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
+
+local function defaultData()
+	return {
+		version = 1,
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply },
+		stats = { runs = 0, wins = 0, takedowns = 0 },
+		receipts = {},
+		receiptOrder = {},
+		lastDailyWin = "",
+	}
+end
+
+local function reconcile(data)
+	local template = defaultData()
+	for key, value in template do
+		if data[key] == nil then
+			data[key] = value
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" then
+			for k2, v2 in value do
+				if data[key][k2] == nil then
+					data[key][k2] = v2
+				end
+			end
+		end
+	end
+	return data
+end
+
+local function keyFor(player)
+	return "u_" .. player.UserId
+end
+
+local function publishTokens(player, data)
+	for kind, amount in data.tokens do
+		player:SetAttribute("Tokens_" .. kind, amount)
+	end
+end
+
+local function load(player)
+	if memoryOnly then
+		return defaultData(), false
+	end
+	for attempt = 1, 3 do
+		local ok, result = pcall(function()
+			return store:GetAsync(keyFor(player))
+		end)
+		if ok then
+			return reconcile(result or defaultData()), false
+		end
+		warn(("[PlayerData] load attempt %d failed for %s: %s"):format(attempt, player.Name, tostring(result)))
+		task.wait(attempt)
+	end
+	-- Don't overwrite real data with defaults if loading failed.
+	return defaultData(), true
+end
+
+function PlayerDataService.save(player)
+	local profile = profiles[player]
+	if not profile or not profile.loaded then
+		return false
+	end
+	if memoryOnly then
+		return true
+	end
+	if profile.noSave then
+		return false
+	end
+	local ok, err = pcall(function()
+		store:UpdateAsync(keyFor(player), function()
+			return profile.data
+		end)
+	end)
+	if not ok then
+		warn(("[PlayerData] save failed for %s: %s"):format(player.Name, tostring(err)))
+	end
+	return ok
+end
+
+function PlayerDataService.isMemoryOnly()
+	return memoryOnly
+end
+
+function PlayerDataService.get(player)
+	local profile = profiles[player]
+	return profile and profile.loaded and profile.data or nil
+end
+
+function PlayerDataService.waitFor(player, timeout)
+	local deadline = os.clock() + (timeout or 15)
+	while player.Parent and os.clock() < deadline do
+		local data = PlayerDataService.get(player)
+		if data then
+			return data
+		end
+		task.wait(0.2)
+	end
+	return nil
+end
+
+function PlayerDataService.addTokens(player, kind, amount)
+	local data = PlayerDataService.get(player)
+	if not data or data.tokens[kind] == nil then
+		return false
+	end
+	data.tokens[kind] += amount
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.useToken(player, kind)
+	local data = PlayerDataService.get(player)
+	if not data or (data.tokens[kind] or 0) < 1 then
+		return false
+	end
+	data.tokens[kind] -= 1
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.hasReceipt(player, purchaseId)
+	local data = PlayerDataService.get(player)
+	return data ~= nil and data.receipts[purchaseId] == true
+end
+
+function PlayerDataService.recordReceipt(player, purchaseId)
+	local data = PlayerDataService.get(player)
+	if not data then
+		return
+	end
+	data.receipts[purchaseId] = true
+	table.insert(data.receiptOrder, purchaseId)
+	while #data.receiptOrder > MAX_RECEIPTS do
+		local oldest = table.remove(data.receiptOrder, 1)
+		data.receipts[oldest] = nil
+	end
+end
+
+local function onPlayerAdded(player)
+	profiles[player] = { loaded = false }
+	local data, noSave = load(player)
+	if not player.Parent then
+		profiles[player] = nil
+		return
+	end
+	profiles[player] = { data = data, noSave = noSave, loaded = true }
+	publishTokens(player, data)
+	if noSave then
+		warn("[PlayerData] " .. player.Name .. " is in no-save mode (DataStore unavailable)")
+	end
+end
+
+local function onPlayerRemoving(player)
+	PlayerDataService.save(player)
+	profiles[player] = nil
+end
+
+function PlayerDataService.init()
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore(STORE_NAME)
+	end)
+	if ok then
+		store = result
+		if RunService:IsStudio() then
+			-- Probe once: Studio without API access throws here.
+			local probeOk = pcall(function()
+				store:GetAsync("probe")
+			end)
+			if not probeOk then
+				memoryOnly = true
+			end
+		end
+	else
+		memoryOnly = true
+	end
+	if memoryOnly then
+		warn("[PlayerData] DataStores unavailable: using memory only (enable Studio API access to test saving)")
+	end
+end
+
+function PlayerDataService.start()
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	for _, player in Players:GetPlayers() do
+		task.spawn(onPlayerAdded, player)
+	end
+
+	game:BindToClose(function()
+		local pending = 0
+		for _, player in Players:GetPlayers() do
+			pending += 1
+			task.spawn(function()
+				PlayerDataService.save(player)
+				pending -= 1
+			end)
+		end
+		local deadline = os.clock() + 25
+		while pending > 0 and os.clock() < deadline do
+			task.wait(0.1)
+		end
+	end)
+
+	while true do
+		task.wait(AUTOSAVE_INTERVAL)
+		for _, player in Players:GetPlayers() do
+			task.spawn(PlayerDataService.save, player)
+		end
+	end
+end
+
+return PlayerDataService
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+</Item>
+<Item class="StarterPlayer" referent="RBX00000034"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000033"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000032"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX00000028"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
+local ContextActionService = game:GetService("ContextActionService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Net = require(Shared.Net)
+local State = require(script.Parent.Parent.State)
+
+local ActionController = {}
+local Controllers
+
+local Begin = Enum.UserInputState.Begin
+local End = Enum.UserInputState.End
+local Sink = Enum.ContextActionResult.Sink
+local Pass = Enum.ContextActionResult.Pass
+
+local function act(name, payload)
+	Net.event("Action"):FireServer(name, payload)
+end
+
+local function isTouch(input)
+	return input and input.UserInputType == Enum.UserInputType.Touch
+end
+
+local function canAct()
+	return State.character ~= nil and not State.uiOpen()
+end
+
+local touchLayout = {
+	Fire = { title = "Fire", pos = UDim2.new(1, -95, 1, -230) },
+	Aim = { title = "Aim", pos = UDim2.new(1, -170, 1, -230) },
+	Quiet = { title = "Quiet", pos = UDim2.new(1, -95, 1, -160) },
+	Throw = { title = "Throw", pos = UDim2.new(1, -170, 1, -160) },
+	Ability = { title = "Skill", pos = UDim2.new(1, -245, 1, -160) },
+	Crouch = { title = "Crouch", pos = UDim2.new(1, -95, 1, -300) },
+	Sprint = { title = "Sprint", pos = UDim2.new(1, -170, 1, -300) },
+	Heal = { title = "Heal", pos = UDim2.new(1, -245, 1, -230) },
+	Torch = { title = "Torch", pos = UDim2.new(1, -245, 1, -300) },
+	Satchel = { title = "Bag", pos = UDim2.new(1, -320, 1, -300) },
+}
+
+local function bind(name, handler, ...)
+	local touch = touchLayout[name] ~= nil
+	ContextActionService:BindAction(name, function(_, inputState, input)
+		local result = handler(inputState, input)
+		return result or Sink
+	end, touch, ...)
+	if touch then
+		ContextActionService:SetTitle(name, touchLayout[name].title)
+		ContextActionService:SetPosition(name, touchLayout[name].pos)
+	end
+end
+
+function ActionController.init(registry)
+	Controllers = registry
+end
+
+function ActionController.start()
+	local Movement = Controllers.MovementController
+	local Camera = Controllers.CameraController
+
+	bind("Aim", function(state, input)
+		if state == End and not isTouch(input) then
+			Movement.setAim(false)
+			return
+		end
+		if not canAct() then
+			return Pass
+		end
+		if isTouch(input) then
+			if state == Begin then
+				Movement.setAim(not State.aiming)
+			end
+		elseif state == Begin then
+			Movement.setAim(true)
+		elseif state == End then
+			Movement.setAim(false)
+		end
+	end, Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2)
+
+	bind("Fire", function(state)
+		if not canAct() then
+			return Pass
+		end
+		if state == Begin and not State.downed then
+			act("Fire", Camera.aimDirection())
+		end
+	end, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
+
+	bind("Quiet", function(state)
+		if state == Begin and canAct() and not State.downed then
+			act("Quiet")
+		end
+	end, Enum.KeyCode.F, Enum.KeyCode.ButtonX)
+
+	bind("Throw", function(state)
+		if state == Begin and canAct() and not State.downed then
+			act("Throw", Camera.aimDirection())
+		end
+	end, Enum.KeyCode.G, Enum.KeyCode.ButtonR1)
+
+	bind("Ability", function(state)
+		if state == Begin and canAct() and not State.downed then
+			act("Ability")
+		end
+	end, Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
+
+	bind("Heal", function(state)
+		if state == Begin and canAct() and not State.downed then
+			act("Heal")
+		end
+	end, Enum.KeyCode.H, Enum.KeyCode.DPadUp)
+
+	bind("Torch", function(state)
+		if state == Begin and State.character and not State.downed then
+			act("Torch")
+		end
+	end, Enum.KeyCode.T, Enum.KeyCode.DPadLeft)
+
+	bind("Crouch", function(state)
+		if state == Begin and State.character then
+			Movement.toggleCrouch()
+		end
+	end, Enum.KeyCode.C, Enum.KeyCode.LeftControl, Enum.KeyCode.ButtonB)
+
+	bind("Sprint", function(state, input)
+		if not State.character then
+			return Pass
+		end
+		local toggle = isTouch(input) or (input and input.KeyCode == Enum.KeyCode.ButtonL3)
+		if toggle then
+			if state == Begin then
+				Movement.setSprint(not State.sprinting, true)
+			end
+		elseif state == Begin then
+			Movement.setSprint(true, false)
+		elseif state == End then
+			Movement.setSprint(false, false)
+		end
+	end, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
+
+	bind("Shoulder", function(state)
+		if state == Begin then
+			State.shoulder = -State.shoulder
+		end
+	end, Enum.KeyCode.X, Enum.KeyCode.ButtonR3)
+
+	bind("Satchel", function(state)
+		if state == Begin and State.character then
+			Controllers.UIController.toggleSatchel()
+		end
+	end, Enum.KeyCode.Tab, Enum.KeyCode.DPadDown)
+
+	bind("SecondWind", function(state)
+		if state == Begin and State.downed then
+			act("SecondWind")
+		end
+	end, Enum.KeyCode.R)
+
+	bind("Resupply", function(state)
+		if state == Begin and canAct() and not State.downed then
+			act("Resupply")
+		end
+	end, Enum.KeyCode.B)
+
+	-- keep the workspace referenced for aim raycasts in Studio play-solo
+	assert(Workspace)
+end
+
+function ActionController.sendAction(name, payload)
+	act(name, payload)
+end
+
+return ActionController
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
+-- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
+-- swap, and mouse / gamepad / touch look.
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Game = require(Shared.Config.Game)
+local Spring = require(Shared.Util.Spring)
+local State = require(script.Parent.Parent.State)
+
+local CameraController = {}
+
+local SENS_MOUSE = 0.0028
+local SENS_PAD = 3.0
+local SENS_TOUCH = 0.0065
+local PITCH_MIN, PITCH_MAX = -1.2, 0.95
+
+local yaw, pitch = 0, -0.12
+local padLook = Vector2.zero
+local touchInput, lastTouchPos = nil, nil
+
+local focusSpring = Spring.new(Vector3.zero, 7)
+local offsetSpring = Spring.new(Vector3.new(1.7, 0.5, 6.2), 5)
+local fovSpring = Spring.new(70, 4)
+local currentDist = 6
+local needsSnap = true
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Exclude
+
+function CameraController.getYaw()
+	return yaw
+end
+
+-- Direction from the character's head toward whatever is under the screen centre.
+function CameraController.aimDirection()
+	local camera = Workspace.CurrentCamera
+	local origin = camera.CFrame.Position
+	local look = camera.CFrame.LookVector * 250
+	local hit = Workspace:Raycast(origin, look, params)
+	local point = hit and hit.Position or origin + look
+	local head = State.character and State.character:FindFirstChild("Head")
+	local from = head and head.Position or origin
+	local dir = point - from
+	if dir.Magnitude < 0.5 then
+		return camera.CFrame.LookVector
+	end
+	return dir.Unit
+end
+
+function CameraController.onCharacter(char)
+	needsSnap = true
+	local root = char:WaitForChild("HumanoidRootPart")
+	local _, ry = root.CFrame:ToEulerAnglesYXZ()
+	yaw = ry
+	pitch = -0.12
+end
+
+local function refreshFilter()
+	local list = {}
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(list, p.Character)
+		end
+	end
+	local enemies = Workspace:FindFirstChild("Enemies")
+	if enemies then
+		table.insert(list, enemies)
+	end
+	params.FilterDescendantsInstances = list
+end
+
+local function update(dt)
+	local camera = Workspace.CurrentCamera
+	if camera.CameraType ~= Enum.CameraType.Scriptable then
+		camera.CameraType = Enum.CameraType.Scriptable
+	end
+
+	local root = State.root
+	if not root or not root.Parent then
+		-- No character yet (choosing crew): a slow establishing shot of the Meridian.
+		local o = Game.FerryOrigin
+		local t = os.clock() * 0.05
+		camera.CFrame = CFrame.lookAt(o + Vector3.new(math.cos(t) * 55, 16, math.sin(t) * 55), o + Vector3.new(0, 4, 0))
+		camera.FieldOfView = 60
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
+
+	local uiOpen = State.uiOpen()
+	if uiOpen then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	elseif not UserInputService.TouchEnabled or UserInputService.MouseEnabled then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UserInputService.MouseIconEnabled = false
+	end
+
+	if padLook.Magnitude > 0.15 then
+		yaw -= padLook.X * SENS_PAD * dt
+		pitch += padLook.Y * SENS_PAD * 0.7 * dt
+	end
+	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
+
+	local takedown = os.clock() < State.takedownUntil
+	local s = State.shoulder
+	local height, offset, fov
+	if State.downed then
+		height, offset, fov = 0.9, Vector3.new(1.2 * s, 1.4, 7), 66
+	elseif takedown then
+		height, offset, fov = 1.8, Vector3.new(2.4 * s, 0.2, 4.2), 58
+	elseif State.aiming then
+		height, offset, fov = State.crouched and 1.4 or 2.2, Vector3.new(1.9 * s, 0.3, 3.6), 52
+	elseif State.sprinting then
+		height, offset, fov = 2.2, Vector3.new(1.3 * s, 0.6, 7), 76
+	elseif State.crouched then
+		height, offset, fov = 1.3, Vector3.new(1.8 * s, 0.7, 5.2), 68
+	else
+		height, offset, fov = 2.3, Vector3.new(1.7 * s, 0.5, 6.2), 70
+	end
+
+	local focusTarget = root.Position + Vector3.new(0, height, 0)
+	if needsSnap or (focusSpring.position - focusTarget).Magnitude > 40 then
+		focusSpring:reset(focusTarget)
+		offsetSpring:reset(offset)
+		currentDist = offset.Magnitude
+		needsSnap = false
+		refreshFilter()
+	end
+	focusSpring.target = focusTarget
+	offsetSpring.target = offset
+	fovSpring.target = fov
+	local focus = focusSpring:update(dt)
+	local off = offsetSpring:update(dt)
+	camera.FieldOfView = fovSpring:update(dt)
+
+	-- subtle breathing sway (scaled down while aiming)
+	local t = os.clock()
+	local sway = (State.aiming and 0.25 or 1) * 0.006
+	local rot = CFrame.fromEulerAnglesYXZ(pitch + math.sin(t * 1.3) * sway, yaw + math.sin(t * 0.7) * sway, 0)
+
+	local desired = (CFrame.new(focus) * rot * CFrame.new(off)).Position
+	local dir = desired - focus
+	local dist = dir.Magnitude
+	local allowed = dist
+	if dist > 0.01 then
+		local hit = Workspace:Spherecast(focus, 0.4, dir, params)
+		if hit then
+			allowed = math.max(hit.Distance - 0.15, 0.35)
+		end
+	end
+	if allowed < currentDist then
+		currentDist = allowed -- snap in so walls never block the view
+	else
+		currentDist += (allowed - currentDist) * math.min(1, dt * 3.5) -- ease back out
+	end
+	local position = dist > 0.01 and focus + dir.Unit * currentDist or desired
+	camera.CFrame = CFrame.new(position) * rot
+	camera.Focus = CFrame.new(focus)
+end
+
+function CameraController.start()
+	UserInputService.InputChanged:Connect(function(input, processed)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			if not State.uiOpen() and State.root then
+				yaw -= input.Delta.X * SENS_MOUSE
+				pitch -= input.Delta.Y * SENS_MOUSE
+			end
+		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
+			padLook = Vector2.new(input.Position.X, input.Position.Y)
+		end
+	end)
+
+	UserInputService.TouchStarted:Connect(function(input, processed)
+		if processed or touchInput or State.uiOpen() then
+			return
+		end
+		if input.Position.X > Workspace.CurrentCamera.ViewportSize.X * 0.4 then
+			touchInput = input
+			lastTouchPos = input.Position
+		end
+	end)
+	UserInputService.TouchMoved:Connect(function(input)
+		if input == touchInput and lastTouchPos then
+			local delta = input.Position - lastTouchPos
+			lastTouchPos = input.Position
+			yaw -= delta.X * SENS_TOUCH
+			pitch -= delta.Y * SENS_TOUCH
+		end
+	end)
+	UserInputService.TouchEnded:Connect(function(input)
+		if input == touchInput then
+			touchInput = nil
+		end
+	end)
+
+	Players.PlayerAdded:Connect(function()
+		task.wait(2)
+		refreshFilter()
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(3)
+			refreshFilter()
+		end
+	end)
+
+	RunService:BindToRenderStep("AftertideCamera", Enum.RenderPriority.Camera.Value + 1, update)
+end
+
+return CameraController
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Client-only feedback: Tide Sense highlights, knockback, hit flash, low-health grade,
+-- takedown framing, Squall lightning, and hiding your own revive prompt.
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Net = require(Shared.Net)
+local Geometry = require(Shared.Util.Geometry)
+local State = require(script.Parent.Parent.State)
+
+local EffectsController = {}
+
+local player = Players.LocalPlayer
+local grade -- our own ColorCorrection layer for health feedback
+local hitFlash = 0
+
+local function tideSense(data)
+	local enemies = Workspace:FindFirstChild("Enemies")
+	local root = State.root
+	if not enemies or not root then
+		return
+	end
+	local radius = tonumber(data.radius) or 70
+	local duration = tonumber(data.duration) or 4
+	for _, model in enemies:GetChildren() do
+		local r = model:FindFirstChild("HumanoidRootPart")
+		if r and (r.Position - root.Position).Magnitude <= radius then
+			local h = Instance.new("Highlight")
+			h.FillColor = Color3.fromRGB(170, 215, 215)
+			h.FillTransparency = 0.88
+			h.OutlineColor = Color3.fromRGB(225, 245, 245)
+			h.OutlineTransparency = 0.1
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Adornee = model
+			h.Parent = model
+			task.delay(duration, function()
+				if h.Parent then
+					local tween = TweenService:Create(h, TweenInfo.new(0.6), { OutlineTransparency = 1, FillTransparency = 1 })
+					tween:Play()
+					tween.Completed:Wait()
+					h:Destroy()
+				end
+			end)
+		end
+	end
+end
+
+local function knockback(data)
+	local root = State.root
+	if root and Geometry.isSaneVector(data.velocity, 200) then
+		root.AssemblyLinearVelocity = data.velocity
+	end
+end
+
+local function hideOwnRevivePrompt(char)
+	local function check(inst)
+		if inst:IsA("ProximityPrompt") and inst.Name == "Revive" then
+			inst.Enabled = false
+		end
+	end
+	for _, d in char:GetDescendants() do
+		check(d)
+	end
+	char.DescendantAdded:Connect(check)
+end
+
+function EffectsController.onCharacter(char)
+	hideOwnRevivePrompt(char)
+end
+
+local nextLightning = 0
+local function lightning()
+	local before = Lighting.Brightness
+	Lighting.Brightness = before + 3
+	task.wait(0.06)
+	Lighting.Brightness = before
+	task.wait(0.09)
+	Lighting.Brightness = before + 2
+	task.wait(0.05)
+	Lighting.Brightness = before
+end
+
+function EffectsController.start()
+	grade = Instance.new("ColorCorrectionEffect")
+	grade.Name = "AftertideHealth"
+	grade.Parent = Lighting
+
+	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
+		data = data or {}
+		if kind == "TideSense" then
+			tideSense(data)
+		elseif kind == "Knockback" then
+			knockback(data)
+		elseif kind == "Hurt" then
+			hitFlash = 1
+		elseif kind == "Takedown" then
+			State.takedownUntil = os.clock() + (tonumber(data.duration) or 0.9)
+		end
+	end)
+
+	RunService.RenderStepped:Connect(function(dt)
+		local char = State.character
+		local hp = char and char:GetAttribute("HP") or 100
+		local maxHp = char and char:GetAttribute("MaxHP") or 100
+		local low = 1 - math.clamp(hp / maxHp, 0, 1)
+		hitFlash = math.max(0, hitFlash - dt * 2.5)
+		grade.Saturation = -0.5 * low - 0.3 * hitFlash
+		grade.TintColor = Color3.new(1, 1 - 0.35 * hitFlash - 0.1 * low, 1 - 0.4 * hitFlash - 0.15 * low)
+		grade.Contrast = 0.1 * low
+		if State.downed then
+			grade.Saturation = -0.8
+		end
+
+		if ReplicatedStorage:GetAttribute("ModifierId") == "Squall" and ReplicatedStorage:GetAttribute("MatchState") == "Encounter" then
+			local now = os.clock()
+			if now > nextLightning then
+				nextLightning = now + math.random(8, 20)
+				task.spawn(lightning)
+			end
+		end
+	end)
+end
+
+return EffectsController
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Stances and speed states with acceleration ramps, wading, aim-facing, and a procedural
+-- crouch/downed pose applied to every character (from their replicated attributes).
+-- Stage 5 replaces the procedural pose with authored crouch locomotion animations.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Movement = require(Shared.Config.Movement)
+local Stats = require(Shared.Stats)
+local Net = require(Shared.Net)
+local Geometry = require(Shared.Util.Geometry)
+local State = require(script.Parent.Parent.State)
+
+local MovementController = {}
+local Controllers
+
+local player = Players.LocalPlayer
+local currentSpeed = 0
+local stillTime = 0
+local lastSent = ""
+local poseAlpha = setmetatable({}, { __mode = "k" })
+
+local function send()
+	local stance = State.crouched and "Crouch" or "Stand"
+	local key = stance .. tostring(State.sprinting) .. tostring(State.aiming)
+	if key ~= lastSent then
+		lastSent = key
+		Net.event("SetMoveState"):FireServer(stance, State.sprinting, State.aiming)
+	end
+end
+
+function MovementController.toggleCrouch()
+	if State.downed then
+		return
+	end
+	State.crouched = not State.crouched
+	if State.crouched then
+		State.sprinting = false
+	end
+	send()
+end
+
+function MovementController.setSprint(on, toggled)
+	if State.downed then
+		return
+	end
+	State.sprinting = on
+	State.sprintToggled = on and toggled == true
+	if on then
+		State.crouched = false
+	end
+	send()
+end
+
+function MovementController.setAim(on)
+	State.aiming = on and not State.downed
+	if State.aiming then
+		State.sprinting = false
+	end
+	send()
+end
+
+function MovementController.onCharacter()
+	currentSpeed = 0
+	lastSent = ""
+	send()
+end
+
+local function mods()
+	return Stats.compute(player:GetAttribute("CharId"), player:GetAttribute("PerkId"))
+end
+
+local cachedMods, cachedKey = nil, nil
+local function getMods()
+	local key = tostring(player:GetAttribute("CharId")) .. tostring(player:GetAttribute("PerkId"))
+	if key ~= cachedKey then
+		cachedKey = key
+		cachedMods = mods()
+	end
+	return cachedMods
+end
+
+local function stepLocal(dt)
+	local char, humanoid, root = State.character, State.humanoid, State.root
+	if not char or not humanoid or not root or not root.Parent then
+		return
+	end
+	local wasDowned = State.downed
+	State.downed = char:GetAttribute("Downed") == true or char:GetAttribute("Out") == true
+	if State.downed and not wasDowned then
+		State.aiming, State.sprinting, State.crouched = false, false, false
+		send()
+	end
+
+	local busy = (char:GetAttribute("BusyUntil") or 0) > Workspace:GetServerTimeNow()
+	local moving = humanoid.MoveDirection.Magnitude > 0.05
+	local S = Movement.Speeds
+	local target
+	if char:GetAttribute("Out") then
+		target = 0
+	elseif State.downed then
+		target = S.Downed
+	elseif busy then
+		target = 0
+	elseif State.aiming then
+		target = State.crouched and S.Crouch * 0.8 or S.Aim
+	elseif State.crouched then
+		target = S.Crouch
+	elseif State.sprinting then
+		target = S.Sprint * getMods().sprintSpeedMult
+	else
+		target = S.Jog
+	end
+	if Geometry.inTagged(root.Position, "Shallows") then
+		target *= Movement.WaterSpeedMult
+	end
+
+	if not moving then
+		currentSpeed = math.min(currentSpeed, 4) -- next start ramps up again
+	end
+	if target > currentSpeed then
+		currentSpeed = math.min(target, currentSpeed + Movement.Accel * dt)
+	else
+		currentSpeed = math.max(target, currentSpeed - Movement.Decel * dt)
+	end
+	humanoid.WalkSpeed = currentSpeed
+
+	if State.aiming and not State.downed then
+		humanoid.AutoRotate = false
+		root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, Controllers.CameraController.getYaw(), 0)
+	else
+		humanoid.AutoRotate = true
+	end
+	stillTime = moving and 0 or stillTime + dt
+	if State.sprinting and State.sprintToggled and stillTime > 0.6 then
+		-- releasing the stick ends a toggled sprint (gamepad / touch)
+		State.sprinting = false
+		State.sprintToggled = false
+		send()
+	end
+end
+
+local function joint(char, partName, jointName)
+	local part = char:FindFirstChild(partName)
+	return part and part:FindFirstChild(jointName)
+end
+
+local function bend(motor, angle)
+	if motor and motor:IsA("Motor6D") then
+		motor.Transform = motor.Transform * CFrame.Angles(angle, 0, 0)
+	end
+end
+
+local function applyPose(char, alpha)
+	local legs = math.min(alpha, 1)
+	bend(joint(char, "UpperTorso", "Waist"), -0.45 * alpha)
+	bend(joint(char, "LeftUpperLeg", "LeftHip"), 1.15 * legs)
+	bend(joint(char, "RightUpperLeg", "RightHip"), 1.15 * legs)
+	bend(joint(char, "LeftLowerLeg", "LeftKnee"), -1.7 * legs)
+	bend(joint(char, "RightLowerLeg", "RightKnee"), -1.7 * legs)
+end
+
+local function stepPoses(_, dt)
+	for _, p in Players:GetPlayers() do
+		local char = p.Character
+		if char then
+			local goal
+			if p == player then
+				goal = State.downed and 1.25 or (State.crouched and 1 or 0)
+			else
+				goal = char:GetAttribute("Downed") and 1.25 or (char:GetAttribute("Stance") == "Crouch" and 1 or 0)
+			end
+			local a = poseAlpha[char] or 0
+			a += (goal - a) * math.min(1, dt * 10)
+			poseAlpha[char] = a
+			if a > 0.01 then
+				applyPose(char, a)
+			end
+			if p == player and State.humanoid then
+				local legs = math.min(a, 1)
+				State.humanoid.HipHeight = State.baseHipHeight * (1 - (1 - Movement.CrouchHipMult) * legs)
+			end
+		end
+	end
+end
+
+function MovementController.init(registry)
+	Controllers = registry
+end
+
+function MovementController.start()
+	RunService:BindToRenderStep("AftertideMovement", Enum.RenderPriority.Input.Value + 1, stepLocal)
+	RunService.Stepped:Connect(stepPoses)
+end
+
+return MovementController
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Owns the ScreenGui and routes server notifications to the UI modules.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Net = require(Shared.Net)
+local UI = script.Parent.Parent:WaitForChild("UI")
+local HUD = require(UI:WaitForChild("HUD"))
+local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
+local Satchel = require(UI:WaitForChild("Satchel"))
+local Shop = require(UI:WaitForChild("Shop"))
+local Results = require(UI:WaitForChild("Results"))
+
+local UIController = {}
+local Controllers
+local player = Players.LocalPlayer
+
+function UIController.toggleSatchel()
+	Satchel.toggle()
+end
+
+function UIController.init(registry)
+	Controllers = registry
+end
+
+function UIController.start()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "AftertideUI"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local function send(name, payload)
+		Controllers.ActionController.sendAction(name, payload)
+	end
+	HUD.build(gui, function()
+		send("SecondWind")
+	end)
+	CharacterSelect.build(gui)
+	Satchel.build(gui, send)
+	Shop.build(gui)
+	Results.build(gui)
+
+	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
+		data = data or {}
+		if kind == "Toast" then
+			HUD.toast(tostring(data.text or ""))
+		elseif kind == "OpenCharacterSelect" then
+			CharacterSelect.open()
+		elseif kind == "OpenShop" then
+			Shop.open()
+		elseif kind == "Results" then
+			Satchel.close()
+			Results.show(data)
+		elseif kind == "EncounterStart" then
+			CharacterSelect.close()
+			Shop.close()
+			Results.close()
+			HUD.toast(("%s · %s"):format(tostring(data.name), tostring(data.modifierName)))
+			HUD.toast(tostring(data.modifierDesc or ""))
+			HUD.toast(tostring(data.objective or ""))
+		elseif kind == "Spotted" then
+			HUD.toast("You've been seen. Break line of sight!")
+		elseif kind == "NeedProduct" then
+			if not Shop.prompt(data.productKey) then
+				HUD.toast("No tokens left. Earn more by finishing crossings.")
+			end
+		end
+	end)
+
+	ReplicatedStorage:GetAttributeChangedSignal("MatchState"):Connect(function()
+		if ReplicatedStorage:GetAttribute("MatchState") == "Ferry" then
+			Results.close()
+		end
+	end)
+
+	-- First visit: choose a crew member (also covers a missed server notification).
+	task.delay(1.5, function()
+		if not player:GetAttribute("CharId") then
+			CharacterSelect.open()
+		end
+	end)
+
+	RunService.RenderStepped:Connect(function(dt)
+		HUD.update(dt)
+		Satchel.refresh()
+		Shop.refresh()
+	end)
+end
+
+return UIController
+]]></ProtectedString></Properties></Item>
+</Item>
+<Item class="LocalScript" referent="RBX00000029"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- AFTERTIDE client bootstrap.
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local State = require(script.Parent:WaitForChild("State"))
+local Controllers = script.Parent:WaitForChild("Controllers")
+
+-- Hide the default Roblox HUD pieces we replace (health bar, backpack). Chat and the player
+-- list stay: co-op players need them.
+task.spawn(function()
+	for _ = 1, 20 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, false)
+		end)
+		if ok then
+			break
+		end
+		task.wait(0.5)
+	end
+end)
+
+local ORDER = { "CameraController", "MovementController", "ActionController", "EffectsController", "UIController" }
+local controllers = {}
+for _, name in ORDER do
+	controllers[name] = require(Controllers:WaitForChild(name))
+end
+for _, name in ORDER do
+	if controllers[name].init then
+		controllers[name].init(controllers)
+	end
+end
+for _, name in ORDER do
+	if controllers[name].start then
+		task.spawn(controllers[name].start)
+	end
+end
+
+local function bindCharacter(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	local root = char:WaitForChild("HumanoidRootPart")
+	State.character = char
+	State.humanoid = humanoid
+	State.root = root
+	State.baseHipHeight = humanoid.HipHeight
+	State.crouched = false
+	State.sprinting = false
+	State.aiming = false
+	State.downed = false
+	for _, name in ORDER do
+		if controllers[name].onCharacter then
+			task.spawn(controllers[name].onCharacter, char)
+		end
+	end
+end
+
+player.CharacterAdded:Connect(bindCharacter)
+player.CharacterRemoving:Connect(function(char)
+	if State.character == char then
+		State.character, State.humanoid, State.root = nil, nil, nil
+	end
+end)
+if player.Character then
+	task.spawn(bindCharacter, player.Character)
+end
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Shared client-side state for controllers and UI.
+local State = {
+	character = nil,
+	humanoid = nil,
+	root = nil,
+	baseHipHeight = 2,
+
+	crouched = false,
+	sprinting = false,
+	aiming = false,
+	downed = false,
+	shoulder = 1, -- 1 = right shoulder, -1 = left
+
+	takedownUntil = 0,
+	modals = {},
+}
+
+function State.setModal(name, open)
+	State.modals[name] = open or nil
+end
+
+function State.uiOpen()
+	return next(State.modals) ~= nil
+end
+
+return State
+]]></ProtectedString></Properties></Item>
+<Item class="Folder" referent="RBX00000031"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
+local Items = require(Shared.Config.Items)
+local Net = require(Shared.Net)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local CharacterSelect = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local backdrop, closeButton
+
+local function loadoutText(loadout)
+	local parts = {}
+	for _, itemId in Items.Order do
+		local amount = loadout[itemId]
+		if amount and amount > 0 then
+			table.insert(parts, amount .. " " .. Items.Items[itemId].name)
+		end
+	end
+	return table.concat(parts, " · ")
+end
+
+local function card(parent, charId, order)
+	local def = Characters.List[charId]
+	local selectedPerk = def.perks[1].id
+	if player:GetAttribute("CharId") == charId and player:GetAttribute("PerkId") then
+		selectedPerk = player:GetAttribute("PerkId")
+	end
+
+	local frame = Theme.panel({ Name = charId, LayoutOrder = order, Size = UDim2.new(0, 258, 0, 500), BackgroundColor3 = C.panelHi, Parent = parent })
+	Theme.padding(12).Parent = frame
+	Theme.list(Enum.FillDirection.Vertical, 5).Parent = frame
+
+	local swatch = Theme.make("Frame", { LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 6), BackgroundColor3 = def.colors.torso, BorderSizePixel = 0, Parent = frame })
+	Theme.corner(3).Parent = swatch
+	Theme.heading({ LayoutOrder = 1, Text = string.upper(def.name), TextSize = 22, Parent = frame })
+	Theme.label({ LayoutOrder = 2, Text = def.role, TextColor3 = C.lantern, Font = Theme.Head, TextSize = 15, Size = UDim2.new(1, 0, 0, 18), Parent = frame })
+	Theme.label({ LayoutOrder = 3, Text = def.bio, TextSize = 12, TextColor3 = C.dim, Size = UDim2.new(1, 0, 0, 32), Parent = frame })
+	Theme.label({ LayoutOrder = 4, Text = "ABILITY · " .. def.ability.name, Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
+	Theme.label({ LayoutOrder = 5, Text = def.ability.desc, TextSize = 12, Size = UDim2.new(1, 0, 0, 44), Parent = frame })
+	Theme.label({ LayoutOrder = 6, Text = "LOADOUT", Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
+	Theme.label({ LayoutOrder = 7, Text = loadoutText(def.loadout), TextSize = 12, Size = UDim2.new(1, 0, 0, 30), Parent = frame })
+	Theme.label({ LayoutOrder = 8, Text = "INNATE · " .. def.innate.name, Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
+	Theme.label({ LayoutOrder = 9, Text = def.innate.desc, TextSize = 12, Size = UDim2.new(1, 0, 0, 30), Parent = frame })
+	Theme.label({ LayoutOrder = 10, Text = "STARTING PERK (choose one)", Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
+
+	local perkRow = Theme.make("Frame", { LayoutOrder = 11, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = frame })
+	Theme.list(Enum.FillDirection.Horizontal, 4).Parent = perkRow
+	local perkDesc = Theme.label({ LayoutOrder = 12, Text = "", TextSize = 12, Size = UDim2.new(1, 0, 0, 30), Parent = frame })
+	local buttons = {}
+	local function refresh()
+		for id, button in buttons do
+			local on = id == selectedPerk
+			button.BackgroundColor3 = on and C.lantern or C.panel
+			button.TextColor3 = on and C.backdrop or C.text
+		end
+		for _, perk in def.perks do
+			if perk.id == selectedPerk then
+				perkDesc.Text = perk.desc
+			end
+		end
+	end
+	for i, perk in def.perks do
+		local b = Theme.button({ LayoutOrder = i, Text = perk.name, TextSize = 12, Size = UDim2.new(1 / 3, -3, 1, 0), Parent = perkRow })
+		buttons[perk.id] = b
+		b.Activated:Connect(function()
+			selectedPerk = perk.id
+			refresh()
+		end)
+	end
+	refresh()
+
+	local choose = Theme.button({ LayoutOrder = 13, Text = "CHOOSE " .. string.upper(def.name:match("^(%S+)")), Size = UDim2.new(1, 0, 0, 36), Parent = frame })
+	choose.Activated:Connect(function()
+		Net.event("SelectCharacter"):FireServer(charId, selectedPerk)
+		CharacterSelect.close()
+	end)
+end
+
+function CharacterSelect.build(gui)
+	local panel
+	backdrop, panel = Theme.modal(gui, "CharacterSelect", UDim2.new(0.96, 0, 0.92, 0), Vector2.new(1120, 640))
+	Theme.heading({ Text = "THE CREW", TextSize = 30, Size = UDim2.new(1, -120, 0, 34), Parent = panel })
+	Theme.label({ Text = "Every crew member is free. Each plays differently: own ability, loadout and perks.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
+	closeButton = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
+	closeButton.Activated:Connect(CharacterSelect.close)
+
+	local scroller = Theme.make("ScrollingFrame", {
+		Position = UDim2.new(0, 0, 0, 64),
+		Size = UDim2.new(1, 0, 1, -64),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollingDirection = Enum.ScrollingDirection.XY,
+		AutomaticCanvasSize = Enum.AutomaticSize.XY,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		Parent = panel,
+	})
+	Theme.list(Enum.FillDirection.Horizontal, 10).Parent = scroller
+	for i, charId in Characters.Order do
+		card(scroller, charId, i)
+	end
+end
+
+function CharacterSelect.open()
+	if not backdrop then
+		return
+	end
+	closeButton.Visible = player:GetAttribute("CharId") ~= nil
+	backdrop.Visible = true
+	State.setModal("select", true)
+end
+
+function CharacterSelect.close()
+	if not backdrop then
+		return
+	end
+	backdrop.Visible = false
+	State.setModal("select", false)
+end
+
+return CharacterSelect
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- In-run HUD: objective, health + ability, noise ring, satchel strip, detection indicators,
+-- crosshair, toasts, downed overlay and the ferry panel. Updated every frame from attributes.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
+local Movement = require(Shared.Config.Movement)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local HUD = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+
+local root -- container frame
+local objectiveTitle, objectiveText
+local statusName, hpFill, abilityLabel
+local ring, ringLabel
+local invLabel, hintLabel
+local crosshair
+local toastHolder
+local downed, downedText, secondWindButton
+local ferryPanel, ferryText
+local indicatorLayer
+local indicators = {} -- [Model] = TextLabel
+local noiseSmoothed = 0
+
+function HUD.build(gui, onSecondWind)
+	root = Theme.make("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
+
+	-- objective
+	local obj = Theme.panel({
+		Name = "Objective",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 14),
+		Size = UDim2.new(0, 520, 0, 62),
+		BackgroundTransparency = 0.3,
+		Parent = root,
+	})
+	Theme.make("UISizeConstraint", { MaxSize = Vector2.new(520, 62), Parent = obj })
+	obj.Size = UDim2.new(0.9, 0, 0, 62)
+	Theme.padding(10).Parent = obj
+	objectiveTitle = Theme.heading({ Text = "", TextSize = 19, Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.lantern, Parent = obj })
+	objectiveText = Theme.label({ Text = "", TextSize = 14, Position = UDim2.new(0, 0, 0, 22), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Parent = obj })
+
+	-- status
+	local status = Theme.panel({
+		Name = "Status",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 18, 1, -18),
+		Size = UDim2.new(0, 280, 0, 84),
+		BackgroundTransparency = 0.3,
+		Parent = root,
+	})
+	Theme.padding(10).Parent = status
+	statusName = Theme.heading({ Text = "", TextSize = 18, Size = UDim2.new(1, 0, 0, 20), Parent = status })
+	local hpBack = Theme.make("Frame", { Position = UDim2.new(0, 0, 0, 26), Size = UDim2.new(1, 0, 0, 6), BackgroundColor3 = C.panelHi, BorderSizePixel = 0, Parent = status })
+	Theme.corner(3).Parent = hpBack
+	hpFill = Theme.make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.text, BorderSizePixel = 0, Parent = hpBack })
+	Theme.corner(3).Parent = hpFill
+	abilityLabel = Theme.label({ Text = "", TextSize = 13, Position = UDim2.new(0, 0, 0, 38), Size = UDim2.new(1, 0, 0, 30), TextColor3 = C.salt, Parent = status })
+
+	-- noise ring
+	local ringHolder = Theme.make("Frame", {
+		Name = "Noise",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -34),
+		Size = UDim2.new(0, 110, 0, 110),
+		BackgroundTransparency = 1,
+		Parent = root,
+	})
+	ring = Theme.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.1, 0.1), BackgroundTransparency = 1, Parent = ringHolder })
+	Theme.make("UICorner", { CornerRadius = UDim.new(1, 0), Parent = ring })
+	Theme.make("UIStroke", { Color = C.text, Thickness = 2, Transparency = 0.4, Parent = ring })
+	Theme.make("UIAspectRatioConstraint", { Parent = ring })
+	ringLabel = Theme.heading({ Text = "SILENT", TextSize = 13, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.new(0, 120, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.dim, Parent = ringHolder })
+
+	-- satchel strip + key hints
+	invLabel = Theme.label({
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -18, 1, -40),
+		Size = UDim2.new(0, 420, 0, 40),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextYAlignment = Enum.TextYAlignment.Bottom,
+		Font = Theme.Head,
+		TextSize = 16,
+		Parent = root,
+	})
+	hintLabel = Theme.label({
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -18, 1, -16),
+		Size = UDim2.new(0, 760, 0, 20),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextYAlignment = Enum.TextYAlignment.Bottom,
+		TextSize = 12,
+		TextColor3 = C.dim,
+		Text = "WASD move · Shift sprint · C crouch · RMB aim · LMB slingshot · G bottle · F quiet/shove · Q skill · H heal · T torch · X shoulder · Tab satchel · B resupply",
+		Visible = UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled,
+		Parent = root,
+	})
+
+	crosshair = Theme.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(0, 5, 0, 5),
+		BackgroundColor3 = C.text,
+		BackgroundTransparency = 0.2,
+		BorderSizePixel = 0,
+		Visible = false,
+		Parent = root,
+	})
+	Theme.make("UICorner", { CornerRadius = UDim.new(1, 0), Parent = crosshair })
+
+	indicatorLayer = Theme.make("Frame", { Name = "Indicators", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
+
+	toastHolder = Theme.make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 86),
+		Size = UDim2.new(0, 600, 0, 200),
+		BackgroundTransparency = 1,
+		Parent = root,
+	})
+	Theme.list(Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center).Parent = toastHolder
+
+	-- downed overlay
+	downed = Theme.make("Frame", { Name = "Downed", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.55, Visible = false, Parent = root })
+	downedText = Theme.heading({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.new(0.9, 0, 0, 80), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, TextSize = 24, Parent = downed })
+	secondWindButton = Theme.button({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0, 300, 0, 44), Text = "SECOND WIND  [R]", Parent = downed })
+	secondWindButton.Activated:Connect(onSecondWind)
+
+	-- ferry panel
+	ferryPanel = Theme.panel({
+		Name = "Ferry",
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0, 18, 0, 90),
+		Size = UDim2.new(0, 300, 0, 132),
+		BackgroundTransparency = 0.25,
+		Visible = false,
+		Parent = root,
+	})
+	Theme.padding(12).Parent = ferryPanel
+	Theme.heading({ Text = "THE MERIDIAN", TextSize = 18, Size = UDim2.new(1, 0, 0, 22), TextColor3 = C.lantern, Parent = ferryPanel })
+	ferryText = Theme.label({ Position = UDim2.new(0, 0, 0, 26), Size = UDim2.new(1, 0, 1, -26), TextSize = 13, Parent = ferryPanel })
+end
+
+function HUD.toast(text)
+	if not toastHolder then
+		return
+	end
+	local label = Theme.label({
+		Text = text,
+		Size = UDim2.new(1, 0, 0, 24),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextSize = 16,
+		TextStrokeTransparency = 0.6,
+		Parent = toastHolder,
+	})
+	task.delay(3.5, function()
+		for i = 1, 10 do
+			label.TextTransparency = i / 10
+			label.TextStrokeTransparency = 0.6 + i / 25
+			task.wait(0.04)
+		end
+		label:Destroy()
+	end)
+	local children = toastHolder:GetChildren()
+	if #children > 6 then
+		for _, child in children do
+			if child:IsA("TextLabel") then
+				child:Destroy()
+				break
+			end
+		end
+	end
+end
+
+local function noiseWord(radius)
+	if radius < 1 then
+		return "SILENT", C.dim
+	elseif radius <= Movement.Noise.Crouch + 1 then
+		return "QUIET", C.salt
+	elseif radius <= Movement.Noise.Walk + 2 then
+		return "AUDIBLE", C.text
+	elseif radius <= Movement.Noise.Jog + 4 then
+		return "LOUD", C.lantern
+	end
+	return "VERY LOUD", C.danger
+end
+
+local function updateIndicators(camera, active)
+	local enemies = Workspace:FindFirstChild("Enemies")
+	local seen = {}
+	if active and enemies and State.root then
+		local key = "Sus_" .. player.UserId
+		local viewport = camera.ViewportSize
+		local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
+		local radius = math.min(viewport.X, viewport.Y) * 0.22
+		for _, model in enemies:GetChildren() do
+			local r = model:FindFirstChild("HumanoidRootPart")
+			local state = model:GetAttribute("State")
+			local sus = model:GetAttribute(key) or 0
+			local hunting = state == "Chase" and model:GetAttribute("Target") == player.UserId
+			if r and state ~= "Dispersed" and (sus > 0.04 or hunting) then
+				seen[model] = true
+				local label = indicators[model]
+				if not label then
+					label = Theme.label({
+						Text = "▲",
+						Font = Enum.Font.GothamBold,
+						TextSize = 26,
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Size = UDim2.new(0, 30, 0, 30),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						TextYAlignment = Enum.TextYAlignment.Center,
+						TextStrokeTransparency = 0.5,
+						Parent = indicatorLayer,
+					})
+					indicators[model] = label
+				end
+				local rel = camera.CFrame:PointToObjectSpace(r.Position)
+				local angle = math.atan2(rel.X, -rel.Z)
+				label.Position = UDim2.fromOffset(center.X + math.sin(angle) * radius, center.Y - math.cos(angle) * radius)
+				label.Rotation = math.deg(angle)
+				local level = hunting and 1 or math.clamp(sus, 0, 1)
+				if hunting then
+					label.TextColor3 = C.danger
+				elseif level >= 0.35 then
+					label.TextColor3 = C.lantern
+				else
+					label.TextColor3 = C.text
+				end
+				label.TextTransparency = 0.75 - level * 0.75
+				label.TextSize = 18 + level * 14
+			end
+		end
+	end
+	for model, label in indicators do
+		if not seen[model] then
+			label:Destroy()
+			indicators[model] = nil
+		end
+	end
+end
+
+function HUD.update(dt)
+	if not root then
+		return
+	end
+	local camera = Workspace.CurrentCamera
+	local char = State.character
+	local matchState = ReplicatedStorage:GetAttribute("MatchState")
+	local inEncounter = matchState == "Encounter" and char ~= nil and player:GetAttribute("InCrossing") == true
+
+	-- objective
+	if matchState == "Encounter" and inEncounter then
+		local modName = ReplicatedStorage:GetAttribute("ModifierName") or ""
+		objectiveTitle.Text = "CANNERY ROW  ·  " .. string.upper(modName)
+		if ReplicatedStorage:GetAttribute("ExtractionOpen") then
+			objectiveText.Text = "Reach the Slipway flare (north-west). All standing crew must be there."
+		else
+			objectiveText.Text = ("Salvage supply crates  %d / %d"):format(ReplicatedStorage:GetAttribute("Crates") or 0, ReplicatedStorage:GetAttribute("CratesRequired") or 5)
+		end
+	elseif matchState == "Starting" then
+		local startsAt = ReplicatedStorage:GetAttribute("StartsAt") or 0
+		objectiveTitle.Text = "CASTING OFF"
+		objectiveText.Text = ("Crossing begins in %d"):format(math.max(0, math.ceil(startsAt - Workspace:GetServerTimeNow())))
+	elseif matchState == "Encounter" then
+		objectiveTitle.Text = "A CROSSING IS UNDERWAY"
+		objectiveText.Text = "Wait on the Meridian. You'll join the next one."
+	else
+		objectiveTitle.Text = "THE MERIDIAN"
+		objectiveText.Text = "Rest, resupply, then plot a crossing at the tide chart."
+	end
+
+	-- ferry panel
+	ferryPanel.Visible = char ~= nil and not inEncounter
+	ferryText.Text = "Tide chart: start a crossing (up to 4 crew).\nCrew cabins: change character & perk.\nPurser's Office: the ledger (run aids).\nSecond Wind: " .. tostring(player:GetAttribute("Tokens_secondWind") or 0) .. "   Resupply: " .. tostring(player:GetAttribute("Tokens_resupply") or 0)
+
+	-- status
+	local charId = player:GetAttribute("CharId")
+	local def = charId and Characters.List[charId]
+	statusName.Text = def and string.upper(def.name) or ""
+	local hp = char and char:GetAttribute("HP") or 0
+	local maxHp = char and char:GetAttribute("MaxHP") or 100
+	hpFill.Size = UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1)
+	hpFill.BackgroundColor3 = hp / maxHp < 0.35 and C.danger or C.text
+	if def and char then
+		local remaining = (char:GetAttribute("AbilityReadyAt") or 0) - Workspace:GetServerTimeNow()
+		abilityLabel.Text = ("[Q] %s  ·  %s"):format(string.upper(def.ability.name), remaining > 0 and (math.ceil(remaining) .. "s") or "READY")
+	else
+		abilityLabel.Text = ""
+	end
+
+	-- noise ring (server-authoritative radius, smoothed)
+	local noise = char and char:GetAttribute("Noise") or 0
+	if not inEncounter then
+		noise = 0
+	end
+	noiseSmoothed += (noise - noiseSmoothed) * math.min(1, dt * 8)
+	local scale = math.clamp(noiseSmoothed / Movement.Noise.Sprint, 0.08, 1)
+	ring.Size = UDim2.fromScale(scale, scale)
+	local word, color = noiseWord(noise)
+	ringLabel.Text = word
+	ringLabel.TextColor3 = color
+	ring.UIStroke.Color = color
+
+	-- satchel strip
+	local function inv(id)
+		return player:GetAttribute("Inv_" .. id) or 0
+	end
+	invLabel.Text = ("SHOT %d   BOTTLE %d/%d   BANDAGE %d\nGLASS %d   CLOTH %d   SCRAP %d"):format(
+		inv("shot"),
+		inv("bottle"),
+		player:GetAttribute("Cap_bottle") or 3,
+		inv("bandage"),
+		inv("glass"),
+		inv("cloth"),
+		inv("scrap")
+	)
+	invLabel.Visible = char ~= nil
+
+	crosshair.Visible = State.aiming and not State.uiOpen()
+
+	-- downed overlay
+	local isDowned = char and char:GetAttribute("Downed") == true
+	local isOut = char and char:GetAttribute("Out") == true
+	downed.Visible = (isDowned or isOut) and inEncounter or false
+	if isOut then
+		downedText.Text = "LOST TO THE PALL\nWaiting for your crew…"
+		secondWindButton.Visible = false
+	elseif isDowned then
+		local bleed = math.max(0, math.ceil((char:GetAttribute("BleedOutAt") or 0) - Workspace:GetServerTimeNow()))
+		downedText.Text = ("YOU'RE DOWN\nA crewmate can revive you · %ds"):format(bleed)
+		secondWindButton.Visible = true
+		secondWindButton.Text = ("SECOND WIND  [R]   ·   tokens: %d"):format(player:GetAttribute("Tokens_secondWind") or 0)
+	end
+
+	updateIndicators(camera, inEncounter)
+end
+
+return HUD
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- End-of-encounter debrief.
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Net = require(Shared.Net)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local Results = {}
+local C = Theme.Colors
+local backdrop, title, body
+
+function Results.build(gui)
+	local panel
+	backdrop, panel = Theme.modal(gui, "Results", UDim2.new(0.9, 0, 0.6, 0), Vector2.new(520, 380))
+	Theme.list(Enum.FillDirection.Vertical, 10).Parent = panel
+	title = Theme.heading({ LayoutOrder = 1, Text = "", TextSize = 32, Size = UDim2.new(1, 0, 0, 38), Parent = panel })
+	body = Theme.label({ LayoutOrder = 2, Text = "", TextSize = 15, Size = UDim2.new(1, 0, 0, 170), Parent = panel })
+	local back = Theme.button({ LayoutOrder = 3, Text = "RETURN TO THE MERIDIAN", Size = UDim2.new(0, 280, 0, 40), Parent = panel })
+	back.Activated:Connect(function()
+		Net.event("ReturnToFerry"):FireServer()
+		back.Text = "WAITING FOR CREW…"
+	end)
+	Results.backButton = back
+end
+
+function Results.show(data)
+	if not backdrop then
+		return
+	end
+	title.Text = data.win and "CROSSING COMPLETE" or "LOST TO THE PALL"
+	title.TextColor3 = data.win and C.lantern or C.danger
+	local lines = {
+		("Time  %d:%02d"):format(math.floor((data.seconds or 0) / 60), (data.seconds or 0) % 60),
+		("Supply crates  %d"):format(data.crates or 0),
+		("Quietings  %d"):format(data.takedowns or 0),
+		("Times spotted  %d"):format(data.detections or 0),
+	}
+	if data.rewards and #data.rewards > 0 then
+		table.insert(lines, "")
+		table.insert(lines, "Earned: " .. table.concat(data.rewards, ", "))
+	end
+	body.Text = table.concat(lines, "\n")
+	Results.backButton.Text = "RETURN TO THE MERIDIAN"
+	backdrop.Visible = true
+	State.setModal("results", true)
+end
+
+function Results.close()
+	if backdrop then
+		backdrop.Visible = false
+		State.setModal("results", false)
+	end
+end
+
+return Results
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The satchel: inventory, field crafting and run-aid tokens.
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Items = require(Shared.Config.Items)
+local Stats = require(Shared.Stats)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local Satchel = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local backdrop, invText, tokenText
+local recipeLabels = {}
+local sendAction
+
+local function costText(recipe)
+	local mods = Stats.compute(player:GetAttribute("CharId"), player:GetAttribute("PerkId"))
+	local parts = {}
+	for itemId, amount in recipe.cost do
+		table.insert(parts, math.max(1, amount - mods.craftDiscount) .. " " .. Items.Items[itemId].name)
+	end
+	return table.concat(parts, " + ")
+end
+
+function Satchel.build(gui, actionSender)
+	sendAction = actionSender
+	local panel
+	backdrop, panel = Theme.modal(gui, "Satchel", UDim2.new(0.92, 0, 0.8, 0), Vector2.new(560, 520))
+	Theme.list(Enum.FillDirection.Vertical, 8).Parent = panel
+	Theme.heading({ LayoutOrder = 1, Text = "SATCHEL", TextSize = 28, Size = UDim2.new(1, 0, 0, 32), Parent = panel })
+	invText = Theme.label({ LayoutOrder = 2, Text = "", Font = Theme.Head, TextSize = 16, Size = UDim2.new(1, 0, 0, 44), Parent = panel })
+
+	Theme.heading({ LayoutOrder = 3, Text = "CRAFT", TextSize = 18, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 22), Parent = panel })
+	for i, recipeId in Items.RecipeOrder do
+		local recipe = Items.Recipes[recipeId]
+		local row = Theme.make("Frame", { LayoutOrder = 3 + i, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = panel })
+		recipeLabels[recipeId] = Theme.label({ Text = recipe.name, Size = UDim2.new(1, -130, 1, 0), TextYAlignment = Enum.TextYAlignment.Center, TextSize = 14, Parent = row })
+		local b = Theme.button({ Text = "CRAFT", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 120, 1, 0), Parent = row })
+		b.Activated:Connect(function()
+			sendAction("Craft", recipeId)
+		end)
+	end
+
+	Theme.heading({ LayoutOrder = 10, Text = "RUN AIDS", TextSize = 18, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 22), Parent = panel })
+	tokenText = Theme.label({ LayoutOrder = 11, Text = "", TextSize = 13, Size = UDim2.new(1, 0, 0, 52), Parent = panel })
+	local resupply = Theme.button({ LayoutOrder = 12, Text = "USE RESUPPLY  [B]", Size = UDim2.new(0, 220, 0, 36), Parent = panel })
+	resupply.Activated:Connect(function()
+		sendAction("Resupply")
+	end)
+	local close = Theme.button({ LayoutOrder = 13, Text = "CLOSE  [Tab]", Size = UDim2.new(0, 160, 0, 36), Parent = panel })
+	close.Activated:Connect(Satchel.close)
+end
+
+function Satchel.refresh()
+	if not backdrop or not backdrop.Visible then
+		return
+	end
+	local function inv(id)
+		return player:GetAttribute("Inv_" .. id) or 0
+	end
+	invText.Text = ("Salt Shot %d · Bottle %d/%d · Bandage %d\nGlass %d · Cloth %d · Scrap %d"):format(
+		inv("shot"), inv("bottle"), player:GetAttribute("Cap_bottle") or 3, inv("bandage"), inv("glass"), inv("cloth"), inv("scrap"))
+	for recipeId, label in recipeLabels do
+		local recipe = Items.Recipes[recipeId]
+		label.Text = recipe.name .. "  ·  " .. costText(recipe)
+	end
+	tokenText.Text = ("Second Wind tokens: %d (use when downed, once per crossing)\nResupply tokens: %d (+4 shot, +1 bottle, +1 bandage, once per crossing)\nEarn more free by finishing crossings, or at the Purser's Office."):format(
+		player:GetAttribute("Tokens_secondWind") or 0, player:GetAttribute("Tokens_resupply") or 0)
+end
+
+function Satchel.toggle()
+	if not backdrop then
+		return
+	end
+	if backdrop.Visible then
+		Satchel.close()
+	else
+		backdrop.Visible = true
+		State.setModal("satchel", true)
+		Satchel.refresh()
+	end
+end
+
+function Satchel.close()
+	if backdrop then
+		backdrop.Visible = false
+		State.setModal("satchel", false)
+	end
+end
+
+return Satchel
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Purser's Office ledger: the in-world shop. Prices come live from Roblox, contents are
+-- fixed and shown in full, and every item says how to earn it for free.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Commerce = require(Shared.Config.Commerce)
+local Game = require(Shared.Config.Game)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local Shop = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local backdrop, tokenText
+
+function Shop.prompt(productKey)
+	local product = Commerce.Products[productKey]
+	if not product or product.productId == 0 then
+		return false
+	end
+	MarketplaceService:PromptProductPurchase(player, product.productId)
+	return true
+end
+
+function Shop.build(gui)
+	local panel
+	backdrop, panel = Theme.modal(gui, "Shop", UDim2.new(0.92, 0, 0.86, 0), Vector2.new(640, 600))
+	Theme.list(Enum.FillDirection.Vertical, 8).Parent = panel
+	Theme.heading({ LayoutOrder = 1, Text = "THE PURSER'S LEDGER", TextSize = 28, Size = UDim2.new(1, 0, 0, 32), Parent = panel })
+	Theme.label({ LayoutOrder = 2, Text = "\"Fair trade only. Nothing comes in a sealed box.\"  (Agnes Pell, Purser of the Meridian)", TextColor3 = C.dim, TextSize = 13, Size = UDim2.new(1, 0, 0, 34), Parent = panel })
+
+	for i, key in Commerce.Order do
+		local product = Commerce.Products[key]
+		local row = Theme.panel({ LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 74), BackgroundColor3 = C.panelHi, Parent = panel })
+		Theme.padding(10).Parent = row
+		Theme.heading({ Text = string.upper(product.name), TextSize = 17, Size = UDim2.new(1, -150, 0, 20), Parent = row })
+		Theme.label({ Text = product.desc, Position = UDim2.new(0, 0, 0, 22), Size = UDim2.new(1, -150, 0, 32), TextSize = 12, Parent = row })
+		local configured = product.productId ~= 0
+		local buy = Theme.button({
+			Text = configured and ("R$ " .. product.price) or "NOT SET UP",
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, 0, 0.5, 0),
+			Size = UDim2.new(0, 136, 0, 38),
+			AutoButtonColor = configured,
+			Parent = row,
+		})
+		if configured then
+			task.spawn(function()
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfo(product.productId, Enum.InfoType.Product)
+				end)
+				if ok and info and info.PriceInRobux then
+					buy.Text = "R$ " .. info.PriceInRobux
+				end
+			end)
+			buy.Activated:Connect(function()
+				Shop.prompt(key)
+			end)
+		end
+	end
+
+	tokenText = Theme.label({ LayoutOrder = 10, Text = "", TextSize = 13, Size = UDim2.new(1, 0, 0, 70), Parent = panel })
+	Theme.label({
+		LayoutOrder = 11,
+		Text = "Coming soon in this office: crew outfits, lantern skins and cabin décor. Cosmetic only, never random.",
+		TextColor3 = C.dim,
+		TextSize = 12,
+		Size = UDim2.new(1, 0, 0, 32),
+		Parent = panel,
+	})
+	local close = Theme.button({ LayoutOrder = 12, Text = "CLOSE", Size = UDim2.new(0, 140, 0, 36), Parent = panel })
+	close.Activated:Connect(Shop.close)
+end
+
+function Shop.refresh()
+	if not backdrop or not backdrop.Visible then
+		return
+	end
+	local winR = Game.WinReward.resupply or 0
+	local dailySW = Game.DailyWinReward.secondWind or 0
+	tokenText.Text = ("You hold: %d Second Wind · %d Resupply\nFree: +%d Resupply for every successful crossing, +%d Second Wind for your first successful crossing each day.%s"):format(
+		player:GetAttribute("Tokens_secondWind") or 0,
+		player:GetAttribute("Tokens_resupply") or 0,
+		winR,
+		dailySW,
+		Game.RunAidsEnabled and "" or "\n(Run aids are switched off on this server.)"
+	)
+end
+
+function Shop.open()
+	if backdrop then
+		backdrop.Visible = true
+		State.setModal("shop", true)
+		Shop.refresh()
+	end
+end
+
+function Shop.close()
+	if backdrop then
+		backdrop.Visible = false
+		State.setModal("shop", false)
+	end
+end
+
+return Shop
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
+-- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
+local Theme = {}
+
+Theme.Colors = {
+	backdrop = Color3.fromRGB(6, 8, 10),
+	panel = Color3.fromRGB(18, 22, 25),
+	panelHi = Color3.fromRGB(30, 35, 38),
+	line = Color3.fromRGB(70, 76, 78),
+	text = Color3.fromRGB(226, 220, 206),
+	dim = Color3.fromRGB(150, 148, 138),
+	lantern = Color3.fromRGB(232, 168, 92),
+	danger = Color3.fromRGB(200, 74, 60),
+	salt = Color3.fromRGB(170, 205, 205),
+	ok = Color3.fromRGB(140, 180, 130),
+}
+
+Theme.Head = Enum.Font.Oswald
+Theme.Body = Enum.Font.Merriweather
+
+local function apply(inst, defaults, props)
+	for key, value in defaults do
+		if props == nil or props[key] == nil then
+			inst[key] = value
+		end
+	end
+	local parent
+	for key, value in props or {} do
+		if key == "Parent" then
+			parent = value
+		elseif key ~= "Children" then
+			inst[key] = value
+		end
+	end
+	for _, child in (props and props.Children) or {} do
+		child.Parent = inst
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+
+function Theme.make(className, props)
+	return apply(Instance.new(className), {}, props)
+end
+
+function Theme.corner(radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or 4)
+	return c
+end
+
+function Theme.stroke(color, thickness, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color = color or Theme.Colors.line
+	s.Thickness = thickness or 1
+	s.Transparency = transparency or 0.2
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	return s
+end
+
+function Theme.padding(px)
+	local p = Instance.new("UIPadding")
+	p.PaddingLeft = UDim.new(0, px)
+	p.PaddingRight = UDim.new(0, px)
+	p.PaddingTop = UDim.new(0, px)
+	p.PaddingBottom = UDim.new(0, px)
+	return p
+end
+
+function Theme.list(direction, gap, align)
+	local l = Instance.new("UIListLayout")
+	l.FillDirection = direction or Enum.FillDirection.Vertical
+	l.Padding = UDim.new(0, gap or 6)
+	l.SortOrder = Enum.SortOrder.LayoutOrder
+	if align then
+		l.HorizontalAlignment = align
+	end
+	return l
+end
+
+function Theme.label(props)
+	return apply(Instance.new("TextLabel"), {
+		BackgroundTransparency = 1,
+		TextColor3 = Theme.Colors.text,
+		Font = Theme.Body,
+		TextSize = 15,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, 20),
+	}, props)
+end
+
+function Theme.heading(props)
+	return apply(Instance.new("TextLabel"), {
+		BackgroundTransparency = 1,
+		TextColor3 = Theme.Colors.text,
+		Font = Theme.Head,
+		TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Size = UDim2.new(1, 0, 0, 28),
+	}, props)
+end
+
+function Theme.panel(props)
+	local frame = apply(Instance.new("Frame"), {
+		BackgroundColor3 = Theme.Colors.panel,
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+	}, props)
+	Theme.corner(6).Parent = frame
+	Theme.stroke().Parent = frame
+	return frame
+end
+
+function Theme.button(props)
+	local button = apply(Instance.new("TextButton"), {
+		BackgroundColor3 = Theme.Colors.panelHi,
+		BorderSizePixel = 0,
+		AutoButtonColor = true,
+		TextColor3 = Theme.Colors.text,
+		Font = Theme.Head,
+		TextSize = 17,
+		Size = UDim2.new(0, 160, 0, 36),
+	}, props)
+	Theme.corner(4).Parent = button
+	Theme.stroke(Theme.Colors.lantern, 1, 0.5).Parent = button
+	return button
+end
+
+-- A full-screen dark backdrop + centred panel for modal screens.
+function Theme.modal(parent, name, size, maxSize)
+	local backdrop = Theme.make("Frame", {
+		Name = name,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Theme.Colors.backdrop,
+		BackgroundTransparency = 0.35,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 20,
+		Parent = parent,
+	})
+	local panel = Theme.panel({
+		Name = "Panel",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = size,
+		ZIndex = 21,
+		Parent = backdrop,
+	})
+	local constraint = Instance.new("UISizeConstraint")
+	constraint.MaxSize = maxSize or Vector2.new(1100, 680)
+	constraint.Parent = panel
+	Theme.padding(18).Parent = panel
+	return backdrop, panel
+end
+
+return Theme
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+</Item>
+</Item>
+</roblox>

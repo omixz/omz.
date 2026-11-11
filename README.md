@@ -4,4 +4,4 @@
 
 Everything lives in [`tiktok-live-tools/`](tiktok-live-tools/). Start with its [README](tiktok-live-tools/README.md).
 
-**AFTERTIDE** *(working title)*: pre-production design pack for a cinematic stealth-survival roguelike on Roblox. See [`aftertide/`](aftertide/README.md).
+**AFTERTIDE**: a cinematic stealth-survival roguelike on Roblox (design pack + playable Slice 0). See [`aftertide/`](aftertide/README.md).

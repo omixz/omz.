@@ -2,9 +2,9 @@
 
 ## 5.1 Assumptions
 
-- The team is you plus contracted art, animation and audio when needed. Durations
-  below assume **one main developer working about 20 to 30 hours a week**. A full-time
-  team of 3 to 4 can compress the total by about half.
+- **Decided:** solo developer, **US$0 budget**. Durations assume about 20 to 30 hours a
+  week. The $0 pipeline is in [doc 6](06-publishing.md) §6.6 (free tools and free,
+  commercially safe assets). Paying contractors is deferred until the game earns.
 - **Each stage has an exit gate.** We don't move on until the gate passes. Building
   more content on a camera that feels bad is the most common way projects like this
   fail.
@@ -89,11 +89,45 @@ Once you approve this pack, the next delivery is **Stage 3 code**:
    and how to test.
 5. Known issues and tuning notes for the feel gate.
 
-## 5.5 Decisions needed from you
+## 5.5 Decisions (11 Nov 2026)
 
-1. **Title:** go with AFTERTIDE and start the clearance search, or pick an alternate?
-2. **Team & budget:** solo, or a budget for contract art, mocap and composer? This
-   changes the stage 2 and 5 timelines.
-3. **Co-op at launch:** I recommend duo. Do you agree?
-4. **Maturity target:** I recommend Moderate. Do you agree?
-5. **Business entity:** set up a Pty Ltd before contractors start? (Recommended.)
+| # | Decision |
+|---|---|
+| 1 | Title: **AFTERTIDE** (free trade mark searches now; paid filing once it earns) |
+| 2 | Team & budget: **solo, US$0** |
+| 3 | Co-op: **up to 4 players** (duo is the baseline we tune around) |
+| 4 | Maturity: **Moderate** |
+| 5 | Business entity: **not now**. Revisit when revenue starts or before hiring anyone. |
+| 6 | Monetisation: add **run aids** (Second Wind extra life, Resupply ammo and consumables) with caps (doc 3 §3.3 B2) |
+| 7 | Characters: each has **their own loadout, an innate perk and a choice of starting perk** (doc 1 §1.5.1) |
+
+## 5.6 Slice 0: what's built
+
+Code lives in `aftertide/src`. Open `aftertide/build/Aftertide.rbxlx` in Studio to play it
+([doc 6](06-publishing.md)).
+
+| Area | Status |
+|---|---|
+| Over-the-shoulder spring camera, collision, shoulder swap, aim/sprint/crouch/takedown framing, mouse + gamepad + touch | Built |
+| Stances, speed ramps, wading, aim-facing, procedural crouch/downed pose (all players) | Built (authored animations in Stage 5) |
+| Ferry hideout (*Meridian*) with chart table, crew cabins, Purser's Office | Built (grey-box) |
+| Cannery Row encounter: cannery, container yard, shallows, reed beds, lamp pools, net shed, fog | Built (grey-box, generated in code) |
+| 4 crew members with abilities (Tide Sense, Rattle Box, Steady Hands, Throw Net), loadouts, innate + choice perks | Built |
+| Drifter AI: sight cone + raycasts, hearing with occlusion, suspicion per player, patrol / investigate / search / chase, grabs | Built |
+| Stealth readability: noise ring (server-truth), directional detection indicators, spotted cues | Built |
+| Quieting (behind / stunned / netted), shove, slingshot (stun or distract), bottles, bandages, torch | Built |
+| Crafting (bottle, bandage, shot) + part pickups, satchel caps | Built |
+| Salvage objective → extraction flare → results → back to the ferry | Built |
+| Random environmental modifier per encounter (Heavy Pall, Squall, Echoing, Moonbreak, Scavenged Out) | Built |
+| Co-op 1 to 4: downed, revive prompt, bleed-out, enemy scaling | Built |
+| Save data (tokens, stats, receipts) with memory fallback in Studio | Built (ProfileStore in Stage 9) |
+| Run aids: Second Wind / Resupply tokens, idempotent receipts, earn-free rewards | Built (needs product IDs, doc 6 step 5) |
+| Server-authoritative actions, rate-limited remotes, movement sanity checks | Built |
+| Custom rigs, authored animations, real art, music | **Not started** (Stages 2 and 5) |
+| Tide chart with multiple encounters per run, salt, perk tree, Keepsakes | **Not started** (Stage 7) |
+| Cosmetics, Tide Pass, subscription | **Not started** (Stage 10) |
+
+**Testing honesty:** this environment can't run Roblox Studio. The code was checked with
+`tools/check_luau.py` (block and bracket balance, cross-module calls) and reviewed by hand,
+but it has **not been play-tested yet**. Expect a round of fixes after the first Studio run:
+send me the Output window errors and I'll fix them.

@@ -18,8 +18,8 @@ Three things decide whether that works on Roblox:
    silhouettes. Tide-flooded streets break maps into small, dense spaces.
 3. **Short runs and co-op keep players coming back.** Roblox players play in shorter
    sessions and in groups more than console players do. A *crossing* (one run) should
-   take 25 to 40 minutes, be resumable at the ferry, and support 1 or 2 players at
-   launch.
+   take 25 to 40 minutes, be resumable at the ferry, and support **1 to 4 players**
+   (duo is the baseline we tune difficulty around).
 
 ### Where I'm pushing back
 
@@ -28,7 +28,7 @@ Three things decide whether that works on Roblox:
 | "Premium console" visuals | Aim for the best-looking game in its Roblox category, with stylised realism | No custom shaders, limited post-processing, and about 60% or more of players are on phones. Chasing photorealism means poor mobile performance and poor retention. |
 | Optional paid character packs | Every playable character is **earned by playing**. Paid packs are cosmetic story packs for those characters. | A character with unique abilities sold for Robux is pay-to-win, whatever we call it. |
 | Subscription from day one | Launch it about 8 to 12 weeks after release, once we have shown a monthly content cadence | Recurring billing needs recurring value, or it churns and generates refunds and bad reviews. |
-| Solo-focused like the inspiration | Solo plus 2-player co-op at launch, with an architecture that allows up to 4 | Roblox discovery rewards social play, and invites are a growth loop. |
+| Solo-focused like the inspiration | **Decided:** solo to 4-player co-op. Enemy count scales with party size. Roblox hosts every server for free and adds more automatically. | Roblox discovery rewards social play, and invites are a growth loop. |
 | Build everything in parallel | Prove the camera, movement and one encounter first | If the feel isn't there, nothing else matters. |
 
 ---
@@ -107,6 +107,23 @@ play differently.
 
 At launch: Mara, Tobias, Ines and Sefa. Wren and Dashiell unlock through play
 milestones, and new characters arrive with seasons, always earnable for free.
+
+### 1.5.1 Loadouts & perks (built in Slice 0)
+
+Every character starts each crossing with **their own loadout**, an **innate perk**, and
+**one starting perk chosen from three** in the crew cabin. This is the core of
+why runs feel different by character. Data lives in `src/shared/Config/Characters.luau`.
+
+| Character | Starting loadout | Innate perk | Choose one starting perk |
+|---|---|---|---|
+| **Mara** | 8 Salt Shot · 2 Bottle · 1 Bandage | *Shallow Step*: wading makes no extra noise | *Quiet Hands* (Quietings 40% faster) · *Long Sense* (Tide Sense +50% radius) · *Light Foot* (crouching 30% quieter) |
+| **Tobias** | 5 Salt Shot · 2 Bottle · 1 Bandage · 3 Scrap | *Tinkerer*: recipes cost 1 part less | *Loud Decoy* (Rattle Box +40% radius) · *Thick Skin* (−15% damage) · *Spare Shot* (+4 Salt Shot) |
+| **Ines** | 4 Salt Shot · 1 Bottle · 3 Bandage | *Field Medic*: healing +25%, revived crew get +30 HP | *Calm Breath* (10% quieter) · *Second Opinion* (+15 s bleed-out) · *Triage* (ability recharges 25% faster) |
+| **Sefa** | 6 Salt Shot · 3 Bottle · 1 Bandage | *Deep Pockets*: +1 bottle capacity | *Strong Arm* (bottles heard 30% further) · *Heavy Net* (net pins 50% longer) · *Sea Legs* (sprint 8% faster) |
+
+Stage 7 extends this into a full **in-run perk tree** (3 branches × 5 perks per character,
+bought with salt) and **alternate loadouts** unlocked by character mastery (for example,
+Mara's "Lookout" loadout at mastery 5). These are sidegrades, never strictly better.
 
 Design guard rails: no character resembles any copyrighted protagonist in look,
 silhouette, backstory, item pairing or voice. See the IP checklist in doc 4.

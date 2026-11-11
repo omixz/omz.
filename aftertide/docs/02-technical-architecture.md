@@ -183,6 +183,9 @@ on file**. No ripped animations, ever.
   mesh with an `AnimationController`, **no Humanoid**) moved by the server by setting
   CFrames along a path. This costs much less than Humanoids, gives exact control and
   makes it easy to support 20 or more enemies.
+- **Slice 0 note:** the prototype Drifters use a simple `Humanoid` for movement (fine for
+  13 or fewer enemies). The CFrame-driven, no-Humanoid mover replaces it in Stage 6 once the
+  enemy count goes up.
 - **Brain:** a hierarchical state machine per enemy:
   `Dormant → Idle/Patrol → Suspicious → Investigating → Alerted → Pursuing → Searching → (back to Patrol)`
   plus `Stunned`, `Pinned`, `Dispersing`.
@@ -276,12 +279,15 @@ ProfileStore profile, one per player, **schema-versioned**:
 
 ## 2.11 Multiplayer
 
-- **Launch:** solo and duo co-op in the Crossing place. The architecture is built for
-  N players from day one: perception and pacing are per player, loot is instanced per
-  player (no fighting over loot), and enemy count scales with party size.
+- **Launch:** solo to **4-player** co-op in the Crossing place (duo is the tuned baseline).
+  Perception and pacing are per player, and enemy count scales with party size
+  (`Game.BaseEnemies + EnemiesPerExtraPlayer`, capped at `MaxEnemies`). The party cap is
+  `Game.MaxPartySize`, and the server size is set to match in the Creator Hub.
+- **Hosting costs nothing:** Roblox runs and adds servers automatically. The Harbour
+  lobby can hold 30 or more players per server; each Crossing is its own server.
 - A downed player can be revived by a partner. If they bleed out, they spectate until
   the next ferry phase. Nobody waits long.
-- Party sizes of 3 to 4 are a post-launch decision based on server CPU measurements.
+- Server CPU must be profiled at 4 players + 13 enemies before launch (MicroProfiler, Developer Console → Server Stats).
 
 ## 2.12 Audio
 

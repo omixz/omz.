@@ -2,8 +2,11 @@
 
 ## 3.1 Principles (non-negotiable)
 
-1. **Nothing sold affects gameplay power.** No stats, no satchel space, no revives, no
-   characters with abilities sold for Robux, no XP boosts that change balance.
+1. **No permanent power for sale, and run aids are capped.** No stats, satchel space, paid
+   characters or XP boosts. The one exception (your decision, 11 Nov 2026) is **run aids**:
+   Second Wind (an extra life) and Resupply (ammo and consumables). Each is limited to **once
+   per crossing**, also **earned free by playing**, offered only when the player asks for
+   it, and the whole system can be switched off with one setting (`Game.RunAidsEnabled`). See §3.3 B2.
 2. **No paid random rewards.** No loot boxes, gacha, mystery crates or random
    cosmetics bought with Robux. Every purchase shows exactly what you get.
 3. **Direct Robux pricing, with no premium currency.** Each item has a Robux price.
@@ -40,10 +43,11 @@ $0.27**. That's about **a quarter** of player spend.
 
 Other income streams:
 
-- **Premium Payouts:** Roblox pays creators based on how long Roblox Premium
-  subscribers spend in your experience. Long, engaging sessions (our 25 to 40 minute
-  runs) suit this well. The model assumes **+15% on top of earned Robux**, which is
-  speculative.
+- **Creator Rewards** (engagement-based payouts; Roblox replaced Premium Payouts with
+  this programme in 2025): Roblox pays based on how much engaged players play your
+  experience, plus a bonus for bringing in new or returning players. Long, engaging sessions
+  (our 25 to 40 minute runs) suit it. The model assumes **+15% on top of earned Robux**, which
+  is speculative. Check the current terms in the Creator Hub.
 - **Subscriptions** are priced in local currency. The model assumes about **30% of the
   sticker price** reaches you as cash after store fees, Roblox's share and conversion.
   Confirm the current payout terms in the Creator Hub before launch.
@@ -64,6 +68,28 @@ Other income streams:
 | Quieting animation variant (non-graphic, styled per character) | **149** | Cinematic flair |
 | Dispersal effect (colour and pattern of the salt burst) | **99** | A satisfying moment, purely visual |
 | Photo-mode frame and film pack ("Darkroom") | **149** | Content creators love it, and it markets the game |
+
+### B2. Run aids (developer products, sold as tokens)
+
+Added at your request so that more than cosmetics can earn money. Built into Slice 0
+(`Config/Commerce.luau`, `CommerceService`, `ActionService`).
+
+| Product | Price (R$) | What it does | Limits that keep it fair |
+|---|---|---|---|
+| **Second Wind** | **49** | Get back up from downed with 60 HP | Max **1 per crossing**. Doesn't work after you're "lost to the Pall". Never auto-prompted: the purchase prompt appears only when *you* press Second Wind with 0 tokens. |
+| **Second Wind ×3** | **129** | Three tokens (genuinely cheaper than 3 × 49 = 147) | Same once-per-crossing limit |
+| **Resupply Satchel** | **29** | +4 Salt Shot, +1 Bottle, +1 Bandage (fixed contents, never random) | Max **1 per crossing**, capped by satchel limits |
+
+**Earned free:** new players start with 1 of each. Every successful crossing gives +1
+Resupply, and your first successful crossing each day gives +1 Second Wind.
+
+**The honest trade-off.** In a co-op PvE game this is "pay to recover", not pay-to-win against
+other players, and Roblox players are used to it. The risks:
+(1) players who feel it's needed to win leave bad reviews, (2) it weakens the "no pay-to-win"
+message, (3) hard difficulty tiers lose prestige. Mitigations: tune the game so a clear
+never needs it, keep the limits above, and (from Stage 7) mark clears that used Second Wind
+as *assisted* on the top difficulty tier (King Tide) so its prestige cosmetics stay meaningful.
+If reviews or retention drop, turn `RunAidsEnabled` off.
 
 ### B. Hideout customisation (developer products)
 
@@ -113,28 +139,30 @@ currency, about **US$4.99 a month**). Launches about 8 to 12 weeks after release
 | Source | Price | Notes |
 |---|---|---|
 | **Private Harbour** (private server for the lobby) | **100 R$/month** | Creators, clans and friend groups. Co-op runs already use free reserved servers. |
-| **Premium Payouts** | — | Comes automatically from engagement |
+| **Creator Rewards** | — | Comes automatically from engagement |
 | **In-experience avatar item sales** *(year 2)* | Varies | Sell AFTERTIDE-branded avatar items (UGC) for players' normal Roblox avatars. Roblox pays the experience a commission on in-experience sales, separate from the item creator's share. A strong brand-awareness loop. |
 | **Physical merch** *(after traction)* | — | Through Roblox's commerce integrations, if available in Australia then |
 | **Rewarded video ads** | — | **Not at launch.** They hurt the premium feel. Revisit only as an opt-in at the ferry radio for small cosmetic or Scrip rewards. |
 
-What we **won't** sell: revives, extra satchel space, resource packs, XP or salt
-boosts, paid characters with abilities, loot boxes, or "skip the run" purchases.
+What we **won't** sell: unlimited revives (Second Wind stays capped at once per crossing),
+extra satchel space, permanent stat upgrades, XP or salt boosts, paid characters with abilities,
+loot boxes, or "skip the run" purchases.
 
 ## 3.4 Revenue model
 
 Assumptions are in [`tools/revenue_model.py`](../tools/revenue_model.py). Steady state
 6 to 12 months after launch. MAU is about 6× DAU. Monthly buyer rates per product, as a
 share of MAU: cosmetics 2.0%, story packs 0.4%, Tide Pass 0.6%, passes 0.4%,
-hideout 0.3%, private servers 0.15%. Subscribers are 0.4% of MAU.
+hideout 0.3%, private servers 0.15%, run aids 3.0% at about 110 R$ each.
+Subscribers are 0.4% of MAU.
 
 ### Headline (per month unless stated)
 
-| Scenario | DAU | MAU | Robux spent by players | Robux earned (incl. Premium Payouts) | **Gross player spend** | **Cash to you** | **Cash per year** |
+| Scenario | DAU | MAU | Robux spent by players | Robux earned (incl. Creator Rewards) | **Gross player spend** | **Cash to you** | **Cash per year** |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Conservative | 1,500 | 9,000 | 125,010 | 100,633 | US$1,617 | **US$436** | **US$5,235** |
-| Moderate | 12,000 | 72,000 | 1,000,080 | 805,064 | US$12,938 | **US$3,490** | **US$41,884** |
-| Optimistic | 75,000 | 450,000 | 6,250,500 | 5,031,652 | US$80,862 | **US$21,814** | **US$261,778** |
+| Conservative | 1,500 | 9,000 | 154,710 | 124,541 | US$1,958 | **US$527** | **US$6,325** |
+| Moderate | 12,000 | 72,000 | 1,237,680 | 996,332 | US$15,670 | **US$4,217** | **US$50,606** |
+| Optimistic | 75,000 | 450,000 | 7,735,500 | 6,227,077 | US$97,940 | **US$26,357** | **US$316,289** |
 
 ### Cash per product per month
 
@@ -146,9 +174,10 @@ hideout 0.3%, private servers 0.15%. Subscribers are 0.4% of MAU.
 | Founder's Lantern + passes | $29 | $230 | $1,436 |
 | Hideout bundles | $18 | $144 | $898 |
 | Private Harbour servers | $4 | $29 | $180 |
+| Run aids (Second Wind, Resupply) | $79 | $632 | $3,950 |
 | Subscription (36 / 288 / 1,800 subs) | $54 | $431 | $2,695 |
-| Premium Payouts (assumed) | $50 | $399 | $2,494 |
-| **Total** | **$437** | **$3,491** | **$21,816** |
+| Creator Rewards (assumed) | $62 | $494 | $3,086 |
+| **Total** | **$528** | **$4,218** | **$26,358** |
 
 ### How to read this honestly
 
@@ -183,6 +212,7 @@ hideout 0.3%, private servers 0.15%. Subscribers are 0.4% of MAU.
 | Phase | Live products |
 |---|---|
 | Closed testing | None (test purchases in Studio only) |
+| Slice 0 / early access | Run aids (Second Wind, Second Wind ×3, Resupply): already implemented |
 | Launch (v1.0) | Cosmetics (about 40 items), 4 Character Story Packs, Founder's Lantern, Darkroom Pro, Crew Wardrobe+, Private Harbour |
 | +4 to 6 weeks | Season 1 Tide Pass |
 | +8 to 12 weeks | Harbour Crew subscription (once 2 or more content drops have shipped) |
