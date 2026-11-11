@@ -84,13 +84,13 @@ Example: `execute at {bot} run summon minecraft:zombie ~{rx} ~1 ~{rz} {CustomNam
 2. **A free always-on server.** [Oracle Cloud "Always Free"](https://www.oracle.com/cloud/free/) gives you an **Ampere A1** VM with up to 4 CPUs and 24 GB of RAM at no cost, enough for Minecraft plus 720p streaming. Use **4 OCPUs and 24 GB** for Minecraft. Sign-up asks for a card to verify your identity, but Always Free resources aren't charged. Any old non-gaming PC running Linux with Docker works too.
 
 ### Steps
-1. Create an **Ubuntu** VM on Oracle (shape **VM.Standard.A1.Flex**). In its *Virtual Cloud Network → Security List*, add ingress rules for **TCP 3000** (dashboard) and **TCP 3007** (Minecraft camera preview).
+1. Create an **Ubuntu** VM on Oracle (shape **VM.Standard.A1.Flex**). In its *Virtual Cloud Network → Security List*, add ingress rules for **TCP 80** and **TCP 443** (your hub's https address) and **TCP 3000** (fallback).
 2. SSH into the VM and run one command. It asks for your TikTok username and the Minecraft EULA, generates the passwords, then builds and starts everything:
    ```bash
    curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash
    ```
    (If the repo is private, clone it first with a GitHub token, then run `bash omz/tiktok-live-tools/setup-vm.sh`.)
-3. Open the **hub** address it prints on your phone (add it to your home screen). Enter the password it prints, then paste the Server URL and Stream key in **Setup**. The hub shows three status lights (TikTok, Minecraft, stream), a **Watch what viewers see** button, the gift ladder and test buttons. Everything else is under **Advanced settings**.
+3. Open the **hub** address it prints on your phone, e.g. `https://129-146-12-34.sslip.io`, a free https address that points at your server (made with [sslip.io](https://sslip.io) and [Caddy](https://caddyserver.com), no domain needed). Add it to your home screen. Enter the password it prints, then paste the Server URL and Stream key in **Setup**. The hub shows three status lights (TikTok, Minecraft, stream), a **Watch what viewers see** button, the gift ladder and test buttons. Everything else is under **Advanced settings**.
 
 Run the same command again any time to update.
 

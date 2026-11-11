@@ -12,8 +12,8 @@ if ! command -v docker >/dev/null; then
 fi
 sudo systemctl enable --now docker
 
-# Oracle's Ubuntu images block incoming ports with iptables: open the dashboard and camera ports.
-for port in 3000 3007; do
+# Oracle's Ubuntu images block incoming ports with iptables: open web (80/443) and the hub's fallback port.
+for port in 80 443 3000; do
   if command -v iptables >/dev/null && ! sudo iptables -C INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null; then
     sudo iptables -I INPUT -p tcp --dport $port -j ACCEPT
   fi
@@ -40,10 +40,18 @@ if [ ! -f .env ]; then
   fi
 fi
 
+# Your hub's https:// address: <ip-with-dashes>.sslip.io points at this server for free.
+IP=$(curl -fs4 ifconfig.me || curl -fs4 api.ipify.org || echo "")
+if [ -n "$IP" ] && ! grep -q '^SITE_ADDRESS=' .env; then
+  echo "SITE_ADDRESS=${IP//./-}.sslip.io" >> .env
+fi
+SITE=$(grep '^SITE_ADDRESS=' .env | cut -d= -f2)
+
 sudo docker compose up -d --build
-IP=$(curl -fs ifconfig.me || echo YOUR-SERVER-IP)
 echo
 echo "✅ Running, and it restarts by itself after crashes and reboots."
-echo "   Hub (open on your phone, add to home screen):  http://$IP:3000"
+echo "   Your hub (open on your phone, add to home screen):"
+echo "      https://${SITE:-$IP}"
+echo "      (if that doesn't load within a few minutes: http://$IP:3000)"
 echo "   Password:   $(grep '^ADMIN_KEY=' .env | cut -d= -f2)"
 echo "   Next: in the hub, paste your TikTok Server URL + Stream key, then press Go LIVE in TikTok LIVE Producer."
