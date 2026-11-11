@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.Net)
+local Sfx = require(Shared.Util.Sfx)
 local UI = script.Parent.Parent:WaitForChild("UI")
 local HUD = require(UI:WaitForChild("HUD"))
 local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
@@ -80,8 +81,10 @@ function UIController.start()
 			Satchel.close()
 			Results.show(data)
 		elseif kind == "OpenChart" then
+			Sfx.ui("Ui_Confirm", 0.5)
 			Chart.open()
 		elseif kind == "OpenWorkbench" then
+			Sfx.ui("Ui_Tick", 0.5)
 			Workbench.open()
 		elseif kind == "OpenRepairs" then
 			Repairs.open()
@@ -89,6 +92,8 @@ function UIController.start()
 			closeMenus()
 		elseif kind == "Hit" then
 			HUD.hit(data)
+		elseif kind == "Hurt" then
+			HUD.hurt()
 		elseif kind == "EncounterStart" then
 			closeMenus()
 			Results.close()

@@ -133,11 +133,39 @@ function WeaponController.fire()
 	end
 	nextFireAt = now + (stat.fireDelay or 0.5)
 	act("Fire", { dir = Controllers.CameraController.aimDirection(), aim = State.aiming })
-	if Weapons.List[id] and not Weapons.List[id].projectile then
+	local def = Weapons.List[id]
+	local runUpgrades = player:GetAttribute("RunUpgrades") or ""
+	local quiet = id == "revolver" and runUpgrades:find('"baffle":true') ~= nil
+	Controllers.SoundController.gunshot(id, State.root.Position, true, quiet)
+	if def and not def.projectile then
 		muzzleFlash(slot)
+		if id ~= "revolver" and id ~= "bow" then
+			WeaponController.ejectShell(slot, id == "shotgun")
+		end
 	end
 	Controllers.CameraController.kick(stat.recoil or 3)
 	State.bloom = math.min(State.bloom + (stat.recoil or 3) * 0.5, 8)
+end
+
+-- a brass (or red shotgun) casing tumbling out of the action
+function WeaponController.ejectShell(slot, isShell)
+	local char = State.character
+	local model = char and char:FindFirstChild("Weapon_" .. slot)
+	local grip = model and model.PrimaryPart
+	if not grip then
+		return
+	end
+	local casing = Instance.new("Part")
+	casing.Size = isShell and Vector3.new(0.18, 0.18, 0.4) or Vector3.new(0.08, 0.08, 0.22)
+	casing.Color = isShell and Color3.fromRGB(150, 40, 34) or Color3.fromRGB(196, 160, 70)
+	casing.Material = Enum.Material.Metal
+	casing.CanQuery = false
+	casing.CanTouch = false
+	casing.CFrame = grip.CFrame * CFrame.new(0.2, 0.35, -0.3)
+	casing.Parent = Workspace
+	casing.AssemblyLinearVelocity = grip.CFrame.RightVector * 12 + Vector3.new(0, 8, 0)
+	casing.AssemblyAngularVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
+	game:GetService("Debris"):AddItem(casing, 6)
 end
 
 function WeaponController.reload()
@@ -204,8 +232,17 @@ function WeaponController.init(registry)
 end
 
 function WeaponController.start()
+	local lastSlot = nil
 	game:GetService("RunService").RenderStepped:Connect(function(dt)
 		State.bloom = math.max(0, State.bloom - dt * 6)
+		local slot = State.character and State.character:GetAttribute("EquippedSlot")
+		if slot ~= lastSlot then
+			if lastSlot ~= nil and slot ~= nil then
+				require(Shared.Util.Sfx).ui("Equip", 0.6)
+				State.weaponSwitchedAt = os.clock()
+			end
+			lastSlot = slot
+		end
 	end)
 end
 

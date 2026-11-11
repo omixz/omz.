@@ -65,7 +65,10 @@ local function buildModel(position, typeName, cfg)
 		p.Name = name
 		p.Size = size * k
 		p.Color = color or base
-		p.Material = material or Enum.Material.Sand
+		p.Material = material or Enum.Material.SmoothPlastic
+		if not material then
+			p.Reflectance = 0.06 -- wet, charred skin
+		end
 		p.CanCollide = false
 		p.CanTouch = false
 		p.Massless = true
@@ -100,7 +103,8 @@ local function buildModel(position, typeName, cfg)
 	local torso = part("Torso", Vector3.new(1.5 * tw, 2.0, 0.85 * tw))
 	joint("Waist", root, torso, CFrame.new(0, 0.3, 0) * CFrame.Angles(math.rad(-body.hunch), 0, 0), CFrame.new(0, -1.0, 0))
 
-	local headColor = Color3.new(math.min(1, base.R * 1.08), math.min(1, base.G * 1.08), math.min(1, base.B * 1.08))
+	local CRUST = Color3.fromRGB(232, 228, 216)
+	local headColor = body.head == "shell" and CRUST or Color3.new(math.min(1, base.R * 1.15), math.min(1, base.G * 1.15), math.min(1, base.B * 1.15))
 	local headSize = ({
 		round = Vector3.new(1.0, 1.25, 1.0),
 		half = Vector3.new(0.95, 1.2, 0.95),
@@ -108,7 +112,7 @@ local function buildModel(position, typeName, cfg)
 		disc = Vector3.new(1.5, 0.95, 1.5),
 		sunk = Vector3.new(1.05, 1.05, 1.05),
 	})[body.head] or Vector3.new(1, 1.25, 1)
-	local head = part("Head", headSize, headColor)
+	local head = part("Head", headSize, headColor, body.head == "shell" and Enum.Material.Sand or nil)
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
 	mesh.Parent = head
@@ -143,13 +147,40 @@ local function buildModel(position, typeName, cfg)
 		attach("Rag" .. i, target, size, offset, ragColor, Enum.Material.Fabric)
 	end
 
+	-- the maw: a black, gaping hollow where the face was (clients open it when they hunt)
+	if body.maw then
+		local maw = attach("Maw", head, Vector3.new(headSize.X * 0.42, headSize.Y * 0.36, 0.3), CFrame.new(0, -headSize.Y * 0.12, -headSize.Z * 0.42), Color3.fromRGB(8, 6, 6), Enum.Material.SmoothPlastic)
+		local mm = Instance.new("SpecialMesh")
+		mm.MeshType = Enum.MeshType.Sphere
+		mm.Parent = maw
+	end
+	-- jagged salt spines out of the back and shoulders
+	for i = 1, body.spines or 0 do
+		local w = Instance.new("WedgePart")
+		w.Name = "Spine" .. i
+		local len = rng:NextNumber(0.5, 1.3)
+		w.Size = Vector3.new(0.18, len, rng:NextNumber(0.3, 0.6)) * k
+		w.Color = CRUST
+		w.Material = Enum.Material.Sand
+		w.CanCollide = false
+		w.CanTouch = false
+		w.Massless = true
+		w.CFrame = torso.CFrame
+		w.Parent = model
+		local weld = Instance.new("Weld")
+		weld.Part0 = torso
+		weld.Part1 = w
+		weld.C0 = CFrame.new(rng:NextNumber(-0.6, 0.6) * torso.Size.X / 2, rng:NextNumber(-0.2, 0.9) * torso.Size.Y / 2, torso.Size.Z / 2 + len * 0.3 * k)
+			* CFrame.Angles(math.rad(rng:NextNumber(20, 60)), math.rad(rng:NextNumber(-30, 30)), math.rad(rng:NextNumber(-25, 25)))
+		weld.Parent = w
+	end
 	-- salt growths: lumpy crust on shoulders, back and head
 	local spots = { torso, torso, head, model.LeftUpperArm, model.RightUpperArm }
 	for i = 1, body.crust do
 		local target = spots[(i - 1) % #spots + 1]
 		local r = rng:NextNumber(0.25, 0.6) * (target == torso and 1.4 or 1)
 		local offset = CFrame.new(rng:NextNumber(-0.5, 0.5) * target.Size.X / k, rng:NextNumber(-0.3, 0.5) * target.Size.Y / k, (target == head and -1 or 1) * rng:NextNumber(0.2, 0.5) * target.Size.Z / k)
-		attach("Crust" .. i, target, Vector3.new(r, r * rng:NextNumber(0.7, 1.2), r), offset, Color3.fromRGB(232, 228, 216), Enum.Material.Sand, Enum.PartType.Ball)
+		attach("Crust" .. i, target, Vector3.new(r, r * rng:NextNumber(0.7, 1.2), r), offset, CRUST, Enum.Material.Sand, Enum.PartType.Ball)
 	end
 
 	local drift = Instance.new("ParticleEmitter")

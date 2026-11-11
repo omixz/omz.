@@ -25,6 +25,7 @@ Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-p
 | 5 | [Roadmap & first prototype](docs/05-roadmap-and-prototype.md) | Stage-by-stage plan with exit criteria, decisions made, and what Slice 0 includes |
 | 6 | [Play, publish & grow for $0](docs/06-publishing.md) | Studio setup, publishing, maturity form, developer products, free assets, launch checklist |
 | 7 | [Realistic characters & graphics](docs/07-characters-and-graphics.md) | Free pipeline for realistic crew models, Cinematic/Balanced/Performance presets, PlayStation/Xbox |
+| 8 | [Audio](docs/08-audio.md) | The original synthesised sound pack (42 sounds) and how to upload it |
 
 ## Code layout
 

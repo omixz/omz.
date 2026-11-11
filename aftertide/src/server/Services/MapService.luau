@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Game = require(Shared.Config.Game)
 local Encounters = require(Shared.Config.Encounters)
+local Sfx = require(Shared.Util.Sfx)
 
 local MapService = {}
 local Services
@@ -538,30 +539,33 @@ end
 local atmosphere, colorCorrection
 
 local function setupLighting()
-	Lighting.ClockTime = 1.4
-	Lighting.Brightness = 1.2
-	Lighting.Ambient = Color3.fromRGB(24, 28, 32)
-	Lighting.OutdoorAmbient = Color3.fromRGB(58, 66, 72)
+	-- Overcast dusk: readable, cold and moody (night is a modifier, not the default)
+	Lighting.ClockTime = 17.4
+	Lighting.GeographicLatitude = 50
+	Lighting.Brightness = 2.2
+	Lighting.Ambient = Color3.fromRGB(62, 68, 74)
+	Lighting.OutdoorAmbient = Color3.fromRGB(112, 120, 128)
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 224, 196)
 	Lighting.EnvironmentDiffuseScale = 0.4
 	Lighting.EnvironmentSpecularScale = 0.6
 	Lighting.GlobalShadows = true
-	Lighting.ExposureCompensation = 0.1
+	Lighting.ExposureCompensation = 0.25
 
 	atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-	atmosphere.Density = 0.45
-	atmosphere.Offset = 0.1
-	atmosphere.Color = Color3.fromRGB(199, 206, 206)
-	atmosphere.Decay = Color3.fromRGB(92, 108, 112)
-	atmosphere.Glare = 0
-	atmosphere.Haze = 2.2
+	atmosphere.Density = 0.34
+	atmosphere.Offset = 0.3
+	atmosphere.Color = Color3.fromRGB(196, 202, 204)
+	atmosphere.Decay = Color3.fromRGB(118, 126, 128)
+	atmosphere.Glare = 0.25
+	atmosphere.Haze = 1.4
 	atmosphere.Parent = Lighting
 
 	colorCorrection = Instance.new("ColorCorrectionEffect")
 	colorCorrection.Name = "AftertideGrade"
-	colorCorrection.Saturation = -0.25
-	colorCorrection.Contrast = 0.12
-	colorCorrection.Brightness = -0.02
-	colorCorrection.TintColor = Color3.fromRGB(225, 235, 240)
+	colorCorrection.Saturation = -0.22
+	colorCorrection.Contrast = 0.16
+	colorCorrection.Brightness = 0.01
+	colorCorrection.TintColor = Color3.fromRGB(230, 236, 240)
 	colorCorrection.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
@@ -575,9 +579,14 @@ function MapService.applyModifier(modifier)
 	if not atmosphere then
 		return
 	end
-	TweenService:Create(atmosphere, TweenInfo.new(3), { Density = modifier.fogDensity or 0.45 }):Play()
+	TweenService:Create(atmosphere, TweenInfo.new(3), { Density = modifier.fogDensity or 0.34 }):Play()
 	local boost = modifier.ambientBoost or 0
-	Lighting.OutdoorAmbient = Color3.fromRGB(58 + boost * 80, 66 + boost * 80, 72 + boost * 80)
+	local night = modifier.night == true
+	Lighting.ClockTime = night and 0.6 or 17.4
+	Lighting.Brightness = night and 1.4 or 2.2
+	local amb = night and 46 or 112
+	Lighting.OutdoorAmbient = Color3.fromRGB(math.min(255, amb + boost * 60), math.min(255, amb + 8 + boost * 60), math.min(255, amb + 16 + boost * 60))
+	Lighting.Ambient = night and Color3.fromRGB(30, 34, 40) or Color3.fromRGB(62, 68, 74)
 end
 
 -- Encounter objects -----------------------------------------------------------------------
@@ -634,6 +643,7 @@ local function makeDoor(parent, hinge, width, axis, closedNow)
 		record.open = open
 		prompt.ActionText = open and "Close" or "Open"
 		TweenService:Create(door, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { CFrame = open and openCF or closedCF }):Play()
+		Sfx.at(door.Position, "Door", 0.6, 60)
 		if byPlayer then
 			Services.PerceptionService.emitNoise(door.Position, 7, "door", byPlayer)
 		end

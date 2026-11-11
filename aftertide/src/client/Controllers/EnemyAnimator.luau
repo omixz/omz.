@@ -76,7 +76,18 @@ local function setup(model)
 		seed = math.random() * 100,
 		twitchAt = 0,
 		twitch = CFrame.new(),
+		spasmAt = os.clock() + math.random() * 4,
+		spasm = 0,
+		maw = head:FindFirstChild("Maw") and nil,
+		lastHP = model:GetAttribute("HP") or 1,
+		flinch = 0,
 	}
+	for _, d in model:GetDescendants() do
+		if d.Name == "Maw" and d:IsA("BasePart") then
+			rig.maw = d
+			rig.mawSize = d.Size
+		end
+	end
 	if not rig.waist or not rig.lh then
 		return nil
 	end
@@ -130,6 +141,30 @@ local function animate(model, rig, dt, now)
 		rig.twitchAt = now + (heard and 0.15 or 0.6 + math.random() * 1.8)
 	end
 
+	-- spasms: sudden violent jerks of the whole upper body
+	if now > rig.spasmAt then
+		rig.spasm = 1
+		rig.spasmAt = now + (model:GetAttribute("Gait") == "rush" and 1.2 or 2.5) + math.random() * 4
+		rig.spasmDir = (math.random() < 0.5) and -1 or 1
+	end
+	rig.spasm = math.max(0, rig.spasm - dt * 5)
+	local sp = rig.spasm ^ 2 * (rig.spasmDir or 1)
+
+	-- flinch when hit
+	local hp = model:GetAttribute("HP") or 1
+	if hp < rig.lastHP - 0.001 then
+		rig.flinch = 1
+	end
+	rig.lastHP = hp
+	rig.flinch = math.max(0, rig.flinch - dt * 4)
+	local fl = rig.flinch
+
+	-- the maw gapes when it hunts or screams
+	if rig.maw then
+		local open = (chasing and 1.6 or 1) + (heard and 0.3 or 0) + math.sin(now * 13) * (chasing and 0.15 or 0)
+		rig.maw.Size = Vector3.new(rig.mawSize.X, rig.mawSize.Y * open, rig.mawSize.Z)
+	end
+
 	-- states that override the gait
 	if state == "Stunned" or state == "Pinned" then
 		local wobble = math.sin(now * 9 + rig.seed) * 0.15
@@ -146,8 +181,10 @@ local function animate(model, rig, dt, now)
 		rArm = math.max(rArm, 1.0 + math.sin(p + 1) * 0.25)
 	end
 
-	set(rig.waist, CFrame.Angles(-lean, math.sin(p * 0.5) * 0.08 * moving, roll))
-	set(rig.neck, CFrame.Angles(lean * 0.6, 0, 0) * rig.twitch)
+	set(rig.waist, CFrame.Angles(-lean + fl * 0.45, math.sin(p * 0.5) * 0.08 * moving + sp * 0.5, roll + sp * 0.3))
+	set(rig.neck, CFrame.Angles(lean * 0.6 - fl * 0.5, sp * 0.9, sp * 0.6) * rig.twitch)
+	lArm += sp * 0.8
+	rArm -= sp * 0.6
 	set(rig.lh, CFrame.Angles(lHip, 0, 0))
 	set(rig.rh, CFrame.Angles(rHip, 0, 0))
 	set(rig.lk, CFrame.Angles(lKnee, 0, 0))

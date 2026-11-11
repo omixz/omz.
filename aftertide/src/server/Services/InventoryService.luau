@@ -8,6 +8,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Items = require(Shared.Config.Items)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
+local Sfx = require(Shared.Util.Sfx)
 
 local InventoryService = {}
 local Services
@@ -228,6 +229,7 @@ function InventoryService.pickup(player, pickupPart, itemId, amount)
 	amount = pickupPart:GetAttribute("Amount") or amount
 	local added = InventoryService.add(player, itemId, amount)
 	if added > 0 then
+		Sfx.at(pickupPart.Position, "Pickup", 0.5, 25)
 		local remaining = amount - added
 		if remaining > 0 then
 			pickupPart:SetAttribute("Amount", remaining)

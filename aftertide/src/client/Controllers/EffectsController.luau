@@ -86,6 +86,21 @@ local function impact(position, kind)
 	if kind == "none" then
 		return
 	end
+	if Controllers then
+		Controllers.SoundController.impact(position, kind)
+	end
+	if kind == "world" then
+		-- a scorched bullet hole that fades
+		local hole = localPart(position, Vector3.new(0.22, 0.22, 0.05))
+		hole.Transparency = 0.1
+		hole.Color = Color3.fromRGB(20, 18, 16)
+		hole.Shape = Enum.PartType.Cylinder
+		hole.Size = Vector3.new(0.04, 0.22, 0.22)
+		local camPos = Workspace.CurrentCamera.CFrame.Position
+		hole.CFrame = CFrame.lookAt(position, camPos) * CFrame.Angles(0, math.rad(90), 0)
+		TweenService:Create(hole, TweenInfo.new(12), { Transparency = 1 }):Play()
+		Debris:AddItem(hole, 12)
+	end
 	local holder = localPart(position)
 	local puff = Instance.new("ParticleEmitter")
 	puff.Texture = SMOKE

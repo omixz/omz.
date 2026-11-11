@@ -385,11 +385,11 @@ function WeaponService.fire(player, info, direction, aiming)
 	local muzzle = WeaponService.muzzlePosition(player) or origin
 
 	Services.PerceptionService.emitNoise(origin, def.noise * mods.noiseMult, "gunshot", player)
-	Sfx.at(muzzle, "Gun_" .. w.id, 0.9, def.noise * mods.noiseMult * 3)
+	-- the gunshot sound is played by every client (instantly for the shooter) from the Shot event
 
 	if def.projectile then
 		simulateArrow(player, def, mods, origin + direction * 0.8, spreadDirection(direction, spread), params)
-		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = {} })
+		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = {}, quiet = mods.noiseMult < 1 })
 	else
 		local hits, anyHead, anyKill, anyEnemy = {}, false, false, false
 		local impactNoise = nil
@@ -414,7 +414,7 @@ function WeaponService.fire(player, info, direction, aiming)
 		if impactNoise then
 			Services.PerceptionService.emitNoise(impactNoise, 14, "impact", nil)
 		end
-		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = hits })
+		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = hits, quiet = mods.noiseMult < 1 })
 	end
 
 	if def.autoReload and w.mag <= 0 then

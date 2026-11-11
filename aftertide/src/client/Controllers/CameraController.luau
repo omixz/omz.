@@ -16,6 +16,8 @@ local CameraController = {}
 local Controllers
 local player = Players.LocalPlayer
 local recoilYaw = 0
+local recoilPitch = 0 -- temporary kick that springs back (most of it)
+local fovPunch = 0
 
 local SENS_MOUSE = 0.0028
 local SENS_PAD = 3.0
@@ -44,8 +46,10 @@ end
 
 -- Recoil: the view climbs (you pull it back down), with a little sideways jitter.
 function CameraController.kick(degrees)
-	pitch += math.rad(degrees) * 0.55
-	recoilYaw += math.rad(degrees) * (math.random() - 0.5) * 0.4
+	recoilPitch += math.rad(degrees) * 0.6
+	pitch += math.rad(degrees) * 0.08 -- a little permanent climb to manage
+	recoilYaw += math.rad(degrees) * (math.random() - 0.5) * 0.35
+	fovPunch = math.min(fovPunch + degrees * 0.35, 4)
 end
 
 local function sensitivity()
@@ -127,25 +131,29 @@ local function update(dt)
 		yaw += step
 		recoilYaw -= step
 	end
+	recoilPitch -= recoilPitch * math.min(1, dt * 9)
+	fovPunch -= fovPunch * math.min(1, dt * 10)
 	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
 	State.pitch = pitch
 
 	local takedown = os.clock() < State.takedownUntil
 	local s = State.shoulder
 	local height, offset, fov
+	-- over-the-shoulder framing: character on the left third, tight when aiming
 	if State.downed then
-		height, offset, fov = 0.9, Vector3.new(1.2 * s, 1.4, 7), 66
+		height, offset, fov = 0.9, Vector3.new(1.4 * s, 1.3, 6.5), 64
 	elseif takedown then
-		height, offset, fov = 1.8, Vector3.new(2.4 * s, 0.2, 4.2), 58
+		height, offset, fov = 1.8, Vector3.new(2.3 * s, 0.1, 4.0), 56
 	elseif State.aiming then
 		local weaponFov = Controllers and Controllers.WeaponController.aimFov()
-		height, offset, fov = State.crouched and 1.4 or 2.2, Vector3.new(1.9 * s, 0.3, weaponFov and weaponFov < 45 and 2.6 or 3.4), weaponFov or 52
+		local scoped = weaponFov and weaponFov < 40
+		height, offset, fov = State.crouched and 1.45 or 2.25, Vector3.new(2.05 * s, 0.35, scoped and 1.9 or 2.7), weaponFov or 50
 	elseif State.sprinting then
-		height, offset, fov = 2.2, Vector3.new(1.3 * s, 0.6, 7), 76
+		height, offset, fov = 2.2, Vector3.new(1.5 * s, 0.55, 6.6), 74
 	elseif State.crouched then
-		height, offset, fov = 1.3, Vector3.new(1.8 * s, 0.7, 5.2), 68
+		height, offset, fov = 1.35, Vector3.new(1.95 * s, 0.6, 4.9), 64
 	else
-		height, offset, fov = 2.3, Vector3.new(1.7 * s, 0.5, 6.2), 70
+		height, offset, fov = 2.3, Vector3.new(1.95 * s, 0.5, 5.6), 66
 	end
 
 	local focusTarget = root.Position + Vector3.new(0, height, 0)
@@ -161,13 +169,24 @@ local function update(dt)
 	fovSpring.target = fov
 	local focus = focusSpring:update(dt)
 	local off = offsetSpring:update(dt)
-	camera.FieldOfView = fovSpring:update(dt)
+	camera.FieldOfView = fovSpring:update(dt) + fovPunch
 
 	-- subtle breathing sway (scaled down while aiming)
 	local t = os.clock()
 	local reduce = player:GetAttribute("Set_reduceMotion") == true
-	local sway = (State.aiming and 0.35 or 1) * (reduce and 0 or 0.006)
-	local rot = CFrame.fromEulerAnglesYXZ(pitch + math.sin(t * 1.3) * sway, yaw + math.sin(t * 0.7) * sway, 0)
+	local sway = reduce and 0 or 0.006
+	local aimSway = 0
+	if State.aiming and not reduce then
+		-- breathing sway: steadier crouched, worse while moving
+		local v = State.root.AssemblyLinearVelocity
+		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
+		aimSway = (State.crouched and 0.0018 or 0.003) * (1 + moving * 1.5)
+	end
+	local rot = CFrame.fromEulerAnglesYXZ(
+		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
+		yaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
+		0
+	)
 
 	local desired = (CFrame.new(focus) * rot * CFrame.new(off)).Position
 	local dir = desired - focus

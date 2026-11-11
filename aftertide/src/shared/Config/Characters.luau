@@ -16,6 +16,7 @@ Characters.Order = { "mara", "tobias", "ines", "sefa" }
 
 Characters.List = {
 	mara = {
+		outfit = { hat = "beanie", hatColor = Color3.fromRGB(70, 56, 48), hair = Color3.fromRGB(58, 40, 30), mask = Color3.fromRGB(120, 110, 94), scarf = Color3.fromRGB(138, 70, 52), boots = Color3.fromRGB(46, 36, 30), pack = Color3.fromRGB(92, 84, 64) },
 		name = "Mara Kell",
 		role = "Stealth & scouting",
 		bio = "Former harbour pilot. Reads the fog like a tide chart.",
@@ -52,6 +53,7 @@ Characters.List = {
 	},
 
 	tobias = {
+		outfit = { hat = "cap", hatColor = Color3.fromRGB(52, 58, 54), hair = Color3.fromRGB(30, 24, 20), mask = Color3.fromRGB(86, 82, 74), boots = Color3.fromRGB(40, 32, 26), pack = Color3.fromRGB(70, 74, 60), toolbelt = true },
 		name = "Tobias Ruane",
 		role = "Traps & distraction",
 		bio = "Ferry engineer. Kept the Meridian's generator alive for eleven years.",
@@ -88,6 +90,7 @@ Characters.List = {
 	},
 
 	ines = {
+		outfit = { hat = "bun", hatColor = Color3.fromRGB(26, 20, 18), hair = Color3.fromRGB(26, 20, 18), mask = Color3.fromRGB(200, 196, 186), boots = Color3.fromRGB(34, 30, 30), pack = Color3.fromRGB(150, 140, 120), medic = true },
 		name = "Ines Okafor-Hale",
 		role = "Sustain & co-op support",
 		bio = "Paramedic. Runs the Meridian's sick bay out of a car deck.",
@@ -124,6 +127,7 @@ Characters.List = {
 	},
 
 	sefa = {
+		outfit = { hat = "hood", hatColor = Color3.fromRGB(130, 102, 46), hair = Color3.fromRGB(24, 20, 18), mask = Color3.fromRGB(64, 78, 84), boots = Color3.fromRGB(30, 40, 44), pack = Color3.fromRGB(58, 70, 66) },
 		name = "Sefa Talataina",
 		role = "Control & escapes",
 		bio = "Fisher and net-maker. Has never once lost a catch.",

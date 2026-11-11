@@ -18,6 +18,7 @@ local Stats = require(Shared.Stats)
 local Net = require(Shared.Net)
 local Geometry = require(Shared.Util.Geometry)
 local Rigs = require(Shared.Config.Rigs)
+local BodyBuilder = require(Shared.BodyBuilder)
 
 local CharacterService = {}
 local Services
@@ -180,7 +181,7 @@ local function spawnCustomRig(player, template)
 	return rig
 end
 
-local function setupCharacter(player, char, session)
+local function setupCharacter(player, char, session, isCustomRig)
 	local humanoid = char:WaitForChild("Humanoid")
 	local root = char:WaitForChild("HumanoidRootPart")
 	local head = char:WaitForChild("Head")
@@ -192,16 +193,25 @@ local function setupCharacter(player, char, session)
 	humanoid.NameDisplayDistance = 60
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 
-	local face = head:FindFirstChild("face")
-	if face and not Rigs.BodyParts[session.charId] then
-		face:Destroy() -- placeholder mannequin is faceless
+	if not isCustomRig then
+		-- Replace the Roblox look and motion: sculpted, clothed body + our own animation
+		-- (client PlayerAnimator) instead of the default Animate script.
+		local animate = char:FindFirstChild("Animate")
+		if animate then
+			animate:Destroy()
+		end
+		local ok, err = pcall(BodyBuilder.build, char, Characters.List[session.charId])
+		if not ok then
+			warn("[CharacterService] body build failed: " .. tostring(err))
+		end
+		char:SetAttribute("Procedural", true)
 	end
 
 	local torch = Instance.new("SpotLight")
 	torch.Name = "Torch"
-	torch.Angle = 55
-	torch.Range = 45
-	torch.Brightness = 2.4
+	torch.Angle = 48
+	torch.Range = 70
+	torch.Brightness = 3.2
 	torch.Color = Color3.fromRGB(255, 236, 205)
 	torch.Shadows = true
 	torch.Enabled = false
@@ -265,7 +275,7 @@ function CharacterService.spawn(player, cframe, resetInventory)
 	if not char then
 		return nil
 	end
-	setupCharacter(player, char, session)
+	setupCharacter(player, char, session, template ~= nil)
 	CharacterService.setGrace(player, 3)
 	char:PivotTo(cframe)
 	if resetInventory or not Services.InventoryService.has(player) then
@@ -381,6 +391,10 @@ function CharacterService.damage(player, amount, fromPosition)
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	if not session or not root or session.downed or session.out then
+		return
+	end
+	if os.clock() < (session.dodgeUntil or 0) then
+		Net.notify(player, "Toast", { text = "Dodged!" })
 		return
 	end
 	amount *= session.mods.damageTakenMult

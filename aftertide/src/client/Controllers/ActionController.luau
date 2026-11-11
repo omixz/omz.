@@ -8,9 +8,10 @@
 --   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
 --   R reload (Second Wind if downed)   X: Quieting/shove near a Hushed, else reload
 --   F Quieting / shove                 (X, contextual)
---   G throw, Z next throwable          R1 throw, L1 next throwable
+--   G throw, Z next throwable          R1 throw, D-pad down next throwable
+--   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
 --   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
---   X swap shoulder, Tab satchel       R3 shoulder, D-pad down satchel
+--   X swap shoulder, Tab satchel       R3 shoulder, View/Back satchel
 --   B resupply, P settings             Start/Menu: Roblox menu
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
@@ -51,6 +52,7 @@ local touchLayout = {
 	Weapon = { title = "Weapon", pos = UDim2.new(1, -245, 1, -300) },
 	Heal = { title = "Heal", pos = UDim2.new(1, -320, 1, -230) },
 	Satchel = { title = "Bag", pos = UDim2.new(1, -320, 1, -300) },
+	Dodge = { title = "Dodge", pos = UDim2.new(1, -320, 1, -160) },
 }
 
 local function bind(name, handler, ...)
@@ -167,7 +169,13 @@ function ActionController.start()
 		if state == Begin and State.character then
 			Weapon.cycleThrowable()
 		end
-	end, Enum.KeyCode.Z, Enum.KeyCode.ButtonL1)
+	end, Enum.KeyCode.Z, Enum.KeyCode.DPadDown)
+
+	bind("Dodge", function(state)
+		if state == Begin and canAct() then
+			Movement.dodge()
+		end
+	end, Enum.KeyCode.Space, Enum.KeyCode.ButtonL1)
 
 	bind("Ability", function(state)
 		if state == Begin and canAct() then
@@ -217,7 +225,7 @@ function ActionController.start()
 		if state == Begin and State.character then
 			Controllers.UIController.toggleSatchel()
 		end
-	end, Enum.KeyCode.Tab, Enum.KeyCode.DPadDown)
+	end, Enum.KeyCode.Tab, Enum.KeyCode.ButtonSelect)
 
 	bind("Resupply", function(state)
 		if state == Begin and canAct() then

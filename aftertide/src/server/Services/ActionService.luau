@@ -75,9 +75,69 @@ end
 
 -- Quieting / spike / shove -------------------------------------------------------------------
 
+local function cue(info, name)
+	info.char:SetAttribute(name, serverTime())
+end
+
+local MELEE = { damage = { 24, 24, 40 }, range = 5.5, interval = 0.42, comboWindow = 0.95, noise = 10 }
+
+local function melee(player, info)
+	local session = info.session
+	local now = os.clock()
+	if now < (session.meleeReadyAt or 0) then
+		return
+	end
+	session.meleeCombo = (now - (session.lastMeleeAt or 0) < MELEE.comboWindow) and ((session.meleeCombo or 0) % 3 + 1) or 1
+	session.lastMeleeAt = now
+	session.meleeReadyAt = now + MELEE.interval
+	local combo = session.meleeCombo
+	info.char:SetAttribute("MeleeCombo", combo)
+	cue(info, "MeleeAt")
+	setBusy(info, 0.3)
+	Sfx.at(info.root.Position, "Swing", 0.5, 30, 0.1)
+	local pos, look = info.root.Position, info.root.CFrame.LookVector
+	task.delay(0.12, function() -- strike lands mid-swing
+		for _, entry in Services.EnemyService.findNear(pos, MELEE.range) do
+			local e = entry.enemy
+			local to = Geometry.flat(e.root.Position - pos)
+			if to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.35 then
+				local damage = MELEE.damage[combo] * (e.cfg.shoveable and 1 or 0.5)
+				local killed = Services.EnemyService.damage(e, damage, player, false)
+				Sfx.at(e.root.Position, "MeleeHit", 0.7, 50, 0.1)
+				Net.notify(player, "Hit", { kill = killed, melee = true })
+				if not killed and combo == 3 and e.cfg.shoveable then
+					Services.EnemyService.stun(e, Items.Shove.stun, player)
+					e.root.AssemblyLinearVelocity = to.Unit * 34
+				end
+				break
+			end
+		end
+	end)
+	Services.PerceptionService.emitNoise(pos, MELEE.noise, "melee", player)
+end
+
+local function dodge(player, info, direction)
+	local session = info.session
+	local now = os.clock()
+	if now < (session.dodgeReadyAt or 0) or isBusy(info) then
+		return
+	end
+	if not Geometry.isSaneVector(direction, 2) then
+		return
+	end
+	local dive = info.char:GetAttribute("Sprint") == true
+	session.dodgeReadyAt = now + (dive and 1.3 or 0.85)
+	session.dodgeUntil = now + (dive and 0.6 or 0.42) -- grabs miss during the dodge
+	Services.CharacterService.setGrace(player, 1.2)
+	info.char:SetAttribute("DodgeDive", dive)
+	cue(info, "DodgeAt")
+	Services.PerceptionService.emitNoise(info.root.Position, dive and 14 or 8, "dodge", player)
+end
+
 local function quietEnemy(player, info, e, duration)
 	Services.EnemyService.stun(e, duration + 5, nil, "Quieted")
 	setBusy(info, duration)
+	cue(info, "TakedownAt")
 	Net.notify(player, "Takedown", { duration = duration })
 	task.delay(duration, function()
 		Services.EnemyService.disperse(e, player)
@@ -115,26 +175,8 @@ local function quiet(player, info)
 			break
 		end
 	end
-	if os.clock() < info.session.shoveReadyAt then
-		return
-	end
-	for _, entry in near do
-		local e = entry.enemy
-		local to = Geometry.flat(e.root.Position - pos)
-		if entry.distance <= Items.Shove.range and to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.3 then
-			info.session.shoveReadyAt = os.clock() + Items.Shove.cooldown * info.session.mods.shoveCooldownMult
-			if e.cfg.shoveable then
-				Services.EnemyService.stun(e, Items.Shove.stun, player)
-				e.root.AssemblyLinearVelocity = to.Unit * 30
-			else
-				toast(player, "Too heavy to shove")
-			end
-			Sfx.at(e.root.Position, "Shove", 0.5, 60)
-			Services.PerceptionService.emitNoise(pos, Items.Shove.noise, "shove", player)
-			setBusy(info, 0.4)
-			return
-		end
-	end
+	-- otherwise: melee combo (third hit knocks them back)
+	melee(player, info)
 end
 
 -- Called by EnemyService when a Hushed grabs someone. Returns true if a spike saved them.
@@ -176,6 +218,7 @@ function landing.flarePot(position, player, mods)
 	Services.EnemyService.addFireZone(position, cfg.radius, cfg.duration, cfg.dps, player)
 	Services.PerceptionService.emitNoise(position, cfg.noise * mods.throwNoiseMult, "flare", nil)
 	local holder = effectHolder(position + Vector3.new(0, 0.3, 0), cfg.duration + 1)
+	Sfx.attach(holder, "FireLoop", 0.8, 70, true)
 	local light = Instance.new("PointLight")
 	light.Color = Color3.fromRGB(255, 120, 60)
 	light.Range = cfg.radius * 2.5
@@ -227,6 +270,7 @@ function landing.fogPot(position, player, mods)
 	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, cfg.radius * 1.2) })
 	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.8, 0.4), NumberSequenceKeypoint.new(1, 1) })
 	smoke.Parent = effectHolder(position + Vector3.new(0, 1, 0), cfg.duration + 5)
+	Sfx.at(position, "FogHiss", 0.8, 60)
 	task.delay(cfg.duration, function()
 		smoke.Enabled = false
 	end)
@@ -321,6 +365,8 @@ local function throw(player, info, payload)
 		return
 	end
 	setBusy(info, 0.35)
+	cue(info, "ThrowAt")
+	Sfx.at(info.root.Position, "Throw", 0.5, 30)
 	local head = info.char:FindFirstChild("Head")
 	local position = (head and head.Position or info.root.Position) + direction * 1.5
 	local velocity = direction * Items.Throw.speed + Vector3.new(0, Items.Throw.lift, 0)
@@ -466,6 +512,8 @@ local function heal(player, info)
 		return
 	end
 	Services.WeaponService.holster(player)
+	cue(info, "HealAt")
+	Sfx.at(info.root.Position, "Bandage", 0.6, 30)
 	channel(info, Items.Dressing.channel, function()
 		if Services.InventoryService.take(player, "dressing", 1) then
 			Services.CharacterService.heal(player, Items.Dressing.heal * info.session.mods.healMult)
@@ -566,10 +614,13 @@ local HANDLERS = {
 	Reload = function(player, info)
 		Services.WeaponService.reload(player, info)
 	end,
+	Dodge = function(player, info, direction)
+		dodge(player, info, direction)
+	end,
 }
 
 -- Actions allowed on the Meridian (no encounter running).
-local FERRY_OK = { Craft = true, Equip = true, Reload = true }
+local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true }
 
 function ActionService.init(registry)
 	Services = registry
