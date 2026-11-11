@@ -44,74 +44,24 @@ local C = {
 
 -- Encounter layout data -------------------------------------------------------------------
 
-MapService.StartSpawns = {
-	Vector3.new(-6, 3, 100),
-	Vector3.new(-2, 3, 102),
-	Vector3.new(2, 3, 102),
-	Vector3.new(6, 3, 100),
-}
+-- Filled from the active map module when a map loads (see MapService.loadMap).
+MapService.StartSpawns = {}
+MapService.ExtractionPos = Vector3.zero
+MapService.LanternPos = Vector3.zero
+MapService.SupplyCandidates = {}
+MapService.LootSpots = {}
+MapService.ContainerSpots = {}
+MapService.EdgeSpawns = {}
+MapService.PatrolRoutes = {}
+MapService.Doorways = {}
+MapService.MapIds = { "CanneryRow", "LarkspurStreet", "HollowPines" }
 
-MapService.ExtractionPos = Vector3.new(-92, 0, -100)
-
-MapService.SupplyCandidates = {
-	Vector3.new(24, 0, -45), -- cannery, north aisle
-	Vector3.new(5, 0, -5), -- cannery, south-west corner
-	Vector3.new(52, 0, -10), -- cannery, east bay
-	Vector3.new(88, 0, -38), -- container yard
-	Vector3.new(90, 0, 62), -- container yard, south
-	Vector3.new(-80, 0, 20), -- shallows
-	Vector3.new(-45, 0, -100), -- net shed
-	Vector3.new(-40, 0, 75), -- south-west reed bed
-	Vector3.new(30, 0, 75), -- south lot
-	Vector3.new(-30, 0, -50), -- mid-west
-}
-
-MapService.LootSpots = {
-	Vector3.new(-25, 0, 45), Vector3.new(-15, 0, 60), Vector3.new(15, 0, 50), Vector3.new(35, 0, 65),
-	Vector3.new(45, 0, 25), Vector3.new(-40, 0, 15), Vector3.new(-30, 0, -25), Vector3.new(-45, 0, -75),
-	Vector3.new(-15, 0, -85), Vector3.new(15, 0, -80), Vector3.new(35, 0, -95), Vector3.new(55, 0, -75),
-	Vector3.new(70, 0, 30), Vector3.new(88, 0, 0), Vector3.new(108, 0, -40), Vector3.new(88, 0, 78),
-	Vector3.new(0, 0, -30), Vector3.new(30, 0, -5), Vector3.new(45, 0, -45), Vector3.new(10, 0, -45),
-	Vector3.new(-90, 0, -30), Vector3.new(-85, 0, 50), Vector3.new(-60, 0, 80), Vector3.new(60, 0, 90),
-}
-
--- Searchable containers (type + facing). Loose items reuse LootSpots.
-MapService.ContainerSpots = {
-	{ pos = Vector3.new(-6, 0, -46), type = "Locker", yaw = 0 },
-	{ pos = Vector3.new(-4, 0, -46), type = "Locker", yaw = 0 },
-	{ pos = Vector3.new(56, 0, -46), type = "Toolbox", yaw = 0 },
-	{ pos = Vector3.new(56, 0, 5), type = "Drawer", yaw = 180 },
-	{ pos = Vector3.new(-6, 0, 5), type = "Drawer", yaw = 180 },
-	{ pos = Vector3.new(30, 0, -12), type = "AmmoCrate", yaw = 90 },
-	{ pos = Vector3.new(90, 0, -50), type = "AmmoCrate", yaw = 0 },
-	{ pos = Vector3.new(108, 0, 20), type = "Toolbox", yaw = -90 },
-	{ pos = Vector3.new(86, 0, 70), type = "Locker", yaw = 90 },
-	{ pos = Vector3.new(-56, 0, -88), type = "Drawer", yaw = 0 },
-	{ pos = Vector3.new(-34, 0, -108), type = "Toolbox", yaw = 180 },
-	{ pos = Vector3.new(-56, 0, -108), type = "AmmoCrate", yaw = 90 },
-	{ pos = Vector3.new(-10, 0, 85), type = "Drawer", yaw = 180 },
-	{ pos = Vector3.new(45, 0, 95), type = "Toolbox", yaw = 180 },
-	{ pos = Vector3.new(-105, 0, 80), type = "AmmoCrate", yaw = 90 },
-	{ pos = Vector3.new(-40, 0, -40), type = "Locker", yaw = 180 },
-	{ pos = Vector3.new(70, 0, -100), type = "Drawer", yaw = 0 },
-	{ pos = Vector3.new(-25, 0, 20), type = "Toolbox", yaw = 0 },
-}
-
--- Where waves of Hushed come from (map edges) and where the signal lantern stands.
-MapService.EdgeSpawns = {
-	Vector3.new(-100, 0, 100), Vector3.new(100, 0, 100), Vector3.new(105, 0, -100), Vector3.new(0, 0, -105),
-	Vector3.new(105, 0, 0), Vector3.new(-60, 0, 105), Vector3.new(60, 0, -105), Vector3.new(-105, 0, -40),
-}
-MapService.LanternPos = Vector3.new(5, 0, 55)
-
-MapService.PatrolRoutes = {
-	{ Vector3.new(24, 0, -30), Vector3.new(24, 0, -2), Vector3.new(52, 0, -30), Vector3.new(5, 0, -35) }, -- cannery
-	{ Vector3.new(88, 0, -80), Vector3.new(88, 0, -38), Vector3.new(88, 0, 20), Vector3.new(88, 0, 62) }, -- yard
-	{ Vector3.new(-30, 0, 50), Vector3.new(30, 0, 55), Vector3.new(40, 0, 25), Vector3.new(-20, 0, 35) }, -- south lot
-	{ Vector3.new(-90, 0, -60), Vector3.new(-90, 0, 40), Vector3.new(-75, 0, 60), Vector3.new(-80, 0, -20) }, -- shallows
-	{ Vector3.new(-40, 0, -60), Vector3.new(0, 0, -85), Vector3.new(50, 0, -85), Vector3.new(-20, 0, -70) }, -- north
-	{ Vector3.new(-45, 0, -10), Vector3.new(-45, 0, 30), Vector3.new(-25, 0, 0) }, -- mid-west
-}
+local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
+local MapKit = require(MapsFolder:WaitForChild("MapKit"))
+local MAP_MODULES = {}
+for _, id in MapService.MapIds do
+	MAP_MODULES[id] = require(MapsFolder:WaitForChild(id))
+end
 
 -- Builders --------------------------------------------------------------------------------
 
@@ -402,138 +352,6 @@ end
 
 -- Cannery Row (encounter) -----------------------------------------------------------------
 
-local function buildCannery(parent)
-	local rng = Random.new(1137) -- fixed seed: the static layout never changes between runs
-	block(parent, Vector3.new(230, 2, 230), Vector3.new(0, -1, 0), C.ground, Enum.Material.Concrete, { Name = "Ground" })
-
-	-- perimeter
-	block(parent, Vector3.new(232, 16, 2), Vector3.new(0, 8, -116), C.wallDark, Enum.Material.Concrete)
-	block(parent, Vector3.new(232, 16, 2), Vector3.new(0, 8, 116), C.wallDark, Enum.Material.Concrete)
-	block(parent, Vector3.new(2, 16, 232), Vector3.new(116, 8, 0), C.wallDark, Enum.Material.Concrete)
-	block(parent, Vector3.new(2, 16, 232), Vector3.new(-116, 8, 0), C.wallDark, Enum.Material.Concrete)
-
-	-- the cannery (x -10..60, z -50..10)
-	local h = 16
-	wallX(parent, -50, -10, 60, h, { { 20, 28 } }, C.wall, Enum.Material.Brick)
-	wallX(parent, 10, -10, 60, h, { { 5, 13 }, { 40, 48 } }, C.wall, Enum.Material.Brick)
-	wallZ(parent, -10, -50, 10, h, { { -24, -16 } }, C.wall, Enum.Material.Brick)
-	wallZ(parent, 60, -50, 10, h, { { -30, -22 } }, C.wall, Enum.Material.Brick)
-	block(parent, Vector3.new(72, 1, 62), Vector3.new(25, h + 0.5, -20), C.roof, Enum.Material.CorrodedMetal)
-	for _, x in { 5, 14, 34, 46 } do
-		block(parent, Vector3.new(6, 4, 16), Vector3.new(x, 2, -20), C.machine, Enum.Material.Metal)
-		block(parent, Vector3.new(2, 2.5, 2), Vector3.new(x, 5.25, -24), C.metal, Enum.Material.Metal)
-	end
-	block(parent, Vector3.new(50, 2.5, 2), Vector3.new(25, 1.25, -40), C.machine, Enum.Material.DiamondPlate) -- conveyor
-	hangingBulb(parent, Vector3.new(24, 13, -20))
-	hangingBulb(parent, Vector3.new(3, 13, -2))
-
-	-- container yard (east)
-	local containers = {
-		{ Vector3.new(78, 0, -85), Vector3.new(8, 8.6, 20) },
-		{ Vector3.new(96, 0, -60), Vector3.new(20, 8.6, 8) },
-		{ Vector3.new(78, 0, -35), Vector3.new(8, 8.6, 20) },
-		{ Vector3.new(100, 0, -15), Vector3.new(8, 8.6, 20) },
-		{ Vector3.new(80, 0, 10), Vector3.new(20, 8.6, 8) },
-		{ Vector3.new(100, 0, 40), Vector3.new(8, 8.6, 20) },
-		{ Vector3.new(78, 0, 60), Vector3.new(8, 8.6, 20) },
-		{ Vector3.new(96, 0, 85), Vector3.new(20, 8.6, 8) },
-	}
-	for i, c in containers do
-		block(parent, c[2], c[1] + Vector3.new(0, 4.3, 0), C.containers[(i - 1) % #C.containers + 1], Enum.Material.CorrodedMetal)
-	end
-	block(parent, Vector3.new(8, 8.6, 20), Vector3.new(78, 12.9, -35), C.containers[4], Enum.Material.CorrodedMetal) -- stacked
-
-	-- net shed (north-west, x -60..-30, z -112..-84)
-	wallX(parent, -84, -60, -30, 10, {}, C.wall, Enum.Material.WoodPlanks)
-	wallZ(parent, -60, -112, -84, 10, {}, C.wall, Enum.Material.WoodPlanks)
-	wallZ(parent, -30, -112, -84, 10, { { -100, -94 } }, C.wall, Enum.Material.WoodPlanks)
-	block(parent, Vector3.new(32, 1, 30), Vector3.new(-45, 10.5, -98), C.roof, Enum.Material.CorrodedMetal)
-
-	-- shallows (west): visual water + noise/slow volume
-	block(parent, Vector3.new(42, 1, 160), Vector3.new(-91, 0.5, -10), C.water, Enum.Material.Glass, {
-		Name = "Water",
-		Transparency = 0.35,
-		Reflectance = 0.15,
-		CanCollide = false,
-		CanQuery = false,
-		CanTouch = false,
-	})
-	volume(parent, Vector3.new(42, 6, 160), Vector3.new(-91, 3, -10), "Shallows")
-
-	-- reed beds (concealment)
-	reeds(parent, Vector3.new(-66, 0, -60), Vector3.new(10, 0, 30), rng)
-	reeds(parent, Vector3.new(-66, 0, 30), Vector3.new(10, 0, 30), rng)
-	reeds(parent, Vector3.new(-40, 0, 70), Vector3.new(30, 0, 14), rng)
-	reeds(parent, Vector3.new(62, 0, 40), Vector3.new(10, 0, 20), rng)
-
-	-- cover: crates, pallets, low walls
-	local crates = {
-		Vector3.new(-30, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
-		Vector3.new(40, 0, 32), Vector3.new(-45, 0, 8), Vector3.new(-35, 0, -32), Vector3.new(-50, 0, -70),
-		Vector3.new(-20, 0, -80), Vector3.new(10, 0, -72), Vector3.new(30, 0, -90), Vector3.new(50, 0, -68),
-		Vector3.new(64, 0, 22), Vector3.new(-5, 0, 80), Vector3.new(68, 0, -95), Vector3.new(-70, 0, -100),
-	}
-	for _, pos in crates do
-		block(parent, Vector3.new(4, 4, 4), pos + Vector3.new(0, 2, 0), C.crate, Enum.Material.WoodPlanks)
-		if rng:NextNumber() < 0.4 then
-			block(parent, Vector3.new(3, 3, 3), pos + Vector3.new(0.4, 5.5, -0.3), C.crate, Enum.Material.WoodPlanks)
-		end
-	end
-	block(parent, Vector3.new(24, 3.5, 1.5), Vector3.new(-20, 1.75, 25), C.wall, Enum.Material.Concrete)
-	block(parent, Vector3.new(1.5, 3.5, 18), Vector3.new(20, 1.75, 30), C.wall, Enum.Material.Concrete)
-	block(parent, Vector3.new(18, 3.5, 1.5), Vector3.new(-40, 1.75, -45), C.wall, Enum.Material.Concrete)
-
-	-- environmental clutter: barrels, pipes, nets, puddles, rubble
-	for _ = 1, 26 do
-		local x, z = rng:NextNumber(-105, 105), rng:NextNumber(-105, 105)
-		local inCannery = x > -12 and x < 62 and z > -52 and z < 12
-		local inShallows = x < -70
-		if not inCannery and not inShallows then
-			local h = 3
-			block(parent, Vector3.new(h, 2.2, 2.2), CFrame.new(x, 1.5, z) * CFrame.Angles(0, 0, math.rad(90)), C.containers[rng:NextInteger(1, 4)], Enum.Material.CorrodedMetal, { Shape = Enum.PartType.Cylinder })
-		end
-	end
-	for i = 0, 5 do
-		block(parent, Vector3.new(70, 0.8, 0.8), CFrame.new(25, 12 + (i % 2) * 1.2, -48 + i * 10), C.metal, Enum.Material.CorrodedMetal, { Shape = Enum.PartType.Cylinder })
-	end
-	for _ = 1, 18 do
-		local x, z = rng:NextNumber(-60, 105), rng:NextNumber(-105, 105)
-		block(parent, Vector3.new(rng:NextNumber(4, 10), 0.05, rng:NextNumber(3, 8)), CFrame.new(x, 0.03, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), Color3.fromRGB(40, 48, 52), Enum.Material.Glass, {
-			Name = "Puddle",
-			Reflectance = 0.35,
-			Transparency = 0.25,
-			CanCollide = false,
-			CanQuery = false,
-			CastShadow = false,
-		})
-	end
-	for _ = 1, 30 do
-		local x, z = rng:NextNumber(-105, 105), rng:NextNumber(-105, 105)
-		local size = rng:NextNumber(0.6, 1.8)
-		block(parent, Vector3.new(size, size * 0.6, size), CFrame.new(x, size * 0.3, z) * CFrame.Angles(rng:NextNumber(0, 1), rng:NextNumber(0, 6.28), rng:NextNumber(0, 1)), C.wallDark, Enum.Material.Concrete, { CanCollide = false })
-	end
-	for _, pos in { Vector3.new(-40, 0, -98), Vector3.new(-95, 0, 60), Vector3.new(70, 0, 95) } do
-		block(parent, Vector3.new(6, 0.25, 5), CFrame.new(pos + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), Color3.fromRGB(110, 100, 70), Enum.Material.Fabric, { Name = "Nets", CanCollide = false })
-	end
-
-	-- lamp posts: light pools are dangerous (you are easier to see inside them)
-	lamp(parent, Vector3.new(0, 0, 70))
-	lamp(parent, Vector3.new(65, 0, -50))
-	lamp(parent, Vector3.new(-50, 0, -20))
-	lamp(parent, Vector3.new(40, 0, 18))
-
-	-- ground fog
-	for _, f in {
-		{ Vector3.new(-60, 1, 40), Vector3.new(60, 0, 60) },
-		{ Vector3.new(30, 1, 60), Vector3.new(80, 0, 60) },
-		{ Vector3.new(-60, 1, -70), Vector3.new(60, 0, 60) },
-		{ Vector3.new(85, 1, 0), Vector3.new(40, 0, 200) },
-		{ Vector3.new(15, 1, -85), Vector3.new(60, 0, 40) },
-	} do
-		fog(parent, f[1], f[2])
-	end
-end
-
 -- Lighting --------------------------------------------------------------------------------
 
 local atmosphere, colorCorrection
@@ -575,18 +393,94 @@ local function setupLighting()
 	bloom.Parent = Lighting
 end
 
+local FERRY_LIGHT = { clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+
+local function rgb(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+-- Map lighting preset, adjusted by the route's modifier (Nightfall turns it to night).
+local function applyPreset(L, modifier)
+	modifier = modifier or {}
+	local night = modifier.night == true
+	Lighting.ClockTime = night and 0.6 or L.clock
+	Lighting.Brightness = night and 1.4 or L.brightness
+	Lighting.Ambient = night and Color3.fromRGB(32, 36, 42) or rgb(L.ambient)
+	local boost = (modifier.ambientBoost or 0) * 50
+	local o = night and { 48, 54, 64 } or L.outdoor
+	Lighting.OutdoorAmbient = Color3.fromRGB(math.min(255, o[1] + boost), math.min(255, o[2] + boost), math.min(255, o[3] + boost))
+	Lighting.ColorShift_Top = rgb(L.shift)
+	if atmosphere then
+		local density = L.fog + ((modifier.fogDensity or 0.34) - 0.34)
+		TweenService:Create(atmosphere, TweenInfo.new(3), { Density = math.clamp(density, 0.12, 0.7) }):Play()
+		atmosphere.Haze = L.haze
+		atmosphere.Color = rgb(L.fogColor)
+	end
+	if colorCorrection then
+		colorCorrection.TintColor = rgb(L.tint)
+		colorCorrection.Saturation = L.saturation
+		colorCorrection.Contrast = L.contrast
+	end
+end
+
+function MapService.applyFerryLighting()
+	applyPreset(FERRY_LIGHT, nil)
+end
+
 function MapService.applyModifier(modifier)
-	if not atmosphere then
+	applyPreset(MapService.currentMap and MapService.currentMap.lighting or FERRY_LIGHT, modifier)
+end
+
+-- Builds a map (terrain + geometry) and loads its data. Rebuilt only when it changes.
+local mapFolder, currentMapId
+function MapService.loadMap(mapId, rng)
+	local def = MAP_MODULES[mapId] or MAP_MODULES.CanneryRow
+	if currentMapId == def.id and mapFolder and mapFolder.Parent then
 		return
 	end
-	TweenService:Create(atmosphere, TweenInfo.new(3), { Density = modifier.fogDensity or 0.34 }):Play()
-	local boost = modifier.ambientBoost or 0
-	local night = modifier.night == true
-	Lighting.ClockTime = night and 0.6 or 17.4
-	Lighting.Brightness = night and 1.4 or 2.2
-	local amb = night and 46 or 112
-	Lighting.OutdoorAmbient = Color3.fromRGB(math.min(255, amb + boost * 60), math.min(255, amb + 8 + boost * 60), math.min(255, amb + 16 + boost * 60))
-	Lighting.Ambient = night and Color3.fromRGB(30, 34, 40) or Color3.fromRGB(62, 68, 74)
+	if mapFolder then
+		mapFolder:Destroy()
+	end
+	MapKit.clearTerrain()
+	local world = Workspace:FindFirstChild("World")
+	mapFolder = Instance.new("Folder")
+	mapFolder.Name = "Map_" .. def.id
+	mapFolder.Parent = world
+	local data = def.build(mapFolder, Random.new(rng:NextInteger(1, 1e6)))
+	-- snap every gameplay position onto the actual ground (hills, house floors)
+	local function snap(v)
+		return Vector3.new(v.X, MapKit.ground(v.X, v.Z, { Workspace.Terrain, mapFolder }), v.Z)
+	end
+	local function snapList(list)
+		local out = {}
+		for i, v in list do
+			out[i] = snap(v)
+		end
+		return out
+	end
+	MapService.StartSpawns = snapList(data.StartSpawns)
+	MapService.ExtractionPos = snap(data.ExtractionPos)
+	MapService.LanternPos = snap(data.LanternPos)
+	MapService.SupplyCandidates = snapList(data.SupplyCandidates)
+	MapService.LootSpots = snapList(data.LootSpots)
+	MapService.EdgeSpawns = snapList(data.EdgeSpawns)
+	MapService.PatrolRoutes = {}
+	for i, route in data.PatrolRoutes do
+		MapService.PatrolRoutes[i] = snapList(route)
+	end
+	MapService.ContainerSpots = {}
+	for i, c in data.ContainerSpots do
+		MapService.ContainerSpots[i] = { pos = snap(c.pos), type = c.type, yaw = c.yaw }
+	end
+	MapService.Doorways = data.Doorways or {}
+	MapService.currentMap = def
+	currentMapId = def.id
+	Workspace:SetAttribute("MapName", def.name)
+end
+
+function MapService.mapName(mapId)
+	local def = MAP_MODULES[mapId]
+	return def and def.name or mapId
 end
 
 -- Encounter objects -----------------------------------------------------------------------
@@ -615,17 +509,12 @@ local function makePrompt(parent, action, object, hold)
 	return prompt
 end
 
--- Doorways (from the wall gaps): { hinge position, width, axis "x"|"z", swing sign }
-local DOORWAYS = {
-	{ Vector3.new(20, 0, -50), 8, "x" }, { Vector3.new(5, 0, 10), 8, "x" }, { Vector3.new(40, 0, 10), 8, "x" },
-	{ Vector3.new(-10, 0, -24), 8, "z" }, { Vector3.new(60, 0, -30), 8, "z" }, { Vector3.new(-30, 0, -100), 6, "z" },
-}
 local doors = {}
 
-local function makeDoor(parent, hinge, width, axis, closedNow)
-	local along = axis == "x" and Vector3.new(1, 0, 0) or Vector3.new(0, 0, 1)
-	local size = axis == "x" and Vector3.new(width, 8.6, 0.4) or Vector3.new(0.4, 8.6, width)
-	local closedCF = CFrame.new(hinge + along * (width / 2) + Vector3.new(0, 4.3, 0))
+local function makeDoor(parent, hinge, width, along, closedNow)
+	along = Vector3.new(along.X, 0, along.Z).Unit
+	local size = Vector3.new(width, 8.6, 0.4)
+	local closedCF = CFrame.fromMatrix(hinge + along * (width / 2) + Vector3.new(0, 4.3, 0), along, Vector3.new(0, 1, 0))
 	local hingeCF = CFrame.new(hinge + Vector3.new(0, 4.3, 0))
 	local openCF = hingeCF * CFrame.Angles(0, math.rad(95), 0) * hingeCF:ToObjectSpace(closedCF)
 	local door = block(parent, size, closedNow and closedCF or openCF, Color3.fromRGB(92, 78, 62), Enum.Material.WoodPlanks, { Name = "Door" })
@@ -660,7 +549,8 @@ function MapService.getLantern()
 	return lantern
 end
 
-function MapService.resetEncounter(modifier, rng, encounterType, pall)
+function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
+	MapService.loadMap(mapId or "CanneryRow", rng)
 	encounterFolder:ClearAllChildren()
 	table.clear(doors)
 	lantern = nil
@@ -700,8 +590,8 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall)
 	end
 
 	-- doors (some start closed)
-	for _, d in DOORWAYS do
-		makeDoor(encounterFolder, d[1], d[2], d[3], rng:NextNumber() < 0.5)
+	for _, d in MapService.Doorways do
+		makeDoor(encounterFolder, d.hinge, d.width, d.dir, rng:NextNumber() < 0.5)
 	end
 
 	-- scavenging: containers + loose items
@@ -806,8 +696,10 @@ function MapService.ferrySpawn(index)
 end
 
 function MapService.encounterSpawn(index)
-	local pos = MapService.StartSpawns[(index - 1) % #MapService.StartSpawns + 1]
-	return CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1))
+	local pos = MapService.StartSpawns[(index - 1) % #MapService.StartSpawns + 1] + Vector3.new(0, 3, 0)
+	local toward = MapService.ExtractionPos - pos
+	toward = Vector3.new(toward.X, 0, toward.Z)
+	return CFrame.lookAt(pos, pos + (toward.Magnitude > 1 and toward.Unit or Vector3.new(0, 0, -1)))
 end
 
 function MapService.init(registry)
@@ -824,16 +716,14 @@ function MapService.start()
 	ferry.Parent = world
 	buildFerry(ferry)
 
-	local cannery = Instance.new("Folder")
-	cannery.Name = "CanneryRow"
-	cannery.Parent = world
-	buildCannery(cannery)
+	MapKit.setAssets(Services.AssetService)
 
 	encounterFolder = Instance.new("Folder")
 	encounterFolder.Name = "Encounter"
 	encounterFolder.Parent = world
 
 	setupLighting()
+	MapService.applyFerryLighting()
 	MapService.setFerryRepairs({})
 	MapService.ready = true
 

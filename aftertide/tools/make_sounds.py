@@ -411,6 +411,34 @@ def stinger_clear():
     return normalise(reverb(fft_filter(chord, high=2500) * env(len(x), 0.6, 1.4), 3.0, 0.5))
 
 
+def radio_callout():
+    """Handheld radio: squelch, a burst of garbled band-limited chatter, squelch."""
+    s = 1.6
+    squelch = fft_filter(noise(0.12), low=800, high=5000) * env(int(SR * 0.12), 0.002, 0.05)
+    chatter = np.zeros(int(SR * 1.1))
+    pos = 0.0
+    while pos < 1.0:
+        d = rng.uniform(0.06, 0.16)
+        f0 = rng.uniform(140, 220)
+        syl = np.tanh(tone(lambda x: f0 * (1 + 0.1 * np.sin(2 * np.pi * 6 * x)), d, "saw") * 2) * np.sin(np.pi * np.linspace(0, 1, int(SR * d)))
+        syl = sweep_filter(syl + noise(d) * 0.3, rng.uniform(700, 1100), rng.uniform(900, 1500), 0.4)
+        chatter += at(syl, pos, 1.1)
+        pos += d + rng.uniform(0.01, 0.06)
+    chatter = fft_filter(chatter + noise(1.1) * 0.08, low=400, high=3200)
+    x = mix(at(squelch, 0.0, s), at(np.tanh(chatter * 3) * 0.8, 0.12, s), at(squelch * 0.8, 1.3, s))
+    return normalise(x, 0.8)
+
+
+def bell_strike():
+    """A struck iron bell: inharmonic partials with long decay (the Tidebound signal)."""
+    s = 5.0
+    partials = [(1.0, 1.0, 2.6), (2.76, 0.6, 1.8), (5.4, 0.35, 1.0), (8.9, 0.2, 0.6), (0.5, 0.4, 3.2)]
+    f0 = 330.0
+    x = sum(tone(f0 * r, s) * env(int(SR * s), 0.002, d) * a for r, a, d in partials)
+    clank = fft_filter(noise(0.05), low=2000, high=9000) * env(int(SR * 0.05), 0.0005, 0.01)
+    return normalise(reverb(mix(x, clank), 2.5, 0.35, 5000))
+
+
 def ui_tick():
     s = 0.12
     return normalise(tone(1800, s) * env(int(SR * s), 0.0005, 0.012) + fft_filter(noise(s), low=3000) * env(int(SR * s), 0.0002, 0.004) * 0.3, 0.6)
@@ -463,6 +491,8 @@ SOUNDS = {
     "Music_Tension": music_tension,
     "Stinger_Spotted": stinger_spotted,
     "Stinger_Clear": stinger_clear,
+    "Radio_Callout": radio_callout,
+    "Bell_Strike": bell_strike,
     "Ui_Tick": ui_tick,
     "Ui_Confirm": ui_confirm,
 }

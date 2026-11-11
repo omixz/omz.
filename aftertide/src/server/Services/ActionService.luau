@@ -521,13 +521,8 @@ local function heal(player, info)
 	end)
 end
 
-local function toggleTorch(player, char)
-	local head = char:FindFirstChild("Head")
-	local torch = head and head:FindFirstChild("Torch")
-	if torch then
-		torch.Enabled = not torch.Enabled
-		char:SetAttribute("Torch", torch.Enabled)
-	end
+local function toggleTorch(_player, char)
+	Services.CharacterService.toggleFlashlight(char)
 end
 
 local function craft(player, info, recipeId)

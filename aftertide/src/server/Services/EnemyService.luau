@@ -14,6 +14,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local EnemyConfig = require(Shared.Config.Enemies)
+local AssetIds = require(Shared.Config.AssetIds)
+local MeshKit = require(Shared.MeshKit)
 local Geometry = require(Shared.Util.Geometry)
 local Sfx = require(Shared.Util.Sfx)
 local Net = require(Shared.Net)
@@ -49,13 +51,15 @@ local function buildModel(position, typeName, cfg)
 	model.Name = "Hushed_" .. typeName
 
 	local legLen = 1.6 * body.legs
-	local hipHeight = (legLen * 2 - 0.2) * k
+	-- legs end 0.2 + 2*legLen below the root centre; the root's bottom is 1 below it
+	local hipHeight = (legLen * 2 - 0.8) * k
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = Vector3.new(2, 2, 1) * k
 	root.Transparency = 1
 	root.CanCollide = true
 	root.CFrame = CFrame.new(position + Vector3.new(0, hipHeight + 1 * k, 0))
+	root.Name = "HumanoidRootPart"
 	root.Parent = model
 	model.PrimaryPart = root
 
@@ -347,6 +351,85 @@ local function hum(e, now)
 	Services.PerceptionService.emitNoise(e.root.Position, h.radius, "hum", e.target)
 end
 
+-- Human combat --------------------------------------------------------------------------------
+
+local shotParams = RaycastParams.new()
+shotParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function humanAttack(e, info, dist, seen, now)
+	local cfg, atk = e.cfg, e.cfg.attack
+	if now - (e.lastSeen[e.target] or 0) > cfg.loseSightTime then
+		e.suspicion[e.target] = 0.6
+		e.target = nil
+		e.searchOrigin = e.lastKnown
+		setState(e, "Search")
+		return
+	end
+	if atk.kind == "melee" then
+		if dist <= atk.range then
+			stop(e)
+			face(e, info.root.Position)
+			if now >= (e.nextShotAt or 0) then
+				e.nextShotAt = now + atk.fireDelay
+				e.model:SetAttribute("AttackAt", workspace:GetServerTimeNow())
+				task.delay(0.25, function()
+					if not e.dead and info.root.Parent and (info.root.Position - e.root.Position).Magnitude <= atk.range + 1 then
+						Services.CharacterService.damage(info.player, atk.damage, e.root.Position)
+						Sfx.at(info.root.Position, "MeleeHit", 0.7, 50)
+					end
+				end)
+				Sfx.at(e.root.Position, "Swing", 0.6, 40)
+			end
+		elseif seen then
+			e.humanoid.WalkSpeed = cfg.chaseSpeed
+			e.humanoid:MoveTo(info.root.Position)
+		else
+			moveTo(e, e.lastKnown, cfg.chaseSpeed)
+		end
+		return
+	end
+	-- ranged: hold position and fire while in sight and range, otherwise close in
+	if seen and dist <= atk.range then
+		stop(e)
+		face(e, info.root.Position)
+		e.model:SetAttribute("Aiming", true)
+		if now >= (e.nextShotAt or 0) then
+			e.nextShotAt = now + atk.fireDelay * (0.8 + rng:NextNumber() * 0.5)
+			local muzzle = e.head.Position + e.root.CFrame.LookVector * 1.2 - Vector3.new(0, 0.4, 0)
+			local char = info.char
+			local chance = atk.accuracy * math.clamp(1.15 - dist / atk.range * 0.7, 0.2, 1)
+			if char:GetAttribute("Stance") == "Crouch" then
+				chance *= 0.75
+			end
+			if info.root.AssemblyLinearVelocity.Magnitude > 14 then
+				chance *= 0.7
+			end
+			local aim = info.root.Position + Vector3.new(0, 0.8, 0)
+			local hit = rng:NextNumber() < chance
+			if not hit then
+				aim += Vector3.new(rng:NextNumber(-3, 3), rng:NextNumber(-1, 2), rng:NextNumber(-3, 3))
+			end
+			shotParams.FilterDescendantsInstances = { folder }
+			local result = Workspace:Raycast(muzzle, (aim - muzzle).Unit * (atk.range + 10), shotParams)
+			local hitPos = result and result.Position or aim
+			local hitPlayer = result and result.Instance:IsDescendantOf(char)
+			if hitPlayer then
+				Services.CharacterService.damage(info.player, atk.damage, nil)
+			end
+			Net.notifyAll("Shot", { shooter = 0, weapon = atk.weapon, from = muzzle, hits = { { position = hitPos, kind = hitPlayer and "none" or "world" } }, quiet = atk.noise < 20 })
+			Services.PerceptionService.emitNoise(e.root.Position, atk.noise, "gunshot", nil)
+		end
+	else
+		e.model:SetAttribute("Aiming", false)
+		if seen then
+			e.humanoid.WalkSpeed = cfg.chaseSpeed
+			e.humanoid:MoveTo(info.root.Position)
+		else
+			moveTo(e, e.lastKnown, cfg.chaseSpeed)
+		end
+	end
+end
+
 -- Brain -----------------------------------------------------------------------------------
 
 local function update(e, dt, now, active)
@@ -397,6 +480,12 @@ local function update(e, dt, now, active)
 		e.lastSeen[bestPlayer] = e.lastSeen[bestPlayer] or now
 		setState(e, "Chase")
 		Services.MatchService.onSpotted(bestPlayer, e)
+		if cfg.callout and now > (e.nextCallout or 0) then
+			-- radio / bell: everyone nearby converges on the spotted player
+			e.nextCallout = now + 10
+			Sfx.at(e.root.Position, cfg.callout, 0.9, 140)
+			Services.PerceptionService.emitNoise(e.lastKnown, 70, "callout", bestPlayer)
+		end
 	end
 
 	if e.state == "Chase" then
@@ -412,6 +501,11 @@ local function update(e, dt, now, active)
 				e.lastKnown = info.root.Position
 			end
 			local dist = (info.root.Position - e.root.Position).Magnitude
+			if cfg.attack then
+				humanAttack(e, info, dist, seenRecently, now)
+				publishSuspicion(e, active)
+				return
+			end
 			if dist <= cfg.grabRange and now >= e.recoverUntil then
 				e.recoverUntil = now + cfg.grabRecover
 				if not Services.ActionService.trySpikeCounter(info.player, e) then
@@ -497,6 +591,15 @@ function EnemyService.spawn(typeName, position, opts)
 	opts = opts or {}
 	local cfg = EnemyConfig.Types[typeName] or EnemyConfig.Types.Drifter
 	local model, humanoid, root, head = buildModel(position, typeName, cfg)
+	local kit = (cfg.human and "Faction_" or "Hushed_") .. typeName
+	if Services.AssetService.hasKit(kit) then
+		pcall(MeshKit.applyRig, model, Services.AssetService.meta(kit), Services.AssetService.part, "enemy", AssetIds.YawFix)
+	end
+	if cfg.flashlight then
+		Services.CharacterService.addFlashlight(model, "Torso")
+		Services.CharacterService.setFlashlight(model, true)
+	end
+	model:SetAttribute("Human", cfg.human == true)
 	model.Parent = folder
 	pcall(function()
 		root:SetNetworkOwner(nil)
@@ -663,6 +766,23 @@ function EnemyService.disperse(e, byPlayer)
 	e.model:SetAttribute("State", "Dispersed")
 	e.model:SetAttribute("HP", 0)
 	e.root.Anchored = true
+	if e.cfg.human then
+		-- people are knocked down, not turned to salt
+		e.model:SetAttribute("State", "Down")
+		Services.CharacterService.setFlashlight(e.model, false)
+		Services.MatchService.onEnemyKilled(byPlayer, e)
+		local model = e.model
+		task.delay(8, function()
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then
+					TweenService:Create(part, TweenInfo.new(1.5), { Transparency = 1 }):Play()
+				end
+			end
+			task.wait(1.6)
+			model:Destroy()
+		end)
+		return
+	end
 
 	local attachment = Instance.new("Attachment")
 	attachment.Position = Vector3.new(0, 0.8, 0)

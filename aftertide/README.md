@@ -25,7 +25,8 @@ Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-p
 | 5 | [Roadmap & first prototype](docs/05-roadmap-and-prototype.md) | Stage-by-stage plan with exit criteria, decisions made, and what Slice 0 includes |
 | 6 | [Play, publish & grow for $0](docs/06-publishing.md) | Studio setup, publishing, maturity form, developer products, free assets, launch checklist |
 | 7 | [Realistic characters & graphics](docs/07-characters-and-graphics.md) | Free pipeline for realistic crew models, Cinematic/Balanced/Performance presets, PlayStation/Xbox |
-| 8 | [Audio](docs/08-audio.md) | The original synthesised sound pack (42 sounds) and how to upload it |
+| 8 | [Audio](docs/08-audio.md) | The original synthesised sound pack (44 sounds) and how to upload it |
+| 9 | [Models, factions & maps](docs/09-models-factions-maps.md) | The generated 3D model packs, uploading them (Open Cloud), Harbour Watch & Tidebound, the three maps |
 
 ## Code layout
 
@@ -42,6 +43,8 @@ Designers mostly touch `src/shared/Config/`: characters, items, enemies, modifie
 - [`tools/build_place.py`](tools/build_place.py): rebuilds `build/Aftertide.rbxlx` from `src/`
   (or use Rojo with `default.project.json`).
 - [`tools/check_luau.py`](tools/check_luau.py): static checks (block balance, cross-module calls).
+- [`tools/build_assets.py`](tools/build_assets.py): sculpts the original 3D packs into `assets/*.glb`.
+- [`tools/upload_assets.py`](tools/upload_assets.py): uploads models + sounds via Open Cloud and fills in the IDs.
 - [`tools/revenue_model.py`](tools/revenue_model.py): the revenue model behind doc 3.
 
 After changing anything in `src/`, run `python3 tools/check_luau.py && python3 tools/build_place.py`.

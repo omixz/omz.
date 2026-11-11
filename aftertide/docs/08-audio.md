@@ -26,7 +26,7 @@ Monthly audio upload limits depend on whether your account is ID-verified; check
 Creator Hub if Studio refuses an upload.
 
 **Shortcut:** if you create an Open Cloud API key (Creator Hub → Open Cloud → API Keys,
-permission *Assets: Read & Write*), I can upload all 42 and fill in the IDs for you.
+permission *Assets: Read & Write*), `tools/upload_assets.py` uploads all 44 and fills in the IDs (see [doc 9](09-models-factions-maps.md)).
 
 ## Changing a sound
 

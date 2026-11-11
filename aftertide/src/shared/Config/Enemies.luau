@@ -58,6 +58,44 @@ return {
 			hum = { radius = 85, cooldown = 8 }, chaseSpeed = 15, salvage = 4,
 			body = { torso = 1, arms = 1.15, legs = 1.05, hunch = 4, head = "disc", crust = 8, rags = 2, spines = 4, maw = true },
 		}),
+		-- THE HARBOUR WATCH: ex-port-authority militia. Rifles, flashlights, radios.
+		WatchRifleman = variant({
+			hp = 110, scale = 1, color = Color3.fromRGB(70, 78, 82), human = true, faction = "Watch",
+			patrolSpeed = 6, investigateSpeed = 10, chaseSpeed = 13.5, sightRange = 95, fovDeg = 100,
+			suspicionGain = 1.0, hearingMult = 1.0, flashlight = true, callout = "Radio_Callout",
+			attack = { kind = "ranged", weapon = "rifle", range = 85, damage = 18, fireDelay = 1.7, accuracy = 0.55, noise = 100 },
+			headMultScale = 1.3, salvage = 7, grabDamage = 0,
+			body = { torso = 1, arms = 1, legs = 1, hunch = 0, head = "round", crust = 0, rags = 0, spines = 0, maw = false },
+			gait = "soldier",
+		}),
+		WatchScout = variant({
+			hp = 85, scale = 0.97, color = Color3.fromRGB(78, 84, 80), human = true, faction = "Watch",
+			patrolSpeed = 7, investigateSpeed = 11, chaseSpeed = 15, sightRange = 85, fovDeg = 110,
+			flashlight = true, callout = "Radio_Callout",
+			attack = { kind = "ranged", weapon = "revolver", range = 55, damage = 12, fireDelay = 0.9, accuracy = 0.5, noise = 75 },
+			headMultScale = 1.3, salvage = 5, grabDamage = 0,
+			body = { torso = 0.95, arms = 1, legs = 1, hunch = 0, head = "round", crust = 0, rags = 0, spines = 0, maw = false },
+			gait = "soldier",
+		}),
+		-- THE TIDEBOUND: a cult that worships the Pall. Silent bows, hooks, a struck bell.
+		TideboundArcher = variant({
+			hp = 80, scale = 0.97, color = Color3.fromRGB(214, 206, 188), human = true, faction = "Tidebound",
+			patrolSpeed = 6, investigateSpeed = 10, chaseSpeed = 14, sightRange = 90, fovDeg = 105, hearingMult = 1.2,
+			callout = "Bell_Strike",
+			attack = { kind = "ranged", weapon = "bow", range = 75, damage = 24, fireDelay = 2.3, accuracy = 0.6, noise = 6 },
+			headMultScale = 1.3, salvage = 5, grabDamage = 0,
+			body = { torso = 0.95, arms = 1, legs = 1, hunch = 4, head = "round", crust = 0, rags = 0, spines = 0, maw = false },
+			gait = "cultist",
+		}),
+		TideboundHook = variant({
+			hp = 100, scale = 1.03, color = Color3.fromRGB(196, 188, 170), human = true, faction = "Tidebound",
+			patrolSpeed = 6.5, investigateSpeed = 12, chaseSpeed = 17.5, sightRange = 80, fovDeg = 110, hearingMult = 1.2,
+			callout = "Bell_Strike",
+			attack = { kind = "melee", range = 4.2, damage = 22, fireDelay = 1.15 },
+			headMultScale = 1.3, salvage = 5, grabDamage = 0,
+			body = { torso = 1.05, arms = 1, legs = 1, hunch = 8, head = "round", crust = 0, rags = 0, spines = 0, maw = false },
+			gait = "cultist",
+		}),
 		-- The last stage: a walking salt reef. Can't be shoved or Quieted.
 		Tidewalker = variant({
 			hp = 700, scale = 1.45, color = Color3.fromRGB(38, 36, 34),

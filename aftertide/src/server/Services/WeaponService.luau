@@ -132,7 +132,10 @@ function WeaponService.onSpawn(player, char)
 	end
 	models[player] = {}
 	for slot, w in Services.InventoryService.weaponSlots(player) do
-		local model = WeaponModels.build(w.id)
+		local kit = "Weapon_" .. w.id
+		local run = Services.CharacterService.getSession(player).run
+		local skip = (w.id == "rifle" and not (run.weapons.rifle and run.weapons.rifle.scope)) and { Scope = true } or nil
+		local model = Services.AssetService.hasKit(kit) and WeaponModels.build(w.id, Services.AssetService.part, Services.AssetService.meta(kit), skip) or WeaponModels.build(w.id)
 		if model then
 			model.Name = "Weapon_" .. slot
 			model:PivotTo(char:GetPivot())

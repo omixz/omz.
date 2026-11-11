@@ -161,7 +161,7 @@ end
 local function generateOptions()
 	local options = {}
 	if run.index > Encounters.RunLength then
-		table.insert(options, { type = "Finale", name = Encounters.Finale.name, modifier = rollModifier().id, bonus = 0 })
+		table.insert(options, { type = "Finale", name = Encounters.Finale.name, modifier = rollModifier().id, bonus = 0, map = "CanneryRow", mapName = "Cannery Row", factionName = "The Hushed" })
 	else
 		local types = { "Salvage", "LanternWatch", "Drift" }
 		for i = #types, 2, -1 do
@@ -169,13 +169,31 @@ local function generateOptions()
 			types[i], types[j] = types[j], types[i]
 		end
 		local count = anyoneHas("radio") and 3 or 2
+		local maps = table.clone(Services.MapService.MapIds)
+		for i = #maps, 2, -1 do
+			local j = rng:NextInteger(1, i)
+			maps[i], maps[j] = maps[j], maps[i]
+		end
+		local factionIds = {}
+		for id in Encounters.Factions do
+			table.insert(factionIds, id)
+		end
+		table.sort(factionIds)
 		for i = 1, count do
 			local t = types[i]
+			local faction = nil
+			if run.index >= 2 and rng:NextNumber() < Encounters.FactionChance and t ~= "LanternWatch" then
+				faction = factionIds[rng:NextInteger(1, #factionIds)]
+			end
 			table.insert(options, {
 				type = t,
 				name = Encounters.Types[t].name,
 				modifier = rollModifier().id,
 				bonus = ({ 0, 5, 10 })[rng:NextInteger(1, 3)],
+				map = maps[(i - 1) % #maps + 1],
+				mapName = Services.MapService.mapName(maps[(i - 1) % #maps + 1]),
+				faction = faction,
+				factionName = faction and Encounters.Factions[faction].name or "The Hushed",
 			})
 		end
 	end
@@ -293,6 +311,10 @@ local function enemyBudget()
 end
 
 local function weightsForPall()
+	local faction = enc and enc.option and enc.option.faction
+	if faction and Encounters.Factions[faction] then
+		return Encounters.Factions[faction].weights
+	end
 	local level = math.clamp(run.pall, 1, 4)
 	return Encounters.TypeWeights[level]
 end
@@ -359,7 +381,7 @@ function MatchService.beginEncounter(option)
 
 	Services.EnemyService.clear()
 	Services.PerceptionService.clearFog()
-	Services.MapService.resetEncounter(MatchService.modifier, rng, kind, run.pall)
+	Services.MapService.resetEncounter(MatchService.modifier, rng, kind, run.pall, option.map)
 	Services.MapService.applyModifier(MatchService.modifier)
 
 	local i = 0
@@ -389,7 +411,8 @@ function MatchService.beginEncounter(option)
 	setState("Encounter")
 	publish()
 	Net.notifyAll("EncounterStart", {
-		name = def.name,
+		name = def.name .. " · " .. (option.mapName or ""),
+		faction = option.factionName,
 		objective = enc.objective,
 		modifierName = MatchService.modifier.name,
 		modifierDesc = MatchService.modifier.desc,
@@ -564,7 +587,7 @@ function MatchService.leaveResults()
 	enc = nil
 	Services.MapService.cleanupEncounter()
 	MatchService.modifier = Modifiers.None
-	Services.MapService.applyModifier(Modifiers.None)
+	Services.MapService.applyFerryLighting()
 	if run then
 		generateOptions()
 		setState("Planning")

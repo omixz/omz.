@@ -44,6 +44,9 @@ local IDS = {
 	Tidewalker_Groan = "",
 	Hum = "",
 	Disperse = "",
+	-- factions
+	Radio_Callout = "",
+	Bell_Strike = "",
 	-- ambience & music
 	Amb_Wind = "",
 	Amb_Sea = "",

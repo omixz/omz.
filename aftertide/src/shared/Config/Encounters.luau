@@ -31,6 +31,12 @@ return {
 	PerPall = 1,
 	PerExtraPlayer = 2,
 	MaxEnemies = 16,
+	-- Who holds the ground on a route. Factions appear from the second stop.
+	Factions = {
+		Watch = { name = "Harbour Watch", desc = "Armed militia patrols with flashlights and radios.", weights = { WatchRifleman = 3, WatchScout = 2, Drifter = 1 } },
+		Tidebound = { name = "The Tidebound", desc = "Cultists with silent bows and hooks. Listen for the bell.", weights = { TideboundHook = 3, TideboundArcher = 2, Drifter = 1 } },
+	},
+	FactionChance = 0.45,
 	-- Enemy type unlocks by Pall level (weights).
 	TypeWeights = {
 		[1] = { Drifter = 4, Rusher = 2 },

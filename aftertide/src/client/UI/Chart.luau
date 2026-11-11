@@ -35,7 +35,7 @@ local function rebuild()
 	for i, option in options do
 		local def = option.type == "Finale" and Encounters.Finale or Encounters.Types[option.type]
 		local mod = modifierById(option.modifier)
-		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 108), BackgroundColor3 = C.panelHi, Parent = list })
+		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 124), BackgroundColor3 = C.panelHi, Parent = list })
 		Theme.padding(10).Parent = card
 		Theme.heading({ Text = string.upper(option.name), TextSize = 20, Size = UDim2.new(1, -170, 0, 24), Parent = card })
 		local desc = def and def.desc or ""
@@ -44,9 +44,9 @@ local function rebuild()
 		end
 		Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 26), Size = UDim2.new(1, -170, 0, 34), TextSize = 13, Parent = card })
 		Theme.label({
-			Text = ("Conditions: %s · %s%s"):format(mod.name, mod.desc, (option.bonus or 0) > 0 and ("  ·  +" .. option.bonus .. " Salvage bonus") or ""),
+			Text = ("%s  ·  %s\nConditions: %s · %s%s"):format(option.mapName or "", option.factionName or "The Hushed", mod.name, mod.desc, (option.bonus or 0) > 0 and ("  ·  +" .. option.bonus .. " Salvage") or ""),
 			Position = UDim2.new(0, 0, 0, 62),
-			Size = UDim2.new(1, -170, 0, 30),
+			Size = UDim2.new(1, -170, 0, 44),
 			TextSize = 12,
 			TextColor3 = C.salt,
 			Parent = card,

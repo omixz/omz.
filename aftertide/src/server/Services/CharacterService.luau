@@ -19,6 +19,8 @@ local Net = require(Shared.Net)
 local Geometry = require(Shared.Util.Geometry)
 local Rigs = require(Shared.Config.Rigs)
 local BodyBuilder = require(Shared.BodyBuilder)
+local MeshKit = require(Shared.MeshKit)
+local AssetIds = require(Shared.Config.AssetIds)
 
 local CharacterService = {}
 local Services
@@ -200,22 +202,21 @@ local function setupCharacter(player, char, session, isCustomRig)
 		if animate then
 			animate:Destroy()
 		end
-		local ok, err = pcall(BodyBuilder.build, char, Characters.List[session.charId])
+		local kit = "Crew_" .. session.charId
+		local ok, err
+		if Services.AssetService.hasKit(kit) then
+			-- sculpted, realistic crew model fitted onto the skeleton
+			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix)
+		else
+			ok, err = pcall(BodyBuilder.build, char, Characters.List[session.charId])
+		end
 		if not ok then
 			warn("[CharacterService] body build failed: " .. tostring(err))
 		end
 		char:SetAttribute("Procedural", true)
 	end
 
-	local torch = Instance.new("SpotLight")
-	torch.Name = "Torch"
-	torch.Angle = 48
-	torch.Range = 70
-	torch.Brightness = 3.2
-	torch.Color = Color3.fromRGB(255, 236, 205)
-	torch.Shadows = true
-	torch.Enabled = false
-	torch.Parent = head
+	CharacterService.addFlashlight(char)
 
 	char:SetAttribute("HP", session.hp)
 	char:SetAttribute("MaxHP", Game.MaxHP)
@@ -287,6 +288,64 @@ function CharacterService.spawn(player, cframe, resetInventory)
 	return char
 end
 
+-- A flashlight clipped to the left chest strap: a shadow-casting spotlight plus a soft
+-- visible beam (light shaft) through the fog. Same rig is used by human enemies.
+function CharacterService.addFlashlight(char, bodyName)
+	local body = char:FindFirstChild(bodyName or "UpperTorso") or char:FindFirstChild("Torso")
+	if not body or body:FindFirstChild("FlashlightMount") then
+		return
+	end
+	local mount = Instance.new("Attachment")
+	mount.Name = "FlashlightMount"
+	mount.Position = Vector3.new(-body.Size.X * 0.22, body.Size.Y * 0.18, -body.Size.Z * 0.5 - 0.15)
+	mount.Parent = body
+	local light = Instance.new("SpotLight")
+	light.Name = "Flashlight"
+	light.Angle = 42
+	light.Range = 75
+	light.Brightness = 3.4
+	light.Color = Color3.fromRGB(255, 244, 222)
+	light.Shadows = true
+	light.Face = Enum.NormalId.Front
+	light.Enabled = false
+	light.Parent = mount
+	local far = Instance.new("Attachment")
+	far.Name = "FlashlightFar"
+	far.Position = mount.Position + Vector3.new(0, -0.6, -24)
+	far.Parent = body
+	local beam = Instance.new("Beam")
+	beam.Name = "FlashlightBeam"
+	beam.Attachment0 = mount
+	beam.Attachment1 = far
+	beam.Width0 = 0.5
+	beam.Width1 = 9
+	beam.FaceCamera = true
+	beam.LightEmission = 0.6
+	beam.LightInfluence = 0
+	beam.Color = ColorSequence.new(Color3.fromRGB(255, 246, 228))
+	beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.82), NumberSequenceKeypoint.new(0.6, 0.94), NumberSequenceKeypoint.new(1, 1) })
+	beam.Segments = 1
+	beam.Enabled = false
+	beam.Parent = body
+end
+
+function CharacterService.setFlashlight(char, on)
+	local light = char:FindFirstChild("Flashlight", true)
+	local beam = char:FindFirstChild("FlashlightBeam", true)
+	if light then
+		light.Enabled = on
+	end
+	if beam then
+		beam.Enabled = on
+	end
+	char:SetAttribute("Torch", on)
+end
+
+function CharacterService.toggleFlashlight(char)
+	local light = char:FindFirstChild("Flashlight", true)
+	CharacterService.setFlashlight(char, not (light and light.Enabled))
+end
+
 function CharacterService.heal(player, amount)
 	local session = sessions[player]
 	local char = player.Character
@@ -351,11 +410,7 @@ function CharacterService.down(player)
 	char:SetAttribute("HP", 0)
 	char:SetAttribute("BleedOutAt", Workspace:GetServerTimeNow() + bleed)
 	char:SetAttribute("Torch", false)
-	local head = char:FindFirstChild("Head")
-	local torch = head and head:FindFirstChild("Torch")
-	if torch then
-		torch.Enabled = false
-	end
+	CharacterService.setFlashlight(char, false)
 
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if root then

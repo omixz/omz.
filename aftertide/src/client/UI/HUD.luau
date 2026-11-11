@@ -372,7 +372,7 @@ function HUD.update(dt)
 	updateCompass(camera)
 	objectiveLine.Text = objectiveText(matchState, inEncounter)
 	if inEncounter then
-		locationLabel.Text = ("CANNERY ROW\n%s · PALL %d"):format(string.upper(R:GetAttribute("ModifierName") or ""), R:GetAttribute("Pall") or 1)
+		locationLabel.Text = ("%s\n%s · PALL %d"):format(string.upper(Workspace:GetAttribute("MapName") or ""), string.upper(R:GetAttribute("ModifierName") or ""), R:GetAttribute("Pall") or 1)
 	elseif char then
 		locationLabel.Text = R:GetAttribute("RunActive") and player:GetAttribute("InCrossing") and ("THE MERIDIAN\nSTOP %d OF %d · SALVAGE %d"):format(R:GetAttribute("RunIndex") or 1, R:GetAttribute("RunLength") or 4, player:GetAttribute("Salvage") or 0) or ("THE MERIDIAN\nSCRIP %d"):format(player:GetAttribute("Scrip") or 0)
 	else

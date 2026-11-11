@@ -73,10 +73,33 @@ local function prep(part)
 	part.BottomSurface = Enum.SurfaceType.Smooth
 end
 
-function WeaponModels.build(weaponId)
+-- getPart / meta are optional: when the sculpted weapon meshes are loaded they replace the
+-- part-built placeholder (grip + muzzle attachment stay the same).
+function WeaponModels.build(weaponId, getPart, meta, skipLayers)
 	local spec = SPECS[weaponId]
 	if not spec then
 		return nil
+	end
+	if getPart and meta then
+		local model = Instance.new("Model")
+		model.Name = "Weapon_" .. weaponId
+		local grip = Instance.new("Part")
+		grip.Name = "Grip"
+		grip.Size = Vector3.new(0.2, 0.2, 0.2)
+		grip.Transparency = 1
+		grip.CFrame = CFrame.new()
+		prep(grip)
+		grip.Parent = model
+		model.PrimaryPart = grip
+		local MeshKit = require(script.Parent.MeshKit)
+		if MeshKit.attachToGrip(meta, getPart, grip, skipLayers) then
+			local muzzle = Instance.new("Attachment")
+			muzzle.Name = "Muzzle"
+			muzzle.Position = spec.muzzle
+			muzzle.Parent = grip
+			return model
+		end
+		model:Destroy()
 	end
 	local model = Instance.new("Model")
 	model.Name = "Weapon_" .. weaponId

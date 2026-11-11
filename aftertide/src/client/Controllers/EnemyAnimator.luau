@@ -24,6 +24,8 @@ local GAITS = {
 	rush = { freq = 2.9, stride = 0.95, armSwing = 0.9, armHang = 0.25, lean = 0.45, twitch = 0.6, limp = 0.1 },
 	feel = { freq = 1.4, stride = 0.45, armSwing = 0.08, armHang = 1.1, lean = 0.05, twitch = 0.45, limp = 0.0 },
 	heavy = { freq = 1.0, stride = 0.5, armSwing = 0.35, armHang = 0.25, lean = 0.3, twitch = 0.1, limp = 0.15 },
+	soldier = { freq = 1.9, stride = 0.6, armSwing = 0.08, armHang = 0.7, lean = 0.06, twitch = 0, limp = 0 },
+	cultist = { freq = 1.8, stride = 0.55, armSwing = 0.3, armHang = 0.15, lean = 0.12, twitch = 0.04, limp = 0 },
 }
 
 local function marker(model, head)
@@ -141,8 +143,9 @@ local function animate(model, rig, dt, now)
 		rig.twitchAt = now + (heard and 0.15 or 0.6 + math.random() * 1.8)
 	end
 
-	-- spasms: sudden violent jerks of the whole upper body
-	if now > rig.spasmAt then
+	-- spasms: sudden violent jerks of the whole upper body (the Hushed only)
+	local human = model:GetAttribute("Human") == true
+	if not human and now > rig.spasmAt then
 		rig.spasm = 1
 		rig.spasmAt = now + (model:GetAttribute("Gait") == "rush" and 1.2 or 2.5) + math.random() * 4
 		rig.spasmDir = (math.random() < 0.5) and -1 or 1
@@ -171,10 +174,22 @@ local function animate(model, rig, dt, now)
 		lean, roll = -0.25, wobble
 		lArm, rArm = 0.6 + wobble, 0.5 - wobble
 		lHip, rHip, lKnee, rKnee = -0.15, 0.2, -0.3, -0.35
-	elseif state == "Quieted" or state == "Dispersed" then
+	elseif state == "Quieted" or state == "Dispersed" or state == "Down" then
 		lean, roll = 0.5, 0.1
 		lHip, rHip, lKnee, rKnee = 0.9, 0.85, -1.6, -1.5
 		lArm, rArm = 0.1, 0.05
+	elseif human then
+		if model:GetAttribute("Aiming") then
+			lArm, rArm, elbow = 1.45, 1.55, 0.2 -- weapon raised
+			lean = 0.02
+		end
+		local attackAt = model:GetAttribute("AttackAt")
+		local since = attackAt and (workspace:GetServerTimeNow() - attackAt) or 99
+		if since < 0.45 then
+			local k = since / 0.45
+			rArm = k < 0.35 and (2.6 * k / 0.35) or (2.6 - (k - 0.35) / 0.65 * 2.4)
+			lean = 0.25 * math.sin(k * math.pi)
+		end
 	elseif chasing then
 		-- arms reach toward their prey
 		lArm = math.max(lArm, 1.1 + math.sin(p) * 0.25)
