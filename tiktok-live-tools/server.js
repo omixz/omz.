@@ -10,6 +10,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
 import { Server } from 'socket.io';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -290,10 +291,35 @@ const ruleRuntime = new Map(); // ruleId -> { lastFired, likeBucket }
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+// destroyUpgrade:false so websocket upgrades for /cam (the Minecraft camera) reach the proxy below
+const io = new Server(server, { cors: { origin: '*' }, destroyUpgrade: false });
+
+// The Minecraft camera (prismarine-viewer in minecraft/bridge.js) is served under the
+// same address as everything else at /cam/, so one https:// address works everywhere.
+const camProxy = createProxyMiddleware({
+  target: `http://127.0.0.1:${Number(process.env.MC_VIEW_PORT) || 3007}`,
+  pathFilter: '/cam',
+  ws: true,
+  logger: { info() {}, warn() {}, error() {} },
+  on: { error: (_err, _req, res) => res?.writeHead && !res.headersSent && (res.writeHead(502), res.end('Minecraft camera is starting…')) },
+});
+app.use(camProxy);
+server.on('upgrade', (req, socket, head) => {
+  if (req.url?.startsWith('/cam/')) camProxy.upgrade(req, socket, head);
+});
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 app.get('/healthz', (_req, res) => res.json({ ok: true, status: status.state }));
+
+// Read-only status for the launcher page (no secrets), readable from any site.
+app.get('/api/status', (_req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.json({
+    tiktok: { state: status.state, username: settings.username },
+    minecraft: mcStatus && { online: mcStatus.online, bot: mcStatus.bot, level: mcStatus.level, round: (mcStatus.deaths || 0) + 1, alive: mcStatus.alive },
+    stream: streamState.state,
+  });
+});
 
 // stream.sh reports whether the video is actually going out to TikTok (localhost only).
 let streamState = { state: process.env.STREAM_MANAGED ? 'starting' : 'not-managed', since: Date.now() };

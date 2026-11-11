@@ -230,9 +230,9 @@ function createBot() {
         lastViewerBot.viewer.close();
       } catch {}
     }
-    startViewer(b, { port: CFG.viewPort, firstPerson: CFG.firstPerson, viewDistance: CFG.viewDistance });
+    startViewer(b, { port: CFG.viewPort, prefix: '/cam', firstPerson: CFG.firstPerson, viewDistance: CFG.viewDistance }); // the app serves it at /cam/
     lastViewerBot = b;
-    log(`${CFG.firstPerson ? 'first-person ' : ''}camera on http://localhost:${CFG.viewPort}`);
+    log(`${CFG.firstPerson ? 'first-person ' : ''}camera on http://localhost:${CFG.viewPort}/cam/ (shown by the app at /cam/)`);
     setupArena();
     giveKit();
     setTimeout(gearUp, 1500);

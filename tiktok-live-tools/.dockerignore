@@ -3,3 +3,4 @@ minecraft/node_modules
 data
 minecraft-data
 .env
+caddy-data

@@ -8,11 +8,25 @@ services:
     restart: always
     env_file: .env
     ports:
-      - "3000:3000"   # dashboard (protect it with ADMIN_KEY)
-      - "3007:3007"   # Minecraft camera, so the dashboard's /minecraft preview works from your phone
+      - "3000:3000"   # hub over plain http (fallback); use the https:// address from the caddy service
     volumes:
       - ./data:/app/data
     shm_size: "1gb"
+
+  # Your hub's https:// address (free certificate, renewed automatically).
+  caddy:
+    image: caddy:2
+    restart: always
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:-:80}"   # never empty: plain http on port 80 if no domain
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+    depends_on:
+      - live
 
   # A real Minecraft Java server (Paper 1.21.4) for the "Can Steve Survive?" game.
   # Enabled by COMPOSE_PROFILES=minecraft in .env. It is private: no port is opened

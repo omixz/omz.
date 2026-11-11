@@ -1,0 +1,6 @@
+# Gives the hub a real https:// address with a free automatic certificate.
+# SITE_ADDRESS is set by setup-vm.sh, e.g. 129-146-12-34.sslip.io (sslip.io maps that name to your IP).
+{$SITE_ADDRESS::80} {
+	encode gzip
+	reverse_proxy live:3000
+}
