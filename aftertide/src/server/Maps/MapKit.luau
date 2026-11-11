@@ -215,6 +215,7 @@ end
 -- Surface height at (x, z) (terrain or parts), for placing things on hills.
 local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Include
+groundParams.IgnoreWater = true
 function MapKit.ground(x, z, include)
 	groundParams.FilterDescendantsInstances = include or { terrain }
 	-- walk down through every surface (roofs, ceilings, floors, props) to the terrain, then
@@ -266,7 +267,7 @@ function FALLBACK.car(parent, cf, scale)
 	block(parent, Vector3.new(3.6, 1.2, 4.6) * scale, cf * CFrame.new(0, 2.6 * scale, 0.4), Color3.fromRGB(40, 44, 46), Enum.Material.Glass)
 end
 function FALLBACK.bush(parent, cf, scale)
-	block(parent, Vector3.new(3, 2.4, 3) * scale, cf * CFrame.new(0, 1.2 * scale, 0), Color3.fromRGB(46, 62, 40), Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball })
+	block(parent, Vector3.new(3, 2.4, 3) * scale, cf * CFrame.new(0, 1.2 * scale, 0), Color3.fromRGB(46, 62, 40), Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
 end
 
 local KIND = {
@@ -328,7 +329,10 @@ end
 -- A patch of tall grass you can hide in (stealth volume + clumps).
 -- groundFn(x, z) gives the height (default flat 0).
 function MapKit.tallGrass(parent, center, size, rng, groundFn, density)
-	MapKit.volume(parent, Vector3.new(size.X, 7, size.Z), center + Vector3.new(0, 3.5, 0), "TallGrass")
+	-- on hills the hiding volume follows the ground at the patch centre and is taller
+	local gy = groundFn and groundFn(center.X, center.Z) or center.Y
+	local vh = groundFn and 22 or 7
+	MapKit.volume(parent, Vector3.new(size.X, vh, size.Z), Vector3.new(center.X, gy + (groundFn and 4 or 3.5), center.Z), "TallGrass")
 	local count = math.floor(size.X * size.Z / 7 * (density or 1))
 	for _ = 1, count do
 		local x = center.X + rng:NextNumber(-size.X / 2, size.X / 2)
@@ -363,7 +367,7 @@ end
 
 -- Houses -------------------------------------------------------------------------------------------
 
--- A two-storey weatherboard house. origin = front-door ground point, facing = yaw (radians,
+-- A weatherboard house. origin = front-door ground point, facing = yaw (radians,
 -- front faces -Z when 0). Returns { doorways = {...}, containers = {...}, loot = {...} }.
 function MapKit.house(parent, origin, yaw, rng, style)
 	style = style or {}

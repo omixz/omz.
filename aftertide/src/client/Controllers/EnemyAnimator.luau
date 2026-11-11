@@ -80,7 +80,6 @@ local function setup(model)
 		twitch = CFrame.new(),
 		spasmAt = os.clock() + math.random() * 4,
 		spasm = 0,
-		maw = head:FindFirstChild("Maw") and nil,
 		lastHP = model:GetAttribute("HP") or 1,
 		flinch = 0,
 	}
@@ -136,7 +135,7 @@ local function animate(model, rig, dt, now)
 	local elbow = gait == GAITS.feel and 0.5 or 0.25
 
 	-- head twitches (sharper when they've just heard something)
-	local heard = now - (model:GetAttribute("Heard") or -100) < 2
+	local heard = Workspace:GetServerTimeNow() - (model:GetAttribute("Heard") or -100) < 2
 	if now > rig.twitchAt then
 		local strength = gait.twitch * (heard and 2 or 1)
 		rig.twitch = CFrame.Angles((math.random() - 0.5) * strength, (math.random() - 0.5) * strength * 1.5, (math.random() - 0.5) * strength)
@@ -184,7 +183,7 @@ local function animate(model, rig, dt, now)
 			lean = 0.02
 		end
 		local attackAt = model:GetAttribute("AttackAt")
-		local since = attackAt and (workspace:GetServerTimeNow() - attackAt) or 99
+		local since = attackAt and (Workspace:GetServerTimeNow() - attackAt) or 99
 		if since < 0.45 then
 			local k = since / 0.45
 			rArm = k < 0.35 and (2.6 * k / 0.35) or (2.6 - (k - 0.35) / 0.65 * 2.4)

@@ -269,7 +269,16 @@ function MatchService.chooseRoute(player, index)
 	Net.notifyAll("Toast", { text = ("%s chose %s. Casting off…"):format(player.DisplayName, option.name) })
 	task.delay(Game.StartCountdown, function()
 		if MatchService.state == "Starting" then
-			MatchService.beginEncounter(option)
+			local ok, err = pcall(MatchService.beginEncounter, option)
+			if not ok then
+				-- never leave the server stuck in "Starting" if a map fails to build
+				warn("[MatchService] could not start the encounter: " .. tostring(err))
+				enc = nil
+				Services.EnemyService.clear()
+				setState("Planning")
+				publish()
+				Net.notifyAll("Toast", { text = "The route was impassable. Choose another on the tide chart." })
+			end
 		end
 	end)
 end

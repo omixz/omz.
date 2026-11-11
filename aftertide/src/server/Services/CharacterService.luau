@@ -272,6 +272,16 @@ function CharacterService.spawn(player, cframe, resetInventory)
 			return nil
 		end
 		char = spawned or player.Character
+		-- wait until Roblox has applied the body scales: the sculpted body is fitted to the
+		-- final joint positions, so fitting too early would leave it the wrong size
+		local appearanceDeadline = os.clock() + 1.5
+		while char and char.Parent and os.clock() < appearanceDeadline do
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if player:HasAppearanceLoaded() or (hum and hum:FindFirstChildOfClass("HumanoidDescription")) then
+				break
+			end
+			task.wait()
+		end
 	end
 	if not char then
 		return nil
@@ -297,7 +307,7 @@ function CharacterService.addFlashlight(char, bodyName)
 	end
 	local mount = Instance.new("Attachment")
 	mount.Name = "FlashlightMount"
-	mount.Position = Vector3.new(-body.Size.X * 0.22, body.Size.Y * 0.18, -body.Size.Z * 0.5 - 0.15)
+	mount.Position = Vector3.new(-body.Size.X * 0.22, body.Size.Y * 0.18, -body.Size.Z * 0.5 - 0.45) -- ahead of the chest so the body doesn't shadow it
 	mount.Parent = body
 	local light = Instance.new("SpotLight")
 	light.Name = "Flashlight"

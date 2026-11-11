@@ -120,19 +120,22 @@ local function updateEnemies()
 		local typeName = model:GetAttribute("Type") or "Drifter"
 		if torso then
 			local a = enemyAudio[model]
+			local human = model:GetAttribute("Human") == true -- people don't rasp or growl
 			if not a then
-				a = { loop = Sfx.attach(torso, VOICE[typeName] or "Hushed_Breath", 0.55, 70, true), lastState = state }
+				a = { loop = (not human) and Sfx.attach(torso, VOICE[typeName] or "Hushed_Breath", 0.55, 70, true) or nil, lastState = state }
 				if a.loop then
 					a.loop.TimePosition = math.random() * 3
 				end
 				enemyAudio[model] = a
 			end
 			if a.loop then
-				a.loop.Volume = (state == "Dispersed" and 0 or (state == "Chase" and 0.9 or 0.5))
+				a.loop.Volume = ((state == "Dispersed" or state == "Down") and 0 or (state == "Chase" and 0.9 or 0.5))
 				a.loop.PlaybackSpeed = state == "Chase" and 1.25 or 1
 			end
 			if state ~= a.lastState then
-				if state == "Chase" then
+				if human then
+					-- their callouts (radio / bell) are played by the server
+				elseif state == "Chase" then
 					Sfx.at(torso.Position, typeName == "Rusher" and "Rusher_Shriek" or "Hushed_Growl", 1, 160, 0.08)
 				elseif state == "Investigate" and math.random() < 0.5 then
 					Sfx.at(torso.Position, "Hushed_Growl", 0.5, 70, 0.15)

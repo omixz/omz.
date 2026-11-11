@@ -196,6 +196,7 @@ local function buildModel(position, typeName, cfg)
 	drift.Color = ColorSequence.new(base)
 	drift.LightInfluence = 1
 	drift.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12 * k), NumberSequenceKeypoint.new(1, 0) })
+	drift.Enabled = not cfg.human -- people don't shed salt
 	drift.Parent = torso
 
 	local humanoid = Instance.new("Humanoid")
@@ -237,6 +238,9 @@ local function setState(e, newState)
 	e.pathGoal = nil
 	e.searchPoint = nil
 	e.model:SetAttribute("State", newState)
+	if newState ~= "Chase" and e.model:GetAttribute("Aiming") then
+		e.model:SetAttribute("Aiming", false)
+	end
 end
 
 local function face(e, position)
@@ -896,7 +900,7 @@ function EnemyService.onNoise(event)
 					e.investigatePos = event.position
 					e.heardAt = os.clock()
 					if loud > 0.15 and event.kind ~= "footstep" then
-						e.model:SetAttribute("Heard", os.clock()) -- clients show a "?" and turn the head
+						e.model:SetAttribute("Heard", Workspace:GetServerTimeNow()) -- clients show a "?" and turn the head
 					end
 				end
 			end

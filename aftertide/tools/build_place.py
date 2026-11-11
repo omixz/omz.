@@ -69,7 +69,12 @@ def folder(name, directory):
 def main():
     body = "".join(
         [
-            item("Workspace", "Workspace", '<bool name="StreamingEnabled">false</bool>'),
+            item(
+                "Workspace",
+                "Workspace",
+                '<bool name="StreamingEnabled">false</bool>',
+                item("Terrain", "Terrain", '<bool name="Decoration">true</bool>'),  # animated grass blades
+            ),
             item("Lighting", "Lighting", '<token name="Technology">4</token>'),
             item("Players", "Players", '<bool name="CharacterAutoLoads">false</bool>'),
             item("ReplicatedStorage", "ReplicatedStorage", "", folder("Shared", os.path.join(SRC, "shared"))),

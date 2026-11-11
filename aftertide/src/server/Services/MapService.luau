@@ -1,7 +1,7 @@
 --!nonstrict
 -- Builds the grey-box world in code so the project is fully self-contained:
 --   * The Meridian (ferry hideout deck) far from the encounter
---   * "Cannery Row" encounter map (cannery, container yard, shallows, reed beds, net shed)
+--   * the encounter maps (src/server/Maps/*), one loaded at a time
 -- and resets per-encounter objects (supply crates, part pickups, extraction flare).
 -- Stage 4+ replaces the grey-box with hand-built art (docs/05-roadmap-and-prototype.md).
 local CollectionService = game:GetService("CollectionService")
@@ -94,115 +94,6 @@ local function volume(parent, size, position, tag)
 	})
 	CollectionService:AddTag(p, tag)
 	return p
-end
-
-local function splitGaps(a, b, gaps)
-	local segments, cursor = {}, a
-	table.sort(gaps, function(x, y)
-		return x[1] < y[1]
-	end)
-	for _, gap in gaps do
-		if gap[1] > cursor then
-			table.insert(segments, { cursor, gap[1] })
-		end
-		cursor = math.max(cursor, gap[2])
-	end
-	if b > cursor then
-		table.insert(segments, { cursor, b })
-	end
-	return segments
-end
-
--- Wall running along X at depth z, with door gaps {{x1, x2}, ...} and lintels above them.
-local function wallX(parent, z, x1, x2, height, gaps, color, material)
-	for _, s in splitGaps(x1, x2, gaps) do
-		block(parent, Vector3.new(s[2] - s[1], height, 2), Vector3.new((s[1] + s[2]) / 2, height / 2, z), color, material)
-	end
-	for _, g in gaps do
-		if height > 9 then
-			block(parent, Vector3.new(g[2] - g[1], height - 9, 2), Vector3.new((g[1] + g[2]) / 2, 9 + (height - 9) / 2, z), color, material)
-		end
-	end
-end
-
-local function wallZ(parent, x, z1, z2, height, gaps, color, material)
-	for _, s in splitGaps(z1, z2, gaps) do
-		block(parent, Vector3.new(2, height, s[2] - s[1]), Vector3.new(x, height / 2, (s[1] + s[2]) / 2), color, material)
-	end
-	for _, g in gaps do
-		if height > 9 then
-			block(parent, Vector3.new(2, height - 9, g[2] - g[1]), Vector3.new(x, 9 + (height - 9) / 2, (g[1] + g[2]) / 2), color, material)
-		end
-	end
-end
-
-local function lamp(parent, base)
-	block(parent, Vector3.new(0.6, 12, 0.6), base + Vector3.new(0, 6, 0), C.metal, Enum.Material.Metal)
-	local head = block(parent, Vector3.new(1.6, 0.8, 1.6), base + Vector3.new(0, 12.2, 0), C.warm, Enum.Material.Neon)
-	local light = Instance.new("PointLight")
-	light.Range = 24
-	light.Brightness = 1.8
-	light.Color = C.warm
-	light.Shadows = true
-	light.Parent = head
-	volume(parent, Vector3.new(20, 10, 20), base + Vector3.new(0, 5, 0), "LitZone")
-end
-
-local function hangingBulb(parent, position)
-	local bulb = block(parent, Vector3.new(0.8, 0.8, 0.8), position, C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball })
-	local light = Instance.new("PointLight")
-	light.Range = 18
-	light.Brightness = 1.2
-	light.Color = C.warm
-	light.Shadows = true
-	light.Parent = bulb
-	volume(parent, Vector3.new(14, 10, 14), Vector3.new(position.X, 5, position.Z), "LitZone")
-end
-
-local function reeds(parent, center, size, rng)
-	volume(parent, Vector3.new(size.X, 6, size.Z), center + Vector3.new(0, 3, 0), "TallGrass")
-	local count = math.floor(size.X * size.Z * 0.3)
-	for _ = 1, count do
-		local h = rng:NextNumber(3.6, 5.6)
-		local x = center.X + rng:NextNumber(-size.X / 2, size.X / 2)
-		local z = center.Z + rng:NextNumber(-size.Z / 2, size.Z / 2)
-		local tilt = CFrame.Angles(rng:NextNumber(-0.18, 0.18), rng:NextNumber(0, 6.28), rng:NextNumber(-0.18, 0.18))
-		local shade = rng:NextNumber(0.8, 1.15)
-		block(parent, Vector3.new(0.22, h, 0.22), CFrame.new(x, h / 2, z) * tilt, Color3.new(C.reed.R * shade, C.reed.G * shade, C.reed.B * shade), Enum.Material.Grass, {
-			CanCollide = false,
-			CanQuery = false,
-			CanTouch = false,
-			CastShadow = false,
-		})
-	end
-end
-
-local function fog(parent, position, size)
-	local p = block(parent, Vector3.new(size.X, 1, size.Z), position, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, {
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-		CanTouch = false,
-		CastShadow = false,
-	})
-	local e = Instance.new("ParticleEmitter")
-	e.Texture = SMOKE
-	e.Rate = 1.4
-	e.Lifetime = NumberRange.new(14, 20)
-	e.Speed = NumberRange.new(0.3, 1)
-	e.SpreadAngle = Vector2.new(60, 60)
-	e.Rotation = NumberRange.new(0, 360)
-	e.RotSpeed = NumberRange.new(-4, 4)
-	e.LightInfluence = 1
-	e.Color = ColorSequence.new(Color3.fromRGB(205, 212, 212))
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 16), NumberSequenceKeypoint.new(1, 28) })
-	e.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.3, 0.86),
-		NumberSequenceKeypoint.new(0.7, 0.9),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	e.Parent = p
 end
 
 -- The Meridian (hideout) ------------------------------------------------------------------
@@ -350,8 +241,6 @@ local function buildFerry(parent)
 	end)
 end
 
--- Cannery Row (encounter) -----------------------------------------------------------------
-
 -- Lighting --------------------------------------------------------------------------------
 
 local atmosphere, colorCorrection
@@ -447,6 +336,10 @@ function MapService.loadMap(mapId, rng)
 	mapFolder.Name = "Map_" .. def.id
 	mapFolder.Parent = world
 	local data = def.build(mapFolder, Random.new(rng:NextInteger(1, 1e6)))
+	-- invisible boundary so nobody can walk off the edge of the map
+	for _, w in { { Vector3.new(246, 120, 2), Vector3.new(0, 40, -122) }, { Vector3.new(246, 120, 2), Vector3.new(0, 40, 122) }, { Vector3.new(2, 120, 246), Vector3.new(-122, 40, 0) }, { Vector3.new(2, 120, 246), Vector3.new(122, 40, 0) } } do
+		block(mapFolder, w[1], w[2], Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, { Name = "Boundary", Transparency = 1, CanQuery = false, CastShadow = false })
+	end
 	-- snap every gameplay position onto the actual ground (hills, house floors)
 	local function snap(v)
 		return Vector3.new(v.X, MapKit.ground(v.X, v.Z, { Workspace.Terrain, mapFolder }), v.Z)
@@ -558,7 +451,7 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 	-- supply crates (Salvage objective)
 	if encounterType == "Salvage" then
 		local picks = shuffled(MapService.SupplyCandidates, rng)
-		for i = 1, Encounters.Types.Salvage.crates do
+		for i = 1, math.min(Encounters.Types.Salvage.crates, #picks) do
 			local pos = picks[i]
 			local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
 			block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })

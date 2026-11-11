@@ -78,7 +78,7 @@ local function scaleWorldFog(mult)
 		return
 	end
 	for _, d in world:GetDescendants() do
-		if d:IsA("ParticleEmitter") and d.Texture == SMOKE and d.Parent and d.Parent.Parent and d.Parent.Parent.Name == "CanneryRow" then
+		if d:IsA("ParticleEmitter") and d.Texture == SMOKE and d.Parent and d.Parent.Parent and d.Parent.Parent.Name:sub(1, 4) == "Map_" then
 			if d:GetAttribute("BaseRate") == nil then
 				d:SetAttribute("BaseRate", d.Rate)
 			end
@@ -210,7 +210,9 @@ function GraphicsController.start()
 	RunService.RenderStepped:Connect(function(dt)
 		local camera = Workspace.CurrentCamera
 		local pos = camera.CFrame.Position
-		mistPart.CFrame = CFrame.new(pos.X, math.min(pos.Y, 3) - 1, pos.Z)
+		-- ground mist hugs the ground you stand on (hills, the ferry deck), not sea level
+		local feet = State.root and State.root.Parent and (State.root.Position.Y - 3.5) or (pos.Y - 6)
+		mistPart.CFrame = CFrame.new(pos.X, feet, pos.Z)
 		rainPart.CFrame = CFrame.new(pos.X, pos.Y + 28, pos.Z)
 		local squall = ReplicatedStorage:GetAttribute("ModifierId") == "Squall" and ReplicatedStorage:GetAttribute("MatchState") == "Encounter"
 		rain.Rate = squall and (current == "Cinematic" and 500 or (current == "Balanced" and 220 or 60)) or 0

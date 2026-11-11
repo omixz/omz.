@@ -35,6 +35,8 @@ local currentDist = 6
 local needsSnap = true
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Exclude
+local aimParams = RaycastParams.new()
+aimParams.FilterType = Enum.RaycastFilterType.Exclude
 
 function CameraController.getYaw()
 	return yaw
@@ -61,7 +63,9 @@ function CameraController.aimDirection()
 	local camera = Workspace.CurrentCamera
 	local origin = camera.CFrame.Position
 	local look = camera.CFrame.LookVector * 250
-	local hit = Workspace:Raycast(origin, look, params)
+	-- enemies must stop this ray: the shot leaves from the head, not the camera, so aiming
+	-- at the wall behind a target would send the bullet past it
+	local hit = Workspace:Raycast(origin, look, aimParams)
 	local point = hit and hit.Position or origin + look
 	local head = State.character and State.character:FindFirstChild("Head")
 	local from = head and head.Position or origin
@@ -87,6 +91,7 @@ local function refreshFilter()
 			table.insert(list, p.Character)
 		end
 	end
+	aimParams.FilterDescendantsInstances = table.clone(list)
 	local enemies = Workspace:FindFirstChild("Enemies")
 	if enemies then
 		table.insert(list, enemies)

@@ -47,11 +47,12 @@ function Map.build(parent, rng)
 
 	-- flatten pads and build cabins
 	local doorways, containers, loot = {}, {}, {}
-	for i, spot in { Vector3.new(55, 0, 40), Vector3.new(-70, 0, -30), Vector3.new(40, 0, -70) } do
+	for _, spot in { Vector3.new(55, 0, 40), Vector3.new(-70, 0, -30), Vector3.new(40, 0, -70) } do
 		local y = baseHeight(spot.X, spot.Z + 9)
-		MapKit.clearAbove(spot.X - 14, spot.Z - 6, spot.X + 14, spot.Z + 24, y)
-		MapKit.slab(spot.X - 14, spot.Z - 6, spot.X + 14, spot.Z + 24, M.Ground, y, 14)
-		local h = MapKit.house(parent, Vector3.new(spot.X, y, spot.Z), i == 2 and 0 or math.pi * 0.5 * (i - 1), rng, { w = 18, d = 16, h = 9, color = Color3.fromRGB(110, 84, 62) })
+		-- every cabin faces -Z so it sits on the pad flattened for it
+		MapKit.clearAbove(spot.X - 16, spot.Z - 12, spot.X + 16, spot.Z + 26, y)
+		MapKit.slab(spot.X - 16, spot.Z - 12, spot.X + 16, spot.Z + 26, M.Ground, y, 16)
+		local h = MapKit.house(parent, Vector3.new(spot.X, y, spot.Z), 0, rng, { w = 18, d = 16, h = 9, color = Color3.fromRGB(110, 84, 62) })
 		for _, d in h.doorways do
 			table.insert(doorways, d)
 		end
@@ -79,7 +80,7 @@ function Map.build(parent, rng)
 			return false
 		end
 		for _, spot in { Vector3.new(55, 0, 48), Vector3.new(-70, 0, -22), Vector3.new(40, 0, -62), Vector3.new(0, 0, 10) } do
-			if (Vector3.new(x, 0, z) - spot).Magnitude < 20 then
+			if (Vector3.new(x, 0, z) - spot).Magnitude < 24 then
 				return false
 			end
 		end
