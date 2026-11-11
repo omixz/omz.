@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Characters = require(Shared.Config.Characters)
 local Items = require(Shared.Config.Items)
+local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
@@ -15,14 +16,21 @@ local player = Players.LocalPlayer
 local backdrop, closeButton
 
 local function loadoutText(loadout)
+	local guns = {}
+	for _, slot in { "long", "sidearm" } do
+		local id = loadout.weapons[slot]
+		if id and Weapons.List[id] then
+			table.insert(guns, Weapons.List[id].name)
+		end
+	end
 	local parts = {}
 	for _, itemId in Items.Order do
-		local amount = loadout[itemId]
+		local amount = loadout.items[itemId]
 		if amount and amount > 0 then
 			table.insert(parts, amount .. " " .. Items.Items[itemId].name)
 		end
 	end
-	return table.concat(parts, " · ")
+	return table.concat(guns, " + ") .. "\n" .. table.concat(parts, " · ")
 end
 
 local function card(parent, charId, order)
@@ -32,7 +40,7 @@ local function card(parent, charId, order)
 		selectedPerk = player:GetAttribute("PerkId")
 	end
 
-	local frame = Theme.panel({ Name = charId, LayoutOrder = order, Size = UDim2.new(0, 258, 0, 500), BackgroundColor3 = C.panelHi, Parent = parent })
+	local frame = Theme.panel({ Name = charId, LayoutOrder = order, Size = UDim2.new(0, 258, 0, 520), BackgroundColor3 = C.panelHi, Parent = parent })
 	Theme.padding(12).Parent = frame
 	Theme.list(Enum.FillDirection.Vertical, 5).Parent = frame
 
@@ -44,7 +52,7 @@ local function card(parent, charId, order)
 	Theme.label({ LayoutOrder = 4, Text = "ABILITY · " .. def.ability.name, Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
 	Theme.label({ LayoutOrder = 5, Text = def.ability.desc, TextSize = 12, Size = UDim2.new(1, 0, 0, 44), Parent = frame })
 	Theme.label({ LayoutOrder = 6, Text = "LOADOUT", Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
-	Theme.label({ LayoutOrder = 7, Text = loadoutText(def.loadout), TextSize = 12, Size = UDim2.new(1, 0, 0, 30), Parent = frame })
+	Theme.label({ LayoutOrder = 7, Text = loadoutText(def.loadout), TextSize = 12, Size = UDim2.new(1, 0, 0, 44), Parent = frame })
 	Theme.label({ LayoutOrder = 8, Text = "INNATE · " .. def.innate.name, Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })
 	Theme.label({ LayoutOrder = 9, Text = def.innate.desc, TextSize = 12, Size = UDim2.new(1, 0, 0, 30), Parent = frame })
 	Theme.label({ LayoutOrder = 10, Text = "STARTING PERK (choose one)", Font = Theme.Head, TextSize = 14, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 16), Parent = frame })

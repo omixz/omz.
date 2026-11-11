@@ -13,6 +13,8 @@ local EVENTS = {
 	"SetMoveState", -- client -> server (stance, sprinting, aiming)
 	"Action", -- client -> server (actionName, payload)
 	"ReturnToFerry", -- client -> server ()
+	"Request", -- client -> server (kind, a, b): ferry menus (chart, workbench, repairs, settings)
+	"Look", -- client -> server (pitch): aim pitch for other players' upper-body pose
 	"Notify", -- server -> client (kind, data)
 }
 

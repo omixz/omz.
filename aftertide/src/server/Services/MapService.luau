@@ -11,7 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Game = require(Shared.Config.Game)
-local Items = require(Shared.Config.Items)
+local Encounters = require(Shared.Config.Encounters)
 
 local MapService = {}
 local Services
@@ -40,11 +40,6 @@ local C = {
 	},
 }
 
-local PART_COLORS = {
-	glass = Color3.fromRGB(120, 170, 150),
-	cloth = Color3.fromRGB(170, 160, 140),
-	scrap = Color3.fromRGB(120, 110, 100),
-}
 
 -- Encounter layout data -------------------------------------------------------------------
 
@@ -78,6 +73,35 @@ MapService.LootSpots = {
 	Vector3.new(0, 0, -30), Vector3.new(30, 0, -5), Vector3.new(45, 0, -45), Vector3.new(10, 0, -45),
 	Vector3.new(-90, 0, -30), Vector3.new(-85, 0, 50), Vector3.new(-60, 0, 80), Vector3.new(60, 0, 90),
 }
+
+-- Searchable containers (type + facing). Loose items reuse LootSpots.
+MapService.ContainerSpots = {
+	{ pos = Vector3.new(-6, 0, -46), type = "Locker", yaw = 0 },
+	{ pos = Vector3.new(-4, 0, -46), type = "Locker", yaw = 0 },
+	{ pos = Vector3.new(56, 0, -46), type = "Toolbox", yaw = 0 },
+	{ pos = Vector3.new(56, 0, 5), type = "Drawer", yaw = 180 },
+	{ pos = Vector3.new(-6, 0, 5), type = "Drawer", yaw = 180 },
+	{ pos = Vector3.new(30, 0, -12), type = "AmmoCrate", yaw = 90 },
+	{ pos = Vector3.new(90, 0, -50), type = "AmmoCrate", yaw = 0 },
+	{ pos = Vector3.new(108, 0, 20), type = "Toolbox", yaw = -90 },
+	{ pos = Vector3.new(86, 0, 70), type = "Locker", yaw = 90 },
+	{ pos = Vector3.new(-56, 0, -88), type = "Drawer", yaw = 0 },
+	{ pos = Vector3.new(-34, 0, -108), type = "Toolbox", yaw = 180 },
+	{ pos = Vector3.new(-56, 0, -108), type = "AmmoCrate", yaw = 90 },
+	{ pos = Vector3.new(-10, 0, 85), type = "Drawer", yaw = 180 },
+	{ pos = Vector3.new(45, 0, 95), type = "Toolbox", yaw = 180 },
+	{ pos = Vector3.new(-105, 0, 80), type = "AmmoCrate", yaw = 90 },
+	{ pos = Vector3.new(-40, 0, -40), type = "Locker", yaw = 180 },
+	{ pos = Vector3.new(70, 0, -100), type = "Drawer", yaw = 0 },
+	{ pos = Vector3.new(-25, 0, 20), type = "Toolbox", yaw = 0 },
+}
+
+-- Where waves of Hushed come from (map edges) and where the signal lantern stands.
+MapService.EdgeSpawns = {
+	Vector3.new(-100, 0, 100), Vector3.new(100, 0, 100), Vector3.new(105, 0, -100), Vector3.new(0, 0, -105),
+	Vector3.new(105, 0, 0), Vector3.new(-60, 0, 105), Vector3.new(60, 0, -105), Vector3.new(-105, 0, -40),
+}
+MapService.LanternPos = Vector3.new(5, 0, 55)
 
 MapService.PatrolRoutes = {
 	{ Vector3.new(24, 0, -30), Vector3.new(24, 0, -2), Vector3.new(52, 0, -30), Vector3.new(5, 0, -35) }, -- cannery
@@ -256,7 +280,7 @@ local function buildFerry(parent)
 	-- string lights
 	for i = 0, 7 do
 		local x = -14 + i * 6
-		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 3.5) * 0.25, 0), C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 3.5) * 0.25, 0), C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, Name = "DeckBulb" })
 		local light = Instance.new("PointLight")
 		light.Range = 12
 		light.Brightness = 0.9
@@ -277,8 +301,9 @@ local function buildFerry(parent)
 	chartPrompt.RequiresLineOfSight = false
 	chartPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
 	chartPrompt.Parent = chart
+	chartPrompt.ActionText = "Read the tide chart"
 	chartPrompt.Triggered:Connect(function(player)
-		Services.MatchService.requestStart(player)
+		Services.MatchService.requestChart(player)
 	end)
 
 	-- Crew cabin door: change character
@@ -293,6 +318,64 @@ local function buildFerry(parent)
 	cabinPrompt.Triggered:Connect(function(player)
 		Services.MatchService.openCharacterSelect(player)
 	end)
+
+	-- Workbench: per-crossing upgrades
+	local bench = block(parent, Vector3.new(6, 3, 2.6), o + Vector3.new(-6, 1.5, -10.5), Color3.fromRGB(86, 66, 46), Enum.Material.WoodPlanks, { Name = "Workbench" })
+	block(parent, Vector3.new(5, 0.2, 0.2), o + Vector3.new(-6, 5.5, -11.6), C.metal, Enum.Material.Metal)
+	for i = -2, 2 do
+		block(parent, Vector3.new(0.15, 0.9, 0.15), o + Vector3.new(-6 + i, 4.9, -11.6), C.metal, Enum.Material.Metal, { CanCollide = false }) -- hanging tools
+	end
+	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-4.2, 3.3, -10.5), Color3.fromRGB(110, 40, 30), Enum.Material.Metal) -- vice
+	local benchLight = Instance.new("PointLight")
+	benchLight.Range = 12
+	benchLight.Brightness = 1.4
+	benchLight.Color = C.warm
+	benchLight.Shadows = true
+	benchLight.Parent = block(parent, Vector3.new(0.6, 0.4, 0.6), o + Vector3.new(-6, 7, -10.5), C.warm, Enum.Material.Neon, { CanCollide = false })
+	local benchPrompt = Instance.new("ProximityPrompt")
+	benchPrompt.ActionText = "Use workbench"
+	benchPrompt.ObjectText = "Workbench"
+	benchPrompt.MaxActivationDistance = 9
+	benchPrompt.RequiresLineOfSight = false
+	benchPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	benchPrompt.Parent = bench
+	benchPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openMenu(player, "OpenWorkbench")
+	end)
+
+	-- Repairs board: permanent homebase upgrades
+	local board = block(parent, Vector3.new(4, 3, 0.3), o + Vector3.new(-15.9, 4, -4), Color3.fromRGB(120, 100, 76), Enum.Material.WoodPlanks, { Name = "RepairsBoard" })
+	local boardPrompt = Instance.new("ProximityPrompt")
+	boardPrompt.ActionText = "Plan repairs"
+	boardPrompt.ObjectText = "The Meridian"
+	boardPrompt.MaxActivationDistance = 9
+	boardPrompt.RequiresLineOfSight = false
+	boardPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	boardPrompt.Parent = board
+	boardPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openMenu(player, "OpenRepairs")
+	end)
+
+	-- Repairable stations (visuals toggled by setFerryRepairs)
+	local stations = Instance.new("Folder")
+	stations.Name = "Stations"
+	stations.Parent = parent
+	local gen = block(stations, Vector3.new(3, 2.4, 2), o + Vector3.new(-26, 1.2, 9), Color3.fromRGB(90, 80, 40), Enum.Material.Metal, { Name = "generator" })
+	local genLight = Instance.new("PointLight")
+	genLight.Name = "On"
+	genLight.Color = Color3.fromRGB(140, 255, 120)
+	genLight.Range = 6
+	genLight.Enabled = false
+	genLight.Parent = gen
+	local mast = block(stations, Vector3.new(0.4, 14, 0.4), o + Vector3.new(-23, 19.5, 0), C.metal, Enum.Material.Metal, { Name = "radio" })
+	local mastLight = Instance.new("PointLight")
+	mastLight.Name = "On"
+	mastLight.Color = Color3.fromRGB(255, 60, 50)
+	mastLight.Range = 10
+	mastLight.Enabled = false
+	mastLight.Parent = block(stations, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(-23, 26.7, 0), Color3.fromRGB(255, 60, 50), Enum.Material.Neon, { Name = "radioBeacon" })
+	block(stations, Vector3.new(6, 1.2, 2.6), o + Vector3.new(10, 0.6, 11), Color3.fromRGB(200, 196, 186), Enum.Material.Fabric, { Name = "sickbay", Transparency = 0.7 })
+	block(stations, Vector3.new(5, 5, 0.6), o + Vector3.new(29, 2.5, -9), Color3.fromRGB(80, 64, 48), Enum.Material.WoodPlanks, { Name = "armory", Transparency = 0.7 })
 
 	-- The Purser's Office: the in-world shop
 	local booth = block(parent, Vector3.new(7, 8, 5), o + Vector3.new(24, 4, -1), Color3.fromRGB(150, 146, 134), Enum.Material.CorrodedMetal, { Name = "PursersOffice" })
@@ -399,6 +482,39 @@ local function buildCannery(parent)
 	block(parent, Vector3.new(1.5, 3.5, 18), Vector3.new(20, 1.75, 30), C.wall, Enum.Material.Concrete)
 	block(parent, Vector3.new(18, 3.5, 1.5), Vector3.new(-40, 1.75, -45), C.wall, Enum.Material.Concrete)
 
+	-- environmental clutter: barrels, pipes, nets, puddles, rubble
+	for _ = 1, 26 do
+		local x, z = rng:NextNumber(-105, 105), rng:NextNumber(-105, 105)
+		local inCannery = x > -12 and x < 62 and z > -52 and z < 12
+		local inShallows = x < -70
+		if not inCannery and not inShallows then
+			local h = 3
+			block(parent, Vector3.new(h, 2.2, 2.2), CFrame.new(x, 1.5, z) * CFrame.Angles(0, 0, math.rad(90)), C.containers[rng:NextInteger(1, 4)], Enum.Material.CorrodedMetal, { Shape = Enum.PartType.Cylinder })
+		end
+	end
+	for i = 0, 5 do
+		block(parent, Vector3.new(70, 0.8, 0.8), CFrame.new(25, 12 + (i % 2) * 1.2, -48 + i * 10), C.metal, Enum.Material.CorrodedMetal, { Shape = Enum.PartType.Cylinder })
+	end
+	for _ = 1, 18 do
+		local x, z = rng:NextNumber(-60, 105), rng:NextNumber(-105, 105)
+		block(parent, Vector3.new(rng:NextNumber(4, 10), 0.05, rng:NextNumber(3, 8)), CFrame.new(x, 0.03, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), Color3.fromRGB(40, 48, 52), Enum.Material.Glass, {
+			Name = "Puddle",
+			Reflectance = 0.35,
+			Transparency = 0.25,
+			CanCollide = false,
+			CanQuery = false,
+			CastShadow = false,
+		})
+	end
+	for _ = 1, 30 do
+		local x, z = rng:NextNumber(-105, 105), rng:NextNumber(-105, 105)
+		local size = rng:NextNumber(0.6, 1.8)
+		block(parent, Vector3.new(size, size * 0.6, size), CFrame.new(x, size * 0.3, z) * CFrame.Angles(rng:NextNumber(0, 1), rng:NextNumber(0, 6.28), rng:NextNumber(0, 1)), C.wallDark, Enum.Material.Concrete, { CanCollide = false })
+	end
+	for _, pos in { Vector3.new(-40, 0, -98), Vector3.new(-95, 0, 60), Vector3.new(70, 0, 95) } do
+		block(parent, Vector3.new(6, 0.25, 5), CFrame.new(pos + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), Color3.fromRGB(110, 100, 70), Enum.Material.Fabric, { Name = "Nets", CanCollide = false })
+	end
+
 	-- lamp posts: light pools are dangerous (you are easier to see inside them)
 	lamp(parent, Vector3.new(0, 0, 70))
 	lamp(parent, Vector3.new(65, 0, -50))
@@ -490,49 +606,97 @@ local function makePrompt(parent, action, object, hold)
 	return prompt
 end
 
-function MapService.resetEncounter(modifier, rng)
-	encounterFolder:ClearAllChildren()
+-- Doorways (from the wall gaps): { hinge position, width, axis "x"|"z", swing sign }
+local DOORWAYS = {
+	{ Vector3.new(20, 0, -50), 8, "x" }, { Vector3.new(5, 0, 10), 8, "x" }, { Vector3.new(40, 0, 10), 8, "x" },
+	{ Vector3.new(-10, 0, -24), 8, "z" }, { Vector3.new(60, 0, -30), 8, "z" }, { Vector3.new(-30, 0, -100), 6, "z" },
+}
+local doors = {}
 
-	-- supply crates (objective)
-	local picks = shuffled(MapService.SupplyCandidates, rng)
-	for i = 1, Game.CratesRequired do
-		local pos = picks[i]
-		local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
-		block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })
-		local glint = Instance.new("PointLight")
-		glint.Range = 5
-		glint.Brightness = 0.35
-		glint.Color = C.warm
-		glint.Parent = crate
-		local prompt = makePrompt(crate, "Salvage", "Supply crate", 1.2)
-		prompt.Triggered:Connect(function(player)
-			Services.MatchService.onCrateSalvaged(player, crate)
-		end)
+local function makeDoor(parent, hinge, width, axis, closedNow)
+	local along = axis == "x" and Vector3.new(1, 0, 0) or Vector3.new(0, 0, 1)
+	local size = axis == "x" and Vector3.new(width, 8.6, 0.4) or Vector3.new(0.4, 8.6, width)
+	local closedCF = CFrame.new(hinge + along * (width / 2) + Vector3.new(0, 4.3, 0))
+	local hingeCF = CFrame.new(hinge + Vector3.new(0, 4.3, 0))
+	local openCF = hingeCF * CFrame.Angles(0, math.rad(95), 0) * hingeCF:ToObjectSpace(closedCF)
+	local door = block(parent, size, closedNow and closedCF or openCF, Color3.fromRGB(92, 78, 62), Enum.Material.WoodPlanks, { Name = "Door" })
+	local modifier = Instance.new("PathfindingModifier")
+	modifier.PassThrough = true -- Hushed path through doors; they push them open
+	modifier.Parent = door
+	local record = { part = door, open = not closedNow, closedCF = closedCF, openCF = openCF }
+	local prompt = makePrompt(door, closedNow and "Open" or "Close", "Door", 0)
+	prompt.MaxActivationDistance = 7
+	record.prompt = prompt
+	function record.set(open, byPlayer)
+		if record.open == open then
+			return
+		end
+		record.open = open
+		prompt.ActionText = open and "Close" or "Open"
+		TweenService:Create(door, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { CFrame = open and openCF or closedCF }):Play()
+		if byPlayer then
+			Services.PerceptionService.emitNoise(door.Position, 7, "door", byPlayer)
+		end
 	end
+	prompt.Triggered:Connect(function(player)
+		record.set(not record.open, player)
+	end)
+	table.insert(doors, record)
+end
 
-	-- crafting parts
-	local spots = shuffled(MapService.LootSpots, rng)
-	local perType = math.max(1, math.floor(Items.PartsPerType * (modifier.partsMult or 1) + 0.5))
-	local index = 1
-	for _, itemId in { "glass", "cloth", "scrap" } do
-		for _ = 1, perType do
-			local pos = spots[index]
-			index += 1
-			if not pos then
-				break
-			end
-			local jitter = Vector3.new(rng:NextNumber(-1.5, 1.5), 0, rng:NextNumber(-1.5, 1.5))
-			local pickup = block(encounterFolder, Vector3.new(1.2, 0.6, 1.2), pos + jitter + Vector3.new(0, 0.3, 0), PART_COLORS[itemId], Enum.Material.SmoothPlastic, {
-				Name = "Pickup_" .. itemId,
-				CanCollide = false,
-			})
-			local prompt = makePrompt(pickup, "Pick up", Items.Items[itemId].name, 0)
-			prompt.MaxActivationDistance = 7
+local lantern
+
+function MapService.getLantern()
+	return lantern
+end
+
+function MapService.resetEncounter(modifier, rng, encounterType, pall)
+	encounterFolder:ClearAllChildren()
+	table.clear(doors)
+	lantern = nil
+
+	-- supply crates (Salvage objective)
+	if encounterType == "Salvage" then
+		local picks = shuffled(MapService.SupplyCandidates, rng)
+		for i = 1, Encounters.Types.Salvage.crates do
+			local pos = picks[i]
+			local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
+			block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })
+			local glint = Instance.new("PointLight")
+			glint.Range = 5
+			glint.Brightness = 0.35
+			glint.Color = C.warm
+			glint.Parent = crate
+			local prompt = makePrompt(crate, "Salvage", "Supply crate", 1.2)
 			prompt.Triggered:Connect(function(player)
-				Services.InventoryService.pickup(player, pickup, itemId, 1)
+				Services.MatchService.onCrateSalvaged(player, crate)
 			end)
 		end
 	end
+
+	-- the signal lantern (Lantern Watch / finale)
+	if encounterType == "LanternWatch" then
+		local base = MapService.LanternPos
+		block(encounterFolder, Vector3.new(3, 1, 3), base + Vector3.new(0, 0.5, 0), C.metal, Enum.Material.Metal)
+		block(encounterFolder, Vector3.new(0.5, 6, 0.5), base + Vector3.new(0, 4, 0), C.metal, Enum.Material.Metal)
+		lantern = block(encounterFolder, Vector3.new(1.6, 2, 1.6), base + Vector3.new(0, 8, 0), C.warm, Enum.Material.Neon, { Name = "SignalLantern" })
+		local light = Instance.new("PointLight")
+		light.Range = 40
+		light.Brightness = 2.5
+		light.Color = C.warm
+		light.Shadows = true
+		light.Parent = lantern
+		volume(encounterFolder, Vector3.new(30, 10, 30), base + Vector3.new(0, 5, 0), "LitZone")
+	end
+
+	-- doors (some start closed)
+	for _, d in DOORWAYS do
+		makeDoor(encounterFolder, d[1], d[2], d[3], rng:NextNumber() < 0.5)
+	end
+
+	-- scavenging: containers + loose items
+	Services.LootService.populate(encounterFolder, rng, pall or 1, MapService.ContainerSpots, MapService.LootSpots)
+	encounterFolder:SetAttribute("Modifier", modifier.id)
 
 	-- extraction: the Slipway flare (inactive until the quota is met)
 	local base = MapService.ExtractionPos
@@ -589,6 +753,42 @@ function MapService.cleanupEncounter()
 	extraction = nil
 end
 
+-- Shows which homebase repairs are done (any player in the server owns them).
+function MapService.setFerryRepairs(owned)
+	local ferry = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Meridian")
+	if not ferry then
+		return
+	end
+	local stations = ferry:FindFirstChild("Stations")
+	for _, d in ferry:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "DeckBulb" then
+			local light = d:FindFirstChildOfClass("PointLight")
+			if light then
+				light.Enabled = owned.lights == true
+			end
+			d.Material = owned.lights and Enum.Material.Neon or Enum.Material.Glass
+		end
+	end
+	if stations then
+		for _, id in { "generator", "radio", "sickbay", "armory" } do
+			local part = stations:FindFirstChild(id)
+			if part then
+				part.Transparency = owned[id] and 0 or 0.7
+				for _, light in part:GetDescendants() do
+					if light:IsA("PointLight") then
+						light.Enabled = owned[id] == true
+					end
+				end
+			end
+		end
+		local beacon = stations:FindFirstChild("radioBeacon")
+		local beaconLight = beacon and beacon:FindFirstChild("On")
+		if beaconLight then
+			beaconLight.Enabled = owned.radio == true
+		end
+	end
+end
+
 function MapService.ferrySpawn(index)
 	local o = Game.FerryOrigin
 	local pos = o + Vector3.new(-4 + ((index - 1) % 4) * 3, 3, 6)
@@ -624,7 +824,18 @@ function MapService.start()
 	encounterFolder.Parent = world
 
 	setupLighting()
+	MapService.setFerryRepairs({})
 	MapService.ready = true
+
+	-- Hushed shove closed doors open when they reach them.
+	while true do
+		task.wait(0.4)
+		for _, d in doors do
+			if not d.open and d.part.Parent and #Services.EnemyService.findNear(d.part.Position, 5) > 0 then
+				d.set(true, nil)
+			end
+		end
+	end
 end
 
 return MapService

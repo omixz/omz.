@@ -166,6 +166,17 @@ def main():
                 elif fn not in defined[mod]:
                     errors.append(f"{os.path.relpath(path, root)}: {registry}.{mod}.{fn} is not defined in {mod}")
 
+    # required modules: alias.fn(...) must exist when the module defines functions
+    req = re.compile(r'local\s+(\w+)\s*=\s*require\((?:[^()]|\([^()]*\))*?(?:\.|WaitForChild\(")(\w+)"?\)?\)\s*$', re.M)
+    for path, src in files.items():
+        aliases = {alias: mod for alias, mod in req.findall(src)}
+        for alias, mod in aliases.items():
+            if mod not in defined or not any(re.search(r"^function\s+%s[.:]" % re.escape(mod), s2, re.M) for p2, s2 in files.items() if os.path.basename(p2).split(".")[0] == mod):
+                continue
+            for fn in set(re.findall(r"\b%s[.:](\w+)\s*\(" % re.escape(alias), src)):
+                if fn not in defined[mod]:
+                    errors.append(f"{os.path.relpath(path, root)}: {alias}.{fn}() is not defined in {mod}")
+
     if errors:
         print("\n".join(errors))
         sys.exit(1)

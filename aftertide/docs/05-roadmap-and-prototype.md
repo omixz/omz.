@@ -123,8 +123,18 @@ Code lives in `aftertide/src`. Open `aftertide/build/Aftertide.rbxlx` in Studio 
 | Save data (tokens, stats, receipts) with memory fallback in Studio | Built (ProfileStore in Stage 9) |
 | Run aids: Second Wind / Resupply tokens, idempotent receipts, earn-free rewards | Built (needs product IDs, doc 6 step 5) |
 | Server-authoritative actions, rate-limited remotes, movement sanity checks | Built |
-| Custom rigs, authored animations, real art, music | **Not started** (Stages 2 and 5) |
-| Tide chart with multiple encounters per run, salt, perk tree, Keepsakes | **Not started** (Stage 7) |
+| **Roguelike crossing:** 3 encounters + finale, tide chart with 2 or 3 routes, rising Pall, return to the Meridian between stops | Built |
+| **Encounter types:** Salvage, Lantern Watch (waves vs the signal lantern), Drift (hunted, then extract), The Breakwater finale with a Tidewalker boss | Built |
+| **Enemies:** Drifter, Bellwether (hum alerts the area), Tidewalker (tank, can't be shoved or Quieted), with health, headshots and stagger | Built |
+| **Guns:** revolver, bow, shotgun, rifle, carbine; mags, reloads, spread, recoil, aim zoom, gunshot noise, tracers, hitmarkers, holstering | Built |
+| **Scavenging:** searchable containers + glinting loose items, loot tables, overflow drops | Built |
+| **Crafting v2:** 6 parts, Field Dressing, Flare Pot, Fog Pot, Salt Bomb, Tide Spike, arrows | Built |
+| **Workbench** (per run, Salvage) and **homebase repairs** (permanent, Scrip) | Built |
+| Interactive doors (Hushed push through them) | Built |
+| Graphics presets: Cinematic / Balanced / Performance, aim-focus depth of field | Built |
+| Custom realistic rigs and animation hooks | Built (needs your rig models, doc 7) |
+| Authored art, meshes, animations, music | **Not started** (doc 7 pipeline) |
+| Salt and Keepsakes; more maps | **Not started** |
 | Cosmetics, Tide Pass, subscription | **Not started** (Stage 10) |
 
 **Testing honesty:** this environment can't run Roblox Studio. The code was checked with

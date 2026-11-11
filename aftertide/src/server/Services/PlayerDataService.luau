@@ -3,6 +3,7 @@
 -- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
 -- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -23,10 +24,13 @@ local function defaultData()
 	return {
 		version = 1,
 		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply },
-		stats = { runs = 0, wins = 0, takedowns = 0 },
+		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
 		lastDailyWin = "",
+		scrip = 0, -- homebase currency, earned only by playing
+		repairs = {}, -- [repairId] = true
+		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
 	}
 end
 
@@ -35,7 +39,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -53,6 +57,59 @@ end
 local function publishTokens(player, data)
 	for kind, amount in data.tokens do
 		player:SetAttribute("Tokens_" .. kind, amount)
+	end
+	player:SetAttribute("Scrip", data.scrip)
+	player:SetAttribute("Repairs", HttpService:JSONEncode(data.repairs))
+	player:SetAttribute("Set_graphics", data.settings.graphics)
+	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
+	player:SetAttribute("Set_reduceMotion", data.settings.reduceMotion)
+end
+
+function PlayerDataService.publish(player)
+	local data = PlayerDataService.get(player)
+	if data then
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.addScrip(player, amount)
+	local data = PlayerDataService.get(player)
+	if not data then
+		return false
+	end
+	data.scrip += amount
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.spendScrip(player, amount)
+	local data = PlayerDataService.get(player)
+	if not data or data.scrip < amount then
+		return false
+	end
+	data.scrip -= amount
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.hasRepair(player, repairId)
+	local data = PlayerDataService.get(player)
+	return data ~= nil and data.repairs[repairId] == true
+end
+
+function PlayerDataService.addRepair(player, repairId)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.repairs[repairId] = true
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.setSettings(player, settings)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.settings = settings
+		publishTokens(player, data)
 	end
 end
 

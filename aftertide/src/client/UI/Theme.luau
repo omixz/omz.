@@ -131,6 +131,22 @@ function Theme.button(props)
 	return button
 end
 
+-- Gamepad/console: put the selection cursor on a button when a menu opens.
+function Theme.focus(button)
+	local UserInputService = game:GetService("UserInputService")
+	if button and UserInputService.GamepadEnabled then
+		game:GetService("GuiService").SelectedObject = button
+	end
+end
+
+function Theme.clear(frame)
+	for _, child in frame:GetChildren() do
+		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UIGridLayout") then
+			child:Destroy()
+		end
+	end
+end
+
 -- A full-screen dark backdrop + centred panel for modal screens.
 function Theme.modal(parent, name, size, maxSize)
 	local backdrop = Theme.make("Frame", {

@@ -1,10 +1,12 @@
 --!nonstrict
--- The Hushed (Slice 0: Drifters). Server-simulated, one state machine per enemy:
+-- The Hushed. Server-simulated, one state machine per enemy:
 --   Patrol -> (notice) -> Investigate -> Search -> Patrol
---   any    -> (suspicion >= 1) -> Chase -> (lost sight) -> Search
+--   any    -> (suspicion >= 1 or shot) -> Chase -> (lost sight) -> Search
 --   Stunned / Pinned / Quieted are timed overrides.
--- Per-player suspicion is published as model attributes "Sus_<UserId>" so each client can draw
--- its own detection indicators. "State" and "Target" (UserId) are published too.
+-- Types (Config/Enemies): Drifter, Bellwether (hums to alert others), Tidewalker (tank).
+-- Encounter behaviours: `objective` (walk to and attack the signal lantern) and `hunt`
+-- (periodically told roughly where the players are).
+-- Replicated model attributes: State, Target (UserId), Sus_<UserId>, Type, HP (0..1).
 local PathfindingService = game:GetService("PathfindingService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -14,45 +16,48 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local EnemyConfig = require(Shared.Config.Enemies)
 local Geometry = require(Shared.Util.Geometry)
 local Sfx = require(Shared.Util.Sfx)
+local Net = require(Shared.Net)
 
 local EnemyService = {}
 local Services
 
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
-local SALT = Color3.fromRGB(206, 201, 189)
 
 local folder
-local enemies = {} -- array of enemy records
-local byModel = {} -- [Model] = record
+local enemies = {}
+local byModel = {}
+local fireZones = {}
 local rng = Random.new()
 local occlusionParams = RaycastParams.new()
 occlusionParams.FilterType = Enum.RaycastFilterType.Exclude
 
 -- Model -----------------------------------------------------------------------------------
 
-local function buildModel(position)
+local function buildModel(position, typeName, cfg)
+	local k = cfg.scale
 	local model = Instance.new("Model")
-	model.Name = "Hushed"
+	model.Name = "Hushed_" .. typeName
 
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1)
+	root.Size = Vector3.new(2, 2, 1) * k
 	root.Transparency = 1
 	root.CanCollide = true
-	root.CFrame = CFrame.new(position + Vector3.new(0, 4, 0))
+	root.CFrame = CFrame.new(position + Vector3.new(0, 4 * k, 0))
 	root.Parent = model
 	model.PrimaryPart = root
 
+	local base = cfg.color
 	local function limb(name, size, offset, color)
 		local p = Instance.new("Part")
 		p.Name = name
-		p.Size = size
-		p.Color = color or SALT
+		p.Size = size * k
+		p.Color = color or base
 		p.Material = Enum.Material.Sand
 		p.CanCollide = false
 		p.CanTouch = false
 		p.Massless = true
-		p.CFrame = root.CFrame * offset
+		p.CFrame = root.CFrame * CFrame.new(offset.Position * k) * offset.Rotation
 		p.Parent = model
 		local weld = Instance.new("WeldConstraint")
 		weld.Part0 = root
@@ -61,31 +66,39 @@ local function buildModel(position)
 		return p
 	end
 
-	local torso = limb("Torso", Vector3.new(1.7, 2.4, 0.9), CFrame.new(0, 0.7, 0) * CFrame.Angles(math.rad(-8), 0, 0))
-	local head = limb("Head", Vector3.new(1.1, 1.45, 1.1), CFrame.new(0, 2.5, -0.3) * CFrame.Angles(math.rad(-18), 0, 0), Color3.fromRGB(222, 218, 207))
+	local bulky = typeName == "Tidewalker"
+	local torso = limb("Torso", bulky and Vector3.new(2.3, 2.6, 1.4) or Vector3.new(1.7, 2.4, 0.9), CFrame.new(0, 0.7, 0) * CFrame.Angles(math.rad(bulky and -16 or -8), 0, 0))
+	local headSize = typeName == "Bellwether" and Vector3.new(1.5, 1.0, 1.5) or Vector3.new(1.1, 1.45, 1.1)
+	local head = limb("Head", headSize, CFrame.new(0, 2.5, bulky and -0.6 or -0.3) * CFrame.Angles(math.rad(-18), 0, 0), Color3.new(base.R * 1.08, base.G * 1.08, base.B * 1.08))
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
 	mesh.Parent = head
-	limb("LeftArm", Vector3.new(0.45, 3.1, 0.45), CFrame.new(-1.12, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(-4)))
-	limb("RightArm", Vector3.new(0.45, 3.1, 0.45), CFrame.new(1.12, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(4)))
+	local armSize = bulky and Vector3.new(0.75, 3.3, 0.75) or Vector3.new(0.45, 3.1, 0.45)
+	local armX = bulky and 1.55 or 1.12
+	limb("LeftArm", armSize, CFrame.new(-armX, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(-4)))
+	limb("RightArm", armSize, CFrame.new(armX, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(4)))
 	limb("LeftLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(-0.45, -2.5, 0))
 	limb("RightLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(0.45, -2.5, 0))
+	if bulky then
+		-- crusted salt plates on the shoulders
+		limb("CrustL", Vector3.new(1.1, 0.7, 1.3), CFrame.new(-1.1, 1.9, 0) * CFrame.Angles(0, 0, math.rad(20)), Color3.fromRGB(120, 118, 110))
+		limb("CrustR", Vector3.new(1.1, 0.7, 1.3), CFrame.new(1.1, 1.9, 0) * CFrame.Angles(0, 0, math.rad(-20)), Color3.fromRGB(120, 118, 110))
+	end
 
-	-- faint salt drifting off them: their visual signature
 	local drift = Instance.new("ParticleEmitter")
-	drift.Rate = 4
+	drift.Rate = bulky and 8 or 4
 	drift.Lifetime = NumberRange.new(2, 3)
 	drift.Speed = NumberRange.new(0.4, 1.2)
 	drift.SpreadAngle = Vector2.new(180, 180)
 	drift.Acceleration = Vector3.new(0, 0.8, 0)
-	drift.Color = ColorSequence.new(SALT)
+	drift.Color = ColorSequence.new(base)
 	drift.LightInfluence = 1
-	drift.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0) })
+	drift.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12 * k), NumberSequenceKeypoint.new(1, 0) })
 	drift.Parent = torso
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.RigType = Enum.HumanoidRigType.R15 -- R15 so HipHeight (not leg parts) sets floor height
-	humanoid.HipHeight = 3
+	humanoid.HipHeight = 3 * k
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.WalkSpeed = 5
@@ -95,31 +108,32 @@ local function buildModel(position)
 	humanoid.RequiresNeck = false
 	humanoid.BreakJointsOnDeath = false
 	humanoid.Parent = model
-	for _, state in {
+	for _, s in {
 		Enum.HumanoidStateType.Climbing,
 		Enum.HumanoidStateType.FallingDown,
 		Enum.HumanoidStateType.Ragdoll,
 		Enum.HumanoidStateType.Seated,
 		Enum.HumanoidStateType.Jumping,
 	} do
-		humanoid:SetStateEnabled(state, false)
+		humanoid:SetStateEnabled(s, false)
 	end
-
+	model:SetAttribute("Type", typeName)
+	model:SetAttribute("HP", 1)
 	return model, humanoid, root, head
 end
 
 -- Helpers ---------------------------------------------------------------------------------
 
-local function setState(e, state)
-	if e.state == state then
+local function setState(e, newState)
+	if e.state == newState then
 		return
 	end
-	e.state = state
+	e.state = newState
 	e.stateTime = os.clock()
 	e.waypoints = nil
 	e.pathGoal = nil
 	e.searchPoint = nil
-	e.model:SetAttribute("State", state)
+	e.model:SetAttribute("State", newState)
 end
 
 local function face(e, position)
@@ -158,7 +172,6 @@ local function computePath(e, goal)
 	end)
 end
 
--- Walks toward `goal` using pathfinding. Returns true on arrival.
 local function moveTo(e, goal, speed)
 	local now = os.clock()
 	local pos = e.root.Position
@@ -183,10 +196,9 @@ local function moveTo(e, goal, speed)
 		end
 	end
 	e.humanoid:MoveTo(target)
-
 	if now - e.progressTime > 2 then
 		if (pos - e.progressPos).Magnitude < 1 then
-			e.pathGoal = nil -- stuck: force a re-path next tick
+			e.pathGoal = nil
 			e.lastPathTime = 0
 		end
 		e.progressPos = pos
@@ -218,6 +230,24 @@ local function publishSuspicion(e, active)
 	end
 end
 
+local function alertTo(e, player)
+	if e.dead or e.state == "Quieted" then
+		return
+	end
+	e.suspicion[player] = math.max(e.suspicion[player] or 0, e.cfg.alertThreshold)
+end
+
+local function hum(e, now)
+	local h = e.cfg.hum
+	if not h or now < (e.nextHum or 0) or not e.target then
+		return
+	end
+	e.nextHum = now + h.cooldown
+	Sfx.at(e.root.Position, "Hum", 0.8, h.radius * 2)
+	Net.notifyAll("Hum", { position = e.root.Position, radius = h.radius })
+	Services.PerceptionService.emitNoise(e.root.Position, h.radius, "hum", e.target)
+end
+
 -- Brain -----------------------------------------------------------------------------------
 
 local function update(e, dt, now, active)
@@ -228,12 +258,14 @@ local function update(e, dt, now, active)
 		publishSuspicion(e, active)
 		return
 	elseif e.state == "Stunned" or e.state == "Pinned" then
-		e.net = e.net and e.net:Destroy()
+		if e.net then
+			e.net:Destroy()
+			e.net = nil
+		end
 		setState(e, e.investigatePos and "Investigate" or "Search")
 		e.searchOrigin = e.root.Position
 	end
 
-	-- perception
 	local bestPlayer, bestSus = nil, 0
 	for _, info in active do
 		local p = info.player
@@ -263,11 +295,13 @@ local function update(e, dt, now, active)
 	if e.state ~= "Chase" and bestPlayer and bestSus >= cfg.alertThreshold then
 		e.target = bestPlayer
 		e.lastKnown = findInfo(active, bestPlayer).root.Position
+		e.lastSeen[bestPlayer] = e.lastSeen[bestPlayer] or now
 		setState(e, "Chase")
 		Services.MatchService.onSpotted(bestPlayer, e)
 	end
 
 	if e.state == "Chase" then
+		hum(e, now)
 		local info = e.target and findInfo(active, e.target)
 		if not info then
 			e.target = nil
@@ -281,10 +315,15 @@ local function update(e, dt, now, active)
 			local dist = (info.root.Position - e.root.Position).Magnitude
 			if dist <= cfg.grabRange and now >= e.recoverUntil then
 				e.recoverUntil = now + cfg.grabRecover
-				Services.CharacterService.damage(info.player, cfg.grabDamage, e.root.Position)
+				if not Services.ActionService.trySpikeCounter(info.player, e) then
+					Services.CharacterService.damage(info.player, cfg.grabDamage, e.root.Position)
+				end
+			end
+			if e.dead then
+				return
 			end
 			if now < e.recoverUntil - cfg.grabRecover + 0.9 then
-				stop(e) -- brief stagger after a grab so you can break away
+				stop(e)
 			elseif now - (e.lastSeen[e.target] or 0) > cfg.loseSightTime then
 				e.suspicion[e.target] = 0.6
 				e.target = nil
@@ -309,7 +348,6 @@ local function update(e, dt, now, active)
 		if not e.investigatePos then
 			setState(e, "Search")
 		elseif bestSus >= cfg.noticeThreshold and bestSus < cfg.investigateThreshold and bestPlayer then
-			-- something's there: stop and stare before committing
 			stop(e)
 			face(e, findInfo(active, bestPlayer).root.Position)
 		elseif moveTo(e, e.investigatePos, cfg.investigateSpeed) then
@@ -332,10 +370,16 @@ local function update(e, dt, now, active)
 			stop(e)
 			face(e, e.root.Position + e.root.CFrame.RightVector * (rng:NextNumber() < 0.5 and -4 or 4))
 		end
-	else -- Patrol
+	else -- Patrol (or objective)
 		if bestPlayer and bestSus >= cfg.noticeThreshold then
 			stop(e)
 			face(e, findInfo(active, bestPlayer).root.Position)
+		elseif e.objective then
+			if moveTo(e, e.objective, cfg.investigateSpeed) or (e.root.Position - e.objective).Magnitude < 6 then
+				stop(e)
+				face(e, e.objective)
+				Services.MatchService.onObjectiveAttacked(e.objectiveDps * dt)
+			end
 		else
 			local waypoint = e.route[e.routeIndex]
 			if moveTo(e, waypoint, cfg.patrolSpeed) then
@@ -349,46 +393,66 @@ end
 
 -- Public API ------------------------------------------------------------------------------
 
-function EnemyService.spawnWave(count, routes)
-	for i = 1, count do
-		local route = routes[(i - 1) % #routes + 1]
-		local startIndex = rng:NextInteger(1, #route)
-		local spawnAt = route[startIndex] + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3))
-		local model, humanoid, root, head = buildModel(spawnAt)
-		model.Parent = folder
-		pcall(function()
-			root:SetNetworkOwner(nil)
-		end)
-		local cfg = EnemyConfig.Drifter
-		local e = {
-			model = model,
-			humanoid = humanoid,
-			root = root,
-			head = head,
-			cfg = cfg,
-			fovCos = math.cos(math.rad(cfg.fovDeg / 2)),
-			route = route,
-			routeIndex = startIndex % #route + 1,
-			path = PathfindingService:CreatePath({
-				AgentRadius = 2,
-				AgentHeight = 7,
-				AgentCanJump = false,
-				WaypointSpacing = 6,
-			}),
-			lastPathTime = 0,
-			progressPos = root.Position,
-			progressTime = os.clock(),
-			stunUntil = 0,
-			recoverUntil = 0,
-			suspicion = {},
-			lastSeen = {},
-			state = "",
-			stateTime = os.clock(),
-		}
-		setState(e, "Patrol")
-		table.insert(enemies, e)
-		byModel[model] = e
+-- opts: { route = {Vector3...}, objective = Vector3, objectiveDps = n, hunt = bool, alertTo = Player }
+function EnemyService.spawn(typeName, position, opts)
+	opts = opts or {}
+	local cfg = EnemyConfig.Types[typeName] or EnemyConfig.Types.Drifter
+	local model, humanoid, root, head = buildModel(position, typeName, cfg)
+	model.Parent = folder
+	pcall(function()
+		root:SetNetworkOwner(nil)
+	end)
+	local route = opts.route or { position }
+	local e = {
+		model = model,
+		humanoid = humanoid,
+		root = root,
+		head = head,
+		typeName = typeName,
+		cfg = cfg,
+		hp = cfg.hp,
+		fovCos = math.cos(math.rad(cfg.fovDeg / 2)),
+		route = route,
+		routeIndex = rng:NextInteger(1, #route),
+		objective = opts.objective,
+		objectiveDps = opts.objectiveDps or 0,
+		hunt = opts.hunt == true,
+		path = PathfindingService:CreatePath({
+			AgentRadius = 2 * cfg.scale,
+			AgentHeight = 7 * cfg.scale,
+			AgentCanJump = false,
+			WaypointSpacing = 6,
+		}),
+		lastPathTime = 0,
+		progressPos = root.Position,
+		progressTime = os.clock(),
+		stunUntil = 0,
+		recoverUntil = 0,
+		suspicion = {},
+		lastSeen = {},
+		state = "",
+		stateTime = os.clock(),
+	}
+	setState(e, "Patrol")
+	table.insert(enemies, e)
+	byModel[model] = e
+	return e
+end
+
+-- Weighted pick from { Type = weight }.
+function EnemyService.pickType(weights)
+	local total = 0
+	for _, w in weights do
+		total += w
 	end
+	local roll = rng:NextNumber() * total
+	for typeName, w in weights do
+		roll -= w
+		if roll <= 0 then
+			return typeName
+		end
+	end
+	return "Drifter"
 end
 
 function EnemyService.clear()
@@ -398,6 +462,11 @@ function EnemyService.clear()
 	end
 	table.clear(enemies)
 	table.clear(byModel)
+	table.clear(fireZones)
+end
+
+function EnemyService.count()
+	return #enemies
 end
 
 function EnemyService.fromInstance(instance)
@@ -412,7 +481,6 @@ function EnemyService.getAll()
 	return enemies
 end
 
--- Living enemies within radius of position, nearest first.
 function EnemyService.findNear(position, radius)
 	local found = {}
 	for _, e in enemies do
@@ -429,7 +497,7 @@ function EnemyService.findNear(position, radius)
 	return found
 end
 
-function EnemyService.stun(e, duration, byPlayer, state)
+function EnemyService.stun(e, duration, byPlayer, newState)
 	if e.dead then
 		return
 	end
@@ -445,7 +513,7 @@ function EnemyService.stun(e, duration, byPlayer, state)
 	if e.state == "Chase" then
 		e.target = nil
 	end
-	setState(e, state or "Stunned")
+	setState(e, newState or "Stunned")
 	stop(e)
 end
 
@@ -453,7 +521,7 @@ function EnemyService.pin(e, duration)
 	EnemyService.stun(e, duration, nil, "Pinned")
 	local net = Instance.new("Part")
 	net.Name = "Net"
-	net.Size = Vector3.new(3.4, 7.4, 2.4)
+	net.Size = Vector3.new(3.4, 7.4, 2.4) * e.cfg.scale
 	net.CFrame = e.root.CFrame * CFrame.new(0, -0.6, 0)
 	net.Material = Enum.Material.Fabric
 	net.Color = Color3.fromRGB(150, 130, 90)
@@ -469,9 +537,8 @@ function EnemyService.pin(e, duration)
 	e.net = net
 end
 
--- True if a Quieting is allowed: from behind and unaware, or any side while stunned/pinned.
 function EnemyService.canQuiet(e, playerPosition)
-	if e.dead or e.state == "Chase" or e.state == "Quieted" then
+	if e.dead or not e.cfg.quietable or e.state == "Chase" or e.state == "Quieted" then
 		return false
 	end
 	if e.state == "Stunned" or e.state == "Pinned" then
@@ -484,7 +551,7 @@ function EnemyService.canQuiet(e, playerPosition)
 	return e.root.CFrame.LookVector:Dot(toPlayer.Unit) < -0.2
 end
 
-function EnemyService.disperse(e)
+function EnemyService.disperse(e, byPlayer)
 	if e.dead then
 		return
 	end
@@ -495,6 +562,7 @@ function EnemyService.disperse(e)
 		table.remove(enemies, index)
 	end
 	e.model:SetAttribute("State", "Dispersed")
+	e.model:SetAttribute("HP", 0)
 	e.root.Anchored = true
 
 	local attachment = Instance.new("Attachment")
@@ -508,9 +576,9 @@ function EnemyService.disperse(e)
 	burst.SpreadAngle = Vector2.new(180, 180)
 	burst.Drag = 3
 	burst.Acceleration = Vector3.new(0, 2.5, 0)
-	burst.Color = ColorSequence.new(SALT)
+	burst.Color = ColorSequence.new(e.cfg.color)
 	burst.LightInfluence = 1
-	burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 4) })
+	burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1 * e.cfg.scale), NumberSequenceKeypoint.new(1, 4 * e.cfg.scale) })
 	burst.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
 	burst.Parent = attachment
 	burst:Emit(70)
@@ -523,13 +591,68 @@ function EnemyService.disperse(e)
 		end
 	end
 	Sfx.at(e.root.Position, "Quieting", 0.5, 60)
+	Services.MatchService.onEnemyKilled(byPlayer, e)
 	local model = e.model
 	task.delay(2.6, function()
 		model:Destroy()
 	end)
 end
 
--- Called by PerceptionService for every noise event.
+-- Weapon / explosive / fire damage. Returns true if this killed it.
+function EnemyService.damage(e, amount, byPlayer, headshot)
+	if e.dead or amount <= 0 then
+		return false
+	end
+	e.hp -= amount
+	e.model:SetAttribute("HP", math.max(0, e.hp / e.cfg.hp))
+	if e.hp <= 0 then
+		EnemyService.disperse(e, byPlayer)
+		return true
+	end
+	-- stagger, and being shot always alerts it to the shooter
+	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
+	if stagger > 0.05 and e.state ~= "Quieted" then
+		e.stunUntil = math.max(e.stunUntil, os.clock() + stagger)
+	end
+	if byPlayer then
+		alertTo(e, byPlayer)
+		local char = byPlayer.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if root then
+			e.lastKnown = root.Position
+			e.investigatePos = root.Position
+		end
+	end
+	return false
+end
+
+function EnemyService.explode(position, radius, damage, byPlayer)
+	for _, entry in EnemyService.findNear(position, radius) do
+		local falloff = 1 - (entry.distance / radius) * 0.6
+		local e = entry.enemy
+		if not EnemyService.damage(e, damage * falloff, byPlayer, false) then
+			EnemyService.stun(e, 2, byPlayer)
+		end
+	end
+end
+
+function EnemyService.addFireZone(position, radius, duration, dps, byPlayer)
+	table.insert(fireZones, { position = position, radius = radius, untilTime = os.clock() + duration, dps = dps, player = byPlayer })
+end
+
+-- Tell hunters roughly where the players are.
+function EnemyService.huntPulse(active)
+	if #active == 0 then
+		return
+	end
+	for _, e in enemies do
+		if e.hunt and not e.dead and e.state ~= "Chase" then
+			local info = active[rng:NextInteger(1, #active)]
+			e.investigatePos = info.root.Position + Vector3.new(rng:NextNumber(-10, 10), 0, rng:NextNumber(-10, 10))
+		end
+	end
+end
+
 function EnemyService.onNoise(event)
 	for _, e in enemies do
 		if not e.dead and e.state ~= "Chase" and e.state ~= "Quieted" and os.clock() >= e.stunUntil then
@@ -539,17 +662,33 @@ function EnemyService.onNoise(event)
 			if dist <= radius then
 				local hit = Workspace:Raycast(eyes, event.position - eyes, occlusionParams)
 				if hit and (hit.Position - event.position).Magnitude > 3 then
-					radius *= 0.5 -- muffled through walls
+					radius *= 0.5
 				end
 				if dist <= radius then
 					local loud = 1 - dist / radius
 					if event.player then
 						local footstep = event.kind == "footstep"
 						local add = (footstep and 0.08 or 0.3) + loud * (footstep and 0.3 or 0.6)
+						if event.kind == "gunshot" or event.kind == "hum" then
+							add += 0.5
+						end
 						e.suspicion[event.player] = math.min(1.2, (e.suspicion[event.player] or 0) + add)
 					end
 					e.investigatePos = event.position
 				end
+			end
+		end
+	end
+end
+
+local function tickFire(dt, now)
+	for i = #fireZones, 1, -1 do
+		local zone = fireZones[i]
+		if now > zone.untilTime then
+			table.remove(fireZones, i)
+		else
+			for _, entry in EnemyService.findNear(zone.position, zone.radius) do
+				EnemyService.damage(entry.enemy, zone.dps * dt, zone.player, false)
 			end
 		end
 	end
@@ -579,6 +718,7 @@ function EnemyService.start()
 		end
 		local now = os.clock()
 		local active = Services.MatchService.getActivePlayers()
+		tickFire(step, now)
 		for i = #enemies, 1, -1 do
 			local e = enemies[i]
 			if e and not e.dead then

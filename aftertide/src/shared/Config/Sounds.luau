@@ -10,4 +10,16 @@ return {
 	Spotted = "rbxasset://sounds/electronicpingshort.wav",
 	Rattle = "rbxasset://sounds/electronicpingshort.wav",
 	Splash = "rbxasset://sounds/impact_water.mp3",
+	Search = "rbxasset://sounds/swordlunge.wav",
+	Explosion = "",
+	Hum = "",
+	-- Gunshots: pick free Roblox-licensed sounds in Creator Store > Audio and paste
+	-- "rbxassetid://<id>" here. Empty = silent (the noise event still alerts the Hushed).
+	Gun_revolver = "",
+	Gun_carbine = "",
+	Gun_rifle = "",
+	Gun_shotgun = "",
+	Gun_bow = "",
+	Reload = "",
+	DryFire = "",
 }

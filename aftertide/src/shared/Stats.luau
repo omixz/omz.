@@ -20,15 +20,17 @@ local DEFAULTS = {
 	reviveHPBonus = 0,
 	bleedOutBonus = 0,
 	throwNoiseMult = 1,
-	craftDiscount = 0,
+	craftTimeMult = 1,
+	craftYieldBonus = 0,
 	ammoBonus = 0,
+	aimSpreadMult = 1,
 }
 
 local ADDITIVE = {
 	throwCapBonus = true,
 	reviveHPBonus = true,
 	bleedOutBonus = true,
-	craftDiscount = true,
+	craftYieldBonus = true,
 	ammoBonus = true,
 }
 
@@ -57,7 +59,8 @@ function Stats.findPerk(charId, perkId)
 	return nil
 end
 
-function Stats.compute(charId, perkId)
+-- extraPerks: optional set { [perkId] = true } of perks bought at the workbench this run.
+function Stats.compute(charId, perkId, extraPerks)
 	local result = table.clone(DEFAULTS)
 	local def = Characters.List[charId]
 	if not def then
@@ -67,6 +70,13 @@ function Stats.compute(charId, perkId)
 	local perk = Stats.findPerk(charId, perkId)
 	if perk then
 		apply(result, perk.mods)
+	end
+	if extraPerks then
+		for _, p in def.perks do
+			if extraPerks[p.id] and p.id ~= perkId then
+				apply(result, p.mods)
+			end
+		end
 	end
 	return result
 end

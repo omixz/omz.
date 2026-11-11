@@ -21,6 +21,9 @@ local currentSpeed = 0
 local stillTime = 0
 local lastSent = ""
 local poseAlpha = setmetatable({}, { __mode = "k" })
+local aimAlpha = setmetatable({}, { __mode = "k" })
+local readyAlpha = setmetatable({}, { __mode = "k" })
+local lastLookSent, lastLookAt = 0, 0
 
 local function send()
 	local stance = State.crouched and "Crouch" or "Stand"
@@ -162,6 +165,25 @@ local function applyPose(char, alpha)
 	bend(joint(char, "RightLowerLeg", "RightKnee"), -1.7 * legs)
 end
 
+local function rotate(motor, cf)
+	if motor and motor:IsA("Motor6D") then
+		motor.Transform = motor.Transform * cf
+	end
+end
+
+-- Holding / aiming a weapon: both hands on the gun, upper body follows aim pitch.
+local function applyArms(char, aimAlpha, readyAlpha, pitchValue, longGun)
+	local a, r = aimAlpha, readyAlpha * (1 - aimAlpha)
+	local p = pitchValue * aimAlpha
+	rotate(joint(char, "UpperTorso", "Waist"), CFrame.Angles(p * 0.45, 0, 0))
+	rotate(joint(char, "RightUpperArm", "RightShoulder"), CFrame.Angles(1.55 * a + 0.55 * r + p * 0.5, 0, 0))
+	rotate(joint(char, "RightLowerArm", "RightElbow"), CFrame.Angles(0.15 * a + 0.9 * r, 0, 0))
+	if longGun or a > 0 then
+		rotate(joint(char, "LeftUpperArm", "LeftShoulder"), CFrame.Angles(1.4 * a + 0.5 * r + p * 0.5, 0, (longGun and 0.55 or 0.75) * (a + r)))
+		rotate(joint(char, "LeftLowerArm", "LeftElbow"), CFrame.Angles((longGun and 0.55 or 0.35) * a + 0.9 * r, 0, 0))
+	end
+end
+
 local function stepPoses(_, dt)
 	for _, p in Players:GetPlayers() do
 		local char = p.Character
@@ -178,6 +200,20 @@ local function stepPoses(_, dt)
 			if a > 0.01 then
 				applyPose(char, a)
 			end
+			-- weapon pose
+			local equipped = char:GetAttribute("Equipped")
+			local armed = equipped ~= nil and equipped ~= "" and not char:GetAttribute("Downed")
+			local aiming = armed and (p == player and State.aiming or (p ~= player and char:GetAttribute("Aim") == true))
+			local ai = aimAlpha[char] or 0
+			ai += ((aiming and 1 or 0) - ai) * math.min(1, dt * 14)
+			aimAlpha[char] = ai
+			local ri = readyAlpha[char] or 0
+			ri += ((armed and 1 or 0) - ri) * math.min(1, dt * 10)
+			readyAlpha[char] = ri
+			if ai > 0.01 or ri > 0.01 then
+				local pitchValue = p == player and State.pitch or (char:GetAttribute("AimPitch") or 0)
+				applyArms(char, ai, ri, pitchValue, char:GetAttribute("EquippedSlot") == "long")
+			end
 			if p == player and State.humanoid then
 				local legs = math.min(a, 1)
 				State.humanoid.HipHeight = State.baseHipHeight * (1 - (1 - Movement.CrouchHipMult) * legs)
@@ -190,7 +226,20 @@ function MovementController.init(registry)
 	Controllers = registry
 end
 
+local function sendLook()
+	if not State.aiming then
+		return
+	end
+	local now = os.clock()
+	if now - lastLookAt > 0.12 and math.abs(State.pitch - lastLookSent) > 0.04 then
+		lastLookAt = now
+		lastLookSent = State.pitch
+		Net.event("Look"):FireServer(State.pitch)
+	end
+end
+
 function MovementController.start()
+	RunService.Heartbeat:Connect(sendLook)
 	RunService:BindToRenderStep("AftertideMovement", Enum.RenderPriority.Input.Value + 1, stepLocal)
 	RunService.Stepped:Connect(stepPoses)
 end

@@ -4,7 +4,8 @@ A cinematic, third-person stealth-survival roguelike for Roblox. This folder hol
 pre-production design pack: what we are building, how, how it makes money, how we
 keep it legally clean, and in what order we build it.
 
-**Status: Slice 0 (first playable) built, waiting for its first Studio play-test.**
+**Status: playable roguelike build: crossings of 3 encounters + finale, guns, scavenging,
+crafting, workbench and homebase. Waiting for its first Studio play-test.**
 Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 
 ## Play it now
@@ -23,6 +24,7 @@ Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-p
 | 4 | [IP & legal compliance](docs/04-ip-compliance.md) | Australian copyright/trade mark, Roblox rules, asset/music licensing, risk register, checklist |
 | 5 | [Roadmap & first prototype](docs/05-roadmap-and-prototype.md) | Stage-by-stage plan with exit criteria, decisions made, and what Slice 0 includes |
 | 6 | [Play, publish & grow for $0](docs/06-publishing.md) | Studio setup, publishing, maturity form, developer products, free assets, launch checklist |
+| 7 | [Realistic characters & graphics](docs/07-characters-and-graphics.md) | Free pipeline for realistic crew models, Cinematic/Balanced/Performance presets, PlayStation/Xbox |
 
 ## Code layout
 

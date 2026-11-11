@@ -24,15 +24,19 @@ its share only when players spend Robux.
 5. **Test co-op:** **Test** tab → *Clients and Servers* → choose **2 players** (up to 4) →
    **Start**. Several windows open, one per player.
 
-**Controls:** WASD move · Shift sprint · C or Ctrl crouch · right mouse aim · left mouse
-slingshot · G throw bottle · F Quieting (from behind) / shove · Q ability · H bandage ·
-T torch · X swap shoulder · Tab satchel and crafting · B resupply · R Second Wind (when
-downed) · E interact. Gamepad and touch controls are bound automatically.
+**Controls:** WASD move · Shift sprint · C or Ctrl crouch · 1 long gun · 2 sidearm ·
+3 holster · right mouse aim · left mouse fire · R reload (Second Wind when downed) ·
+F Quieting / shove · G throw · Z next throwable · Q ability · H Field Dressing · T torch ·
+X swap shoulder · Tab satchel and crafting · B resupply · P settings · E interact/search.
+Gamepad: L2/R2 aim and fire, X reload or Quiet (contextual), R1/L1 throw/next throwable,
+D-pad right cycles weapons. Touch buttons appear automatically.
 
-**How to play Cannery Row:** salvage 5 supply crates (orange crates with a white stripe),
-then get every standing crew member to the red flare at the north-west Slipway.
-Crouch in the reeds, stay out of lamp light, keep your torch off, throw bottles to pull
-Hushed away, and Quiet them from behind. A Hushed that grabs you three times puts you down.
+**How a crossing works:** hold E at the tide chart to start, prepare at the workbench,
+then pick a route. Each stop is Salvage (find crates, reach the flare), Lantern Watch
+(defend the lantern through waves) or Drift (survive being hunted, then extract). Search
+drawers, lockers and crates for parts and ammo, craft in the satchel (Tab), and stay
+quiet: gunshots bring every Hushed nearby. After 3 stops comes the finale, The
+Breakwater. Scrip from every cleared stop repairs the Meridian permanently.
 
 **Messages you can ignore in Output during local testing:**
 `[PlayerData] DataStores unavailable: using memory only`. This appears until the
@@ -57,8 +61,8 @@ experience is published and Studio API access is on (6.3).
 ## 6.4 Maturity & compliance questionnaire (required)
 
 Creator Hub → AFTERTIDE → **Audience → Maturity & Compliance** → answer honestly:
-fictional, non-realistic violence against non-human creatures, no blood or gore, fear and
-horror themes present. Expect the **Moderate** label (the target we chose). Re-answer it
+fictional weapons used against non-human creatures, no blood or gore (they burst into
+salt), fear and horror themes present. Expect the **Moderate** label (the target we chose). Re-answer it
 whenever the content changes. Wrong answers can get the experience moderated.
 
 ## 6.5 Turn on the run-aid products
@@ -141,4 +145,6 @@ scripts and stolen assets (doc 4 §4.4).
 | "NOT SET UP" on shop buttons | Product IDs are still 0 in `Config/Commerce.luau` (6.5) |
 | Everything very dark or flat | Lighting → Technology = **Future**. Check the graphics quality setting in the Roblox menu. |
 | Players can't join each other | Server size too small (6.3 step 3) |
+| Gunshots are silent | Add gun sounds in `Config/Sounds.luau` (doc 7). Empty IDs mean no sound. |
+| Characters still look like mannequins | Add realistic rigs to ServerStorage → Rigs (doc 7 §7.2) |
 | A red error in Output | Copy the full error text (it names the script and line) and send it to me |

@@ -6,7 +6,9 @@
 --   noiseMult, crouchNoiseMult, waterNoiseMult, takedownTimeMult, shoveCooldownMult, healMult,
 --   throwCapBonus (+n), damageTakenMult, abilityCooldownMult, abilityRadiusMult,
 --   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
---   throwNoiseMult, craftDiscount (+n), ammoBonus (+n start shot)
+--   throwNoiseMult, craftTimeMult, craftYieldBonus (+n on traps/spikes/arrows),
+--   ammoBonus (+n starting revolver rounds), aimSpreadMult
+-- loadout.weapons = { long = <Weapons id>, sidearm = <Weapons id> }; loadout.items = reserve ammo + items.
 
 local Characters = {}
 
@@ -32,7 +34,10 @@ Characters.List = {
 			radius = 70,
 			duration = 4,
 		},
-		loadout = { shot = 8, bottle = 2, bandage = 1 },
+		loadout = {
+			weapons = { long = "bow", sidearm = "revolver" },
+			items = { arrows = 6, pistolAmmo = 6, bottle = 2, dressing = 1, cloth = 1 },
+		},
 		innate = {
 			id = "ShallowStep",
 			name = "Shallow Step",
@@ -65,17 +70,20 @@ Characters.List = {
 			radius = 36,
 			duration = 9,
 		},
-		loadout = { shot = 5, bottle = 2, bandage = 1, scrap = 3 },
+		loadout = {
+			weapons = { long = "shotgun", sidearm = "revolver" },
+			items = { shells = 4, pistolAmmo = 6, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
+		},
 		innate = {
 			id = "Tinkerer",
 			name = "Tinkerer",
-			desc = "Every recipe costs one part less (minimum 1).",
-			mods = { craftDiscount = 1 },
+			desc = "Crafts twice as fast. Salt Bombs, Tide Spikes and arrows craft +1.",
+			mods = { craftTimeMult = 0.5, craftYieldBonus = 1 },
 		},
 		perks = {
 			{ id = "LoudDecoy", name = "Loud Decoy", desc = "Rattle Box is heard 40% further away.", mods = { abilityRadiusMult = 1.4 } },
 			{ id = "ThickSkin", name = "Thick Skin", desc = "Take 15% less damage.", mods = { damageTakenMult = 0.85 } },
-			{ id = "SpareShot", name = "Spare Shot", desc = "Start with 4 extra Salt Shot.", mods = { ammoBonus = 4 } },
+			{ id = "SpareRounds", name = "Spare Rounds", desc = "Start with 6 extra revolver rounds.", mods = { ammoBonus = 6 } },
 		},
 	},
 
@@ -98,7 +106,10 @@ Characters.List = {
 			radius = 15,
 			duration = 6,
 		},
-		loadout = { shot = 4, bottle = 1, bandage = 3 },
+		loadout = {
+			weapons = { long = "rifle", sidearm = "revolver" },
+			items = { rifleAmmo = 4, pistolAmmo = 6, dressing = 2, cloth = 1, alcohol = 1 },
+		},
 		innate = {
 			id = "FieldMedic",
 			name = "Field Medic",
@@ -106,7 +117,7 @@ Characters.List = {
 			mods = { healMult = 1.25, reviveHPBonus = 30 },
 		},
 		perks = {
-			{ id = "CalmBreath", name = "Calm Breath", desc = "All your movement is 10% quieter.", mods = { noiseMult = 0.9 } },
+			{ id = "Marksman", name = "Marksman", desc = "Aimed shots are 40% steadier.", mods = { aimSpreadMult = 0.6 } },
 			{ id = "SecondOpinion", name = "Second Opinion", desc = "You bleed out 15 seconds slower.", mods = { bleedOutBonus = 15 } },
 			{ id = "Triage", name = "Triage", desc = "Steady Hands recharges 25% faster.", mods = { abilityCooldownMult = 0.75 } },
 		},
@@ -131,11 +142,14 @@ Characters.List = {
 			radius = 25,
 			duration = 5,
 		},
-		loadout = { shot = 6, bottle = 3, bandage = 1 },
+		loadout = {
+			weapons = { long = "carbine", sidearm = "revolver" },
+			items = { rifleAmmo = 7, pistolAmmo = 6, bottle = 3, fogPot = 1, dressing = 1 },
+		},
 		innate = {
 			id = "DeepPockets",
 			name = "Deep Pockets",
-			desc = "Carry one extra bottle.",
+			desc = "Carry one extra of every throwable.",
 			mods = { throwCapBonus = 1 },
 		},
 		perks = {

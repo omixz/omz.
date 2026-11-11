@@ -2,9 +2,13 @@
 -- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
 -- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
 --
--- Slice 0 uses a scaled, faceless R15 mannequin coloured per character. Stage 5 swaps in the
--- custom skinned-mesh rigs; nothing else in the code needs to change.
+-- Realistic characters: if ServerStorage > Rigs contains a custom R15-compatible model for
+-- the crew member (Config/Rigs), it is used. Otherwise Marketplace body parts from
+-- Config/Rigs.BodyParts, otherwise the faceless placeholder mannequin.
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -13,6 +17,7 @@ local Game = require(Shared.Config.Game)
 local Stats = require(Shared.Stats)
 local Net = require(Shared.Net)
 local Geometry = require(Shared.Util.Geometry)
+local Rigs = require(Shared.Config.Rigs)
 
 local CharacterService = {}
 local Services
@@ -37,7 +42,9 @@ local function newSession()
 		graceUntil = 0,
 		usedSecondWind = false,
 		usedResupply = false,
-		stats = { takedowns = 0, detections = 0, crates = 0 },
+		stats = { takedowns = 0, detections = 0, crates = 0, kills = 0 },
+		runId = nil,
+		run = { weapons = {}, general = {}, perks = {} }, -- workbench upgrades this run
 	}
 end
 
@@ -60,10 +67,51 @@ function CharacterService.setCharacter(player, charId, perkId)
 	end
 	session.charId = charId
 	session.perkId = perkId
-	session.mods = Stats.compute(charId, perkId)
+	CharacterService.refreshMods(player)
 	player:SetAttribute("CharId", charId)
 	player:SetAttribute("PerkId", perkId)
 	return true
+end
+
+function CharacterService.publishRun(player)
+	local session = sessions[player]
+	if session then
+		player:SetAttribute("RunUpgrades", HttpService:JSONEncode(session.run))
+	end
+end
+
+function CharacterService.refreshMods(player)
+	local session = sessions[player]
+	if not session then
+		return
+	end
+	session.mods = Stats.compute(session.charId, session.perkId, session.run.perks)
+	CharacterService.publishRun(player)
+end
+
+-- Starts a new crossing for this player: fresh loadout (+ homebase bonuses), no upgrades.
+function CharacterService.beginRun(player, runId, bonus)
+	local session = CharacterService.getSession(player)
+	if not session or not session.charId then
+		return false
+	end
+	session.runId = runId
+	session.run = { weapons = {}, general = {}, perks = {} }
+	session.usedSecondWind = false
+	session.usedResupply = false
+	session.stats = { takedowns = 0, detections = 0, crates = 0, kills = 0 }
+	CharacterService.refreshMods(player)
+	Services.InventoryService.reset(player, Characters.List[session.charId].loadout, session.mods, bonus)
+	return true
+end
+
+function CharacterService.endRun(player)
+	local session = sessions[player]
+	if session then
+		session.runId = nil
+		session.run = { weapons = {}, general = {}, perks = {} }
+		CharacterService.refreshMods(player)
+	end
 end
 
 function CharacterService.setGrace(player, seconds)
@@ -73,7 +121,7 @@ function CharacterService.setGrace(player, seconds)
 	end
 end
 
-local function buildDescription(def)
+local function buildDescription(def, charId)
 	local desc = Instance.new("HumanoidDescription")
 	desc.HeightScale = def.height or 1
 	desc.WidthScale = 0.82
@@ -88,7 +136,48 @@ local function buildDescription(def)
 	desc.RightArmColor = c.arms
 	desc.LeftLegColor = c.legs
 	desc.RightLegColor = c.legs
+	local parts = Rigs.BodyParts[charId]
+	if parts then
+		for slot, assetId in parts do
+			if type(assetId) == "number" and assetId > 0 then
+				pcall(function()
+					desc[slot] = assetId
+				end)
+			end
+		end
+	end
 	return desc
+end
+
+local function customRig(charId)
+	local folder = ServerStorage:FindFirstChild("Rigs")
+	local name = Rigs.Custom[charId]
+	local template = folder and name and folder:FindFirstChild(name)
+	if template and template:IsA("Model") and template:FindFirstChildOfClass("Humanoid") and template:FindFirstChild("HumanoidRootPart") then
+		return template
+	end
+	return nil
+end
+
+-- Spawns a custom rig as the player's character (keeps Animate if the rig contains one).
+local function spawnCustomRig(player, template)
+	local rig = template:Clone()
+	rig.Name = player.Name
+	local old = player.Character
+	for _, child in StarterPlayer:WaitForChild("StarterCharacterScripts"):GetChildren() do
+		if not rig:FindFirstChild(child.Name) then
+			child:Clone().Parent = rig
+		end
+	end
+	player.Character = rig
+	rig.Parent = Workspace
+	if old and old ~= rig then
+		old:Destroy()
+	end
+	pcall(function()
+		rig.HumanoidRootPart:SetNetworkOwner(player)
+	end)
+	return rig
 end
 
 local function setupCharacter(player, char, session)
@@ -104,8 +193,8 @@ local function setupCharacter(player, char, session)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 
 	local face = head:FindFirstChild("face")
-	if face then
-		face:Destroy()
+	if face and not Rigs.BodyParts[session.charId] then
+		face:Destroy() -- placeholder mannequin is faceless
 	end
 
 	local torch = Instance.new("SpotLight")
@@ -133,8 +222,9 @@ local function setupCharacter(player, char, session)
 	return root
 end
 
--- (Re)spawns the player's chosen crew member at `cframe`. `freshRun` resets run-only state.
-function CharacterService.spawn(player, cframe, freshRun)
+-- (Re)spawns the player's chosen crew member at `cframe`.
+-- resetInventory: give a fresh loadout (outside a run). During a run the satchel is kept.
+function CharacterService.spawn(player, cframe, resetInventory)
 	local session = sessions[player]
 	if not session or not session.charId then
 		return nil
@@ -148,36 +238,42 @@ function CharacterService.spawn(player, cframe, freshRun)
 	session.channelId += 1
 	session.abilityReadyAt = 0
 	session.calmUntil = 0
-	if freshRun then
-		session.usedSecondWind = false
-		session.usedResupply = false
-		session.stats = { takedowns = 0, detections = 0, crates = 0 }
-	end
 
-	local spawned
-	local conn = player.CharacterAdded:Connect(function(c)
-		spawned = c
-	end)
-	local ok, err = pcall(function()
-		player:LoadCharacterWithHumanoidDescription(buildDescription(def))
-	end)
-	local deadline = os.clock() + 8
-	while ok and not spawned and player.Parent and os.clock() < deadline do
-		task.wait()
+	local char
+	local template = customRig(session.charId)
+	if template then
+		char = spawnCustomRig(player, template)
+	else
+		local spawned
+		local conn = player.CharacterAdded:Connect(function(c)
+			spawned = c
+		end)
+		local ok, err = pcall(function()
+			player:LoadCharacterWithHumanoidDescription(buildDescription(def, session.charId))
+		end)
+		local deadline = os.clock() + 8
+		while ok and not spawned and player.Parent and os.clock() < deadline do
+			task.wait()
+		end
+		conn:Disconnect()
+		if not ok then
+			warn("[CharacterService] spawn failed: " .. tostring(err))
+			return nil
+		end
+		char = spawned or player.Character
 	end
-	conn:Disconnect()
-	if not ok then
-		warn("[CharacterService] spawn failed: " .. tostring(err))
-		return nil
-	end
-	local char = spawned or player.Character
 	if not char then
 		return nil
 	end
 	setupCharacter(player, char, session)
 	CharacterService.setGrace(player, 3)
 	char:PivotTo(cframe)
-	Services.InventoryService.reset(player, def.loadout, session.mods)
+	if resetInventory or not Services.InventoryService.has(player) then
+		Services.InventoryService.reset(player, def.loadout, session.mods)
+	else
+		Services.InventoryService.publish(player)
+	end
+	Services.WeaponService.onSpawn(player, char)
 	return char
 end
 
@@ -238,6 +334,7 @@ function CharacterService.down(player)
 	session.downed = true
 	session.hp = 0
 	session.channelId += 1
+	Services.WeaponService.onDowned(player)
 	local bleed = Game.BleedOutTime + session.mods.bleedOutBonus
 	session.bleedOutAt = os.clock() + bleed
 	char:SetAttribute("Downed", true)

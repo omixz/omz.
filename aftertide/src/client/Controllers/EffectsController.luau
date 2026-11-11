@@ -14,6 +14,9 @@ local Geometry = require(Shared.Util.Geometry)
 local State = require(script.Parent.Parent.State)
 
 local EffectsController = {}
+local Controllers
+local Debris = game:GetService("Debris")
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 local player = Players.LocalPlayer
 local grade -- our own ColorCorrection layer for health feedback
@@ -48,6 +51,122 @@ local function tideSense(data)
 			end)
 		end
 	end
+end
+
+local function localPart(position, size)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Transparency = 1
+	p.Size = size or Vector3.new(0.2, 0.2, 0.2)
+	p.CFrame = CFrame.new(position)
+	p.Parent = Workspace
+	return p
+end
+
+local function tracer(from, to)
+	local length = (to - from).Magnitude
+	if length < 0.5 then
+		return
+	end
+	local beam = localPart(from)
+	beam.Transparency = 0.35
+	beam.Material = Enum.Material.Neon
+	beam.Color = Color3.fromRGB(255, 225, 180)
+	beam.Size = Vector3.new(0.05, 0.05, length)
+	beam.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -length / 2)
+	TweenService:Create(beam, TweenInfo.new(0.08), { Transparency = 1 }):Play()
+	Debris:AddItem(beam, 0.1)
+end
+
+local function impact(position, kind)
+	if kind == "none" then
+		return
+	end
+	local holder = localPart(position)
+	local puff = Instance.new("ParticleEmitter")
+	puff.Texture = SMOKE
+	puff.Rate = 0
+	puff.Lifetime = NumberRange.new(0.4, 0.9)
+	puff.Speed = NumberRange.new(2, 6)
+	puff.SpreadAngle = Vector2.new(60, 60)
+	puff.Drag = 4
+	puff.LightInfluence = 1
+	if kind == "enemy" then
+		puff.Color = ColorSequence.new(Color3.fromRGB(225, 220, 205)) -- salt, never blood
+		puff.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 2) })
+	else
+		puff.Color = ColorSequence.new(Color3.fromRGB(120, 116, 108))
+		puff.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1.4) })
+		local sparks = Instance.new("ParticleEmitter")
+		sparks.Rate = 0
+		sparks.Lifetime = NumberRange.new(0.1, 0.25)
+		sparks.Speed = NumberRange.new(8, 16)
+		sparks.SpreadAngle = Vector2.new(50, 50)
+		sparks.LightEmission = 1
+		sparks.Color = ColorSequence.new(Color3.fromRGB(255, 200, 140))
+		sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0) })
+		sparks.Parent = holder
+		sparks:Emit(5)
+	end
+	puff.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	puff.Parent = holder
+	puff:Emit(kind == "enemy" and 10 or 6)
+	Debris:AddItem(holder, 1.5)
+end
+
+local function shot(data)
+	if typeof(data.from) ~= "Vector3" then
+		return
+	end
+	if data.shooter ~= player.UserId then
+		local holder = localPart(data.from)
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 200, 140)
+		light.Range = 16
+		light.Brightness = 5
+		light.Parent = holder
+		Debris:AddItem(holder, 0.06)
+	end
+	for _, hit in data.hits or {} do
+		if typeof(hit.position) == "Vector3" then
+			tracer(data.from, hit.position)
+			impact(hit.position, hit.kind)
+		end
+	end
+end
+
+local shake = 0
+local function explosion(data)
+	local root = State.root
+	if not root or typeof(data.position) ~= "Vector3" then
+		return
+	end
+	local dist = (root.Position - data.position).Magnitude
+	shake = math.max(shake, math.clamp(1 - dist / 80, 0, 1))
+end
+
+local function humRing(data)
+	if typeof(data.position) ~= "Vector3" then
+		return
+	end
+	local ring = localPart(data.position + Vector3.new(0, 0.2, 0))
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Material = Enum.Material.ForceField
+	ring.Color = Color3.fromRGB(200, 230, 230)
+	ring.Transparency = 0.2
+	ring.Size = Vector3.new(0.2, 2, 2)
+	ring.CFrame = CFrame.new(data.position + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	local r = (tonumber(data.radius) or 60) * 2
+	TweenService:Create(ring, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Size = Vector3.new(0.2, r, r), Transparency = 1 }):Play()
+	Debris:AddItem(ring, 1.3)
+end
+
+function EffectsController.getShake()
+	return shake
 end
 
 local function knockback(data)
@@ -85,6 +204,10 @@ local function lightning()
 	Lighting.Brightness = before
 end
 
+function EffectsController.init(registry)
+	Controllers = registry
+end
+
 function EffectsController.start()
 	grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "AftertideHealth"
@@ -100,10 +223,21 @@ function EffectsController.start()
 			hitFlash = 1
 		elseif kind == "Takedown" then
 			State.takedownUntil = os.clock() + (tonumber(data.duration) or 0.9)
+		elseif kind == "Shot" then
+			shot(data)
+		elseif kind == "Impact" then
+			if typeof(data.position) == "Vector3" then
+				impact(data.position, data.kind)
+			end
+		elseif kind == "Explosion" then
+			explosion(data)
+		elseif kind == "Hum" then
+			humRing(data)
 		end
 	end)
 
 	RunService.RenderStepped:Connect(function(dt)
+		shake = math.max(0, shake - dt * 2.5)
 		local char = State.character
 		local hp = char and char:GetAttribute("HP") or 100
 		local maxHp = char and char:GetAttribute("MaxHP") or 100

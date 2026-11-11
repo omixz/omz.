@@ -12,6 +12,10 @@ local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
 local Satchel = require(UI:WaitForChild("Satchel"))
 local Shop = require(UI:WaitForChild("Shop"))
 local Results = require(UI:WaitForChild("Results"))
+local Chart = require(UI:WaitForChild("Chart"))
+local Workbench = require(UI:WaitForChild("Workbench"))
+local Repairs = require(UI:WaitForChild("Repairs"))
+local Settings = require(UI:WaitForChild("Settings"))
 
 local UIController = {}
 local Controllers
@@ -19,6 +23,19 @@ local player = Players.LocalPlayer
 
 function UIController.toggleSatchel()
 	Satchel.toggle()
+end
+
+function UIController.toggleSettings()
+	Settings.toggle()
+end
+
+local function closeMenus()
+	Chart.close()
+	Workbench.close()
+	Repairs.close()
+	Shop.close()
+	Satchel.close()
+	CharacterSelect.close()
 end
 
 function UIController.init(registry)
@@ -36,13 +53,20 @@ function UIController.start()
 	local function send(name, payload)
 		Controllers.ActionController.sendAction(name, payload)
 	end
+	local function request(kind, a, b)
+		Controllers.ActionController.request(kind, a, b)
+	end
 	HUD.build(gui, function()
 		send("SecondWind")
-	end)
+	end, Controllers.WeaponController)
 	CharacterSelect.build(gui)
 	Satchel.build(gui, send)
 	Shop.build(gui)
 	Results.build(gui)
+	Chart.build(gui, request)
+	Workbench.build(gui, request)
+	Repairs.build(gui, request)
+	Settings.build(gui, request)
 
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
 		data = data or {}
@@ -55,9 +79,18 @@ function UIController.start()
 		elseif kind == "Results" then
 			Satchel.close()
 			Results.show(data)
+		elseif kind == "OpenChart" then
+			Chart.open()
+		elseif kind == "OpenWorkbench" then
+			Workbench.open()
+		elseif kind == "OpenRepairs" then
+			Repairs.open()
+		elseif kind == "CloseMenus" then
+			closeMenus()
+		elseif kind == "Hit" then
+			HUD.hit(data)
 		elseif kind == "EncounterStart" then
-			CharacterSelect.close()
-			Shop.close()
+			closeMenus()
 			Results.close()
 			HUD.toast(("%s · %s"):format(tostring(data.name), tostring(data.modifierName)))
 			HUD.toast(tostring(data.modifierDesc or ""))
@@ -72,7 +105,8 @@ function UIController.start()
 	end)
 
 	ReplicatedStorage:GetAttributeChangedSignal("MatchState"):Connect(function()
-		if ReplicatedStorage:GetAttribute("MatchState") == "Ferry" then
+		local matchState = ReplicatedStorage:GetAttribute("MatchState")
+		if matchState == "Ferry" or matchState == "Planning" then
 			Results.close()
 		end
 	end)

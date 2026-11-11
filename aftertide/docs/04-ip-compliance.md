@@ -49,6 +49,8 @@ Check each item against the inspiration. Any "yes" needs a redesign.
 | Protagonists | A teen girl with a guitar, a bow and a fern tattoo; a muscular woman with a braid; a grizzled father figure; their outfits and silhouettes | An ensemble crew of varied ages and backgrounds, with salt and sea-themed gear |
 | Factions | Militia and cult analogues, scars and symbol iconography | (Post-launch) Tollkeepers, a toll-bridge cartel that captures rather than kills |
 | Mode structure | Encounter names "Assault / Holdout / Hunted / Capture", the mode name "No Return" | Salvage, Lantern Watch, Drift, Lost Signal, Silent Passage |
+| Weapons & crafting | Recreations of specific TLOU weapons or their upgrade names, "Molotov / Shiv / Smoke Bomb / Trap Mine" item names and icons, the workbench and crafting UI look | Fictional generic weapons (Service Revolver, Lever Carbine…), Flare Pot, Fog Pot, Salt Bomb, Tide Spike; our own satchel and workbench UI |
+| Character models | Anything resembling Ellie, Abby, Joel and others (face, tattoos, hair, outfits); ripped "TLOU models" | Original crew made via the doc 7 pipeline |
 | Hideout | A farm or theatre-style hub layout | A beached car ferry |
 | Listen-mode visual | A grey world with white enemy silhouettes | Tide Sense: salt glints in fog, short range, world colour unchanged |
 | UI | A specific crafting wheel or backpack style, typography | A waxed canvas satchel, tide-chart map, hull-stencil type |

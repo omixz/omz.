@@ -142,11 +142,23 @@ silhouette, backstory, item pairing or voice. See the IP checklist in doc 4.
 **Finale:** *The Choir*, a mass of Hushed around the Breakwater lighthouse, humming
 in sync. It's a stealth-and-light puzzle encounter, not a damage race.
 
-How the player beats them: shove, stun, distract (bottles, flares, the Rattle Box) and
-the **Quieting**, a close-range takedown with a salvaged *tide-hook* that disperses a
-Hushed into fog. Ranged options are stylised and non-realistic: slingshot, flare gun,
-salt-charge (a stun burst). No realistic firearms, and nothing that teaches real-world
-combat.
+How the player beats them: stealth first (crouch, reeds, darkness, bottles, the
+**Quieting** from behind), and when that fails, **guns**. Weapons are fictional and
+stylised, and the targets are non-human Hushed that burst into salt, never blood.
+Gunshots are **loud** noise events that pull every Hushed nearby, so going loud is
+always a trade-off.
+
+### 1.6.1 Combat, scavenging & crafting (built)
+
+| System | What it does |
+|---|---|
+| **Weapons** | Service Revolver (sidearm, everyone), plus a long gun per character: Recurve Bow (silent, arrows drop), Pump Shotgun (pellets, falloff), Bolt Rifle (precise), Lever Carbine (fast). Magazines + reserve ammo, timed reloads, hip/aim spread, movement penalty, recoil climb, headshots, stagger, aim zoom. Long guns sit on your back and sidearms on your hip until drawn (keys 1/2/3). |
+| **Throwables** | Bottle (distraction), **Flare Pot** (burning area), **Fog Pot** (smoke that blocks sight and stuns), **Salt Bomb** (proximity trap that explodes). |
+| **Tide Spike** | A crafted tool. Quiet a Hushed **from the front**, or break free automatically when grabbed. |
+| **Scavenging** | Search drawers, lockers, toolboxes and ammo crates (they open). Loose items glint in the fog. What doesn't fit stays on the floor for a crewmate. |
+| **Crafting** | 6 parts (Cloth, Alcohol, Black Salt, Scrap, Tape, Canister) shared between recipes: Field Dressing and Flare Pot both need Cloth + Alcohol, so every craft is a choice. |
+| **Workbench** (per crossing) | Spend Salvage on weapon parts (damage, reload, baffle/suppressor, scope, magazine, stability), satchel and ammo-pouch upgrades, a faster holster, and your character's other perks. |
+| **Homebase** (permanent) | Spend Scrip (earned by playing) to repair the *Meridian*: deck lights, generator (+Salvage), sick bay (+Dressing), workshop (−15% workbench), radio mast (3 routes on the chart), armory (choose your long gun). |
 
 ## 1.7 The run: a *Crossing*
 

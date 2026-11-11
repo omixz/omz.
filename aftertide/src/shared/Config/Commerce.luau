@@ -26,7 +26,7 @@ return {
 			productId = 0,
 			name = "Resupply Satchel",
 			price = 29,
-			desc = "+4 Salt Shot, +1 Bottle, +1 Bandage, once per crossing.",
+			desc = "+6 revolver rounds, +1 Field Dressing, +1 Bottle. Once per crossing.",
 			grant = { resupply = 1 },
 		},
 	},

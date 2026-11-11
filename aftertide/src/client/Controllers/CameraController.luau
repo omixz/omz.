@@ -13,6 +13,9 @@ local Spring = require(Shared.Util.Spring)
 local State = require(script.Parent.Parent.State)
 
 local CameraController = {}
+local Controllers
+local player = Players.LocalPlayer
+local recoilYaw = 0
 
 local SENS_MOUSE = 0.0028
 local SENS_PAD = 3.0
@@ -33,6 +36,20 @@ params.FilterType = Enum.RaycastFilterType.Exclude
 
 function CameraController.getYaw()
 	return yaw
+end
+
+function CameraController.getPitch()
+	return pitch
+end
+
+-- Recoil: the view climbs (you pull it back down), with a little sideways jitter.
+function CameraController.kick(degrees)
+	pitch += math.rad(degrees) * 0.55
+	recoilYaw += math.rad(degrees) * (math.random() - 0.5) * 0.4
+end
+
+local function sensitivity()
+	return player:GetAttribute("Set_sensitivity") or 1
 end
 
 -- Direction from the character's head toward whatever is under the screen centre.
@@ -101,10 +118,17 @@ local function update(dt)
 	end
 
 	if padLook.Magnitude > 0.15 then
-		yaw -= padLook.X * SENS_PAD * dt
-		pitch += padLook.Y * SENS_PAD * 0.7 * dt
+		local aimSlow = State.aiming and 0.55 or 1
+		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
+		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
+	end
+	if recoilYaw ~= 0 then
+		local step = recoilYaw * math.min(1, dt * 12)
+		yaw += step
+		recoilYaw -= step
 	end
 	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
+	State.pitch = pitch
 
 	local takedown = os.clock() < State.takedownUntil
 	local s = State.shoulder
@@ -114,7 +138,8 @@ local function update(dt)
 	elseif takedown then
 		height, offset, fov = 1.8, Vector3.new(2.4 * s, 0.2, 4.2), 58
 	elseif State.aiming then
-		height, offset, fov = State.crouched and 1.4 or 2.2, Vector3.new(1.9 * s, 0.3, 3.6), 52
+		local weaponFov = Controllers and Controllers.WeaponController.aimFov()
+		height, offset, fov = State.crouched and 1.4 or 2.2, Vector3.new(1.9 * s, 0.3, weaponFov and weaponFov < 45 and 2.6 or 3.4), weaponFov or 52
 	elseif State.sprinting then
 		height, offset, fov = 2.2, Vector3.new(1.3 * s, 0.6, 7), 76
 	elseif State.crouched then
@@ -140,7 +165,8 @@ local function update(dt)
 
 	-- subtle breathing sway (scaled down while aiming)
 	local t = os.clock()
-	local sway = (State.aiming and 0.25 or 1) * 0.006
+	local reduce = player:GetAttribute("Set_reduceMotion") == true
+	local sway = (State.aiming and 0.35 or 1) * (reduce and 0 or 0.006)
 	local rot = CFrame.fromEulerAnglesYXZ(pitch + math.sin(t * 1.3) * sway, yaw + math.sin(t * 0.7) * sway, 0)
 
 	local desired = (CFrame.new(focus) * rot * CFrame.new(off)).Position
@@ -159,16 +185,26 @@ local function update(dt)
 		currentDist += (allowed - currentDist) * math.min(1, dt * 3.5) -- ease back out
 	end
 	local position = dist > 0.01 and focus + dir.Unit * currentDist or desired
+	local shake = Controllers and Controllers.EffectsController.getShake() or 0
+	if shake > 0 and player:GetAttribute("Set_reduceMotion") ~= true then
+		local k = shake * 0.03
+		rot = rot * CFrame.Angles((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+	end
 	camera.CFrame = CFrame.new(position) * rot
 	camera.Focus = CFrame.new(focus)
+end
+
+function CameraController.init(registry)
+	Controllers = registry
 end
 
 function CameraController.start()
 	UserInputService.InputChanged:Connect(function(input, processed)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			if not State.uiOpen() and State.root then
-				yaw -= input.Delta.X * SENS_MOUSE
-				pitch -= input.Delta.Y * SENS_MOUSE
+				local k = SENS_MOUSE * sensitivity() * (State.aiming and 0.6 or 1)
+				yaw -= input.Delta.X * k
+				pitch -= input.Delta.Y * k
 			end
 		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
 			padLook = Vector2.new(input.Position.X, input.Position.Y)
@@ -188,8 +224,8 @@ function CameraController.start()
 		if input == touchInput and lastTouchPos then
 			local delta = input.Position - lastTouchPos
 			lastTouchPos = input.Position
-			yaw -= delta.X * SENS_TOUCH
-			pitch -= delta.Y * SENS_TOUCH
+			yaw -= delta.X * SENS_TOUCH * sensitivity()
+			pitch -= delta.Y * SENS_TOUCH * sensitivity()
 		end
 	end)
 	UserInputService.TouchEnded:Connect(function(input)

@@ -14,6 +14,10 @@ local State = {
 
 	takedownUntil = 0,
 	modals = {},
+
+	throwable = "bottle", -- selected throwable
+	bloom = 0, -- extra crosshair spread from recent shots (degrees)
+	pitch = 0, -- camera pitch (radians), mirrored for poses
 }
 
 function State.setModal(name, open)

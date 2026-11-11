@@ -17,9 +17,42 @@ local Services
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
+local fogClouds = {} -- { position, radius, untilTime }
+
 function PerceptionService.setEnemyFolder(folder)
 	rayParams.FilterDescendantsInstances = { folder }
 end
+
+-- Fog Pots: smoke that blocks sight lines through (or into) it.
+function PerceptionService.addFogCloud(position, radius, duration)
+	table.insert(fogClouds, { position = position, radius = radius, untilTime = os.clock() + duration })
+end
+
+function PerceptionService.clearFog()
+	table.clear(fogClouds)
+end
+
+local function segmentBlocked(a, b)
+	local now = os.clock()
+	for i = #fogClouds, 1, -1 do
+		local cloud = fogClouds[i]
+		if now > cloud.untilTime then
+			table.remove(fogClouds, i)
+		else
+			local ab = b - a
+			local len = ab.Magnitude
+			if len > 0.01 then
+				local t = math.clamp((cloud.position - a):Dot(ab) / (len * len), 0, 1)
+				local closest = a + ab * t
+				if (closest - cloud.position).Magnitude < cloud.radius then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+PerceptionService.segmentBlocked = segmentBlocked
 
 -- Returns 0 (unseen) or a positive visibility factor (higher = noticed faster).
 function PerceptionService.sightFactor(enemy, info)
@@ -45,6 +78,9 @@ function PerceptionService.sightFactor(enemy, info)
 		return 0
 	end
 
+	if segmentBlocked(eyes, root.Position) then
+		return 0
+	end
 	local visible = false
 	for _, target in { head.Position, root.Position } do
 		local result = Workspace:Raycast(eyes, target - eyes, rayParams)
