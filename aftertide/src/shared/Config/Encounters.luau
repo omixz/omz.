@@ -33,10 +33,10 @@ return {
 	MaxEnemies = 16,
 	-- Enemy type unlocks by Pall level (weights).
 	TypeWeights = {
-		[1] = { Drifter = 1 },
-		[2] = { Drifter = 4, Bellwether = 1 },
-		[3] = { Drifter = 4, Bellwether = 1, Tidewalker = 0.5 },
-		[4] = { Drifter = 3, Bellwether = 1, Tidewalker = 1 },
+		[1] = { Drifter = 4, Rusher = 2 },
+		[2] = { Drifter = 4, Rusher = 2, Seeker = 1.5, Bellwether = 1 },
+		[3] = { Drifter = 3, Rusher = 2, Seeker = 2, Bellwether = 1, Tidewalker = 0.5 },
+		[4] = { Drifter = 3, Rusher = 3, Seeker = 2, Bellwether = 1, Tidewalker = 1 },
 	},
 	Rewards = {
 		salvagePerEncounter = 15, -- +5 per Pall

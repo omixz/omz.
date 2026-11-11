@@ -272,6 +272,9 @@ local function simulateArrow(player, def, mods, origin, direction, params)
 			if result then
 				arrow.CFrame = CFrame.lookAt(result.Position - step.Unit * 0.6, result.Position)
 				local kind, headshot, killed = applyHit(player, def, mods, result, travelled)
+				if kind ~= "enemy" then
+					Services.PerceptionService.emitNoise(result.Position, 12, "impact", nil) -- arrows make a good distraction
+				end
 				if kind == "enemy" then
 					Net.notify(player, "Hit", { headshot = headshot, kill = killed })
 					arrow:Destroy()
@@ -389,12 +392,16 @@ function WeaponService.fire(player, info, direction, aiming)
 		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = {} })
 	else
 		local hits, anyHead, anyKill, anyEnemy = {}, false, false, false
+		local impactNoise = nil
 		for _ = 1, def.pellets do
 			local dir = spreadDirection(direction, spread)
 			local result = Workspace:Raycast(origin, dir * def.range, params)
 			local hitPos = result and result.Position or origin + dir * def.range
 			local kind, headshot, killed = applyHit(player, def, mods, result, (hitPos - origin).Magnitude)
 			table.insert(hits, { position = hitPos, kind = kind or "none" })
+			if kind == "world" then
+				impactNoise = hitPos -- stray rounds clatter: Hushed near the impact come to look
+			end
 			if kind == "enemy" then
 				anyEnemy = true
 				anyHead = anyHead or headshot
@@ -403,6 +410,9 @@ function WeaponService.fire(player, info, direction, aiming)
 		end
 		if anyEnemy then
 			Net.notify(player, "Hit", { headshot = anyHead, kill = anyKill })
+		end
+		if impactNoise then
+			Services.PerceptionService.emitNoise(impactNoise, 14, "impact", nil)
 		end
 		Net.notifyAll("Shot", { shooter = player.UserId, weapon = w.id, from = muzzle, hits = hits })
 	end

@@ -12,6 +12,29 @@ its share only when players spend Robux.
 - *Optional, for coding:* VS Code + the free **Rojo** plugin, to edit `src/` and live-sync
   into Studio. Not required to play or publish.
 
+## 6.0 Just want to test it? Do exactly this
+
+1. **Install Roblox Studio** (free): go to <https://create.roblox.com>, click **Start
+   Creating** / **Download Studio**, install it, and log in with your Roblox account.
+2. **Download the game file.** While signed in to GitHub, open
+   `https://github.com/omixz/omz./raw/claude/affectionate-allen-xl9gi1/aftertide/build/Aftertide.rbxlx`.
+   It downloads `Aftertide.rbxlx`. (Or on GitHub: repo → switch the branch to
+   `claude/affectionate-allen-xl9gi1` → `aftertide` → `build` → `Aftertide.rbxlx` →
+   **Download raw file**.)
+3. **Open it:** in Studio, **File → Open from File…** and pick `Aftertide.rbxlx`.
+4. **Turn on the Output window:** **View → Output**. Errors appear there in red.
+5. **Play:** press the big **Play** button (or F5). Pick a crew member and a perk, walk to
+   the **tide chart table** on the ferry deck, and hold **E**. Choose a route. You're in.
+6. **Stop:** press **Stop** (Shift+F5).
+7. **Test co-op:** **Test** tab → **Clients and Servers** → pick **2 Players** → **Start**.
+   A window opens for each player.
+8. **Test on a "phone":** **Test** tab → **Device** → choose a phone, then Play.
+9. **Something broke?** Copy the red text from Output and send it to me. It names the
+   script and line, so I can fix it straight away.
+
+If characters look broken when you press Play: **Home → Game Settings → Avatar → R15**.
+Studio may ask you to publish first (6.3). You don't need to publish to test.
+
 ## 6.2 Play it in Studio (5 minutes)
 
 1. In Studio: **File → Open from File…** → `aftertide/build/Aftertide.rbxlx`.

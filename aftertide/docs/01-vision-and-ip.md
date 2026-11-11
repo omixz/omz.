@@ -130,6 +130,22 @@ silhouette, backstory, item pairing or voice. See the IP checklist in doc 4.
 
 ## 1.6 Enemies (the Hushed)
 
+The Pall takes people in **stages**. Bodies are built in code from jointed parts, with
+torn clothing and salt growths, and animated procedurally (`EnemyAnimator`). A **"?"**
+over a head means it heard something; **"!"** means it's after you. Loud noises show a
+ring of how far they carried, and every Hushed inside the ring heard it.
+
+| Built | Stage | Senses | Behaviour | Counter |
+|---|---|---|---|---|
+| ✅ **Rusher** | 1: freshly taken | Sight (good), hearing | Fast, twitchy, sprints at noises, comes in groups. Weaker (70 HP) | Stay unseen; shotgun |
+| ✅ **Drifter** | 2: the drifting majority | Hearing, poor sight in fog | Shambling patrols, investigates noise | Sneak, distract, Quiet from behind |
+| ✅ **Seeker** | 3: sealed in salt | **Blind**, hears at almost double range | Feels ahead with its arms, lunges at sounds, hard grab (65), can't be shoved | Crouch-walk past; never shoot near it; Tide Spike |
+| ✅ **Bellwether** | Caller | Hearing | Its hum alerts every Hushed in range | Kill or avoid it first |
+| ✅ **Tidewalker** | Final stage | Hearing + sight | Tank (700 HP), can't be shoved or Quieted, heavy grab | Salt Bombs, headshots, keep moving |
+
+Design notes for the table below: these are original designs. No fungal growths, no
+clicking echolocation, no "runner/stalker/clicker/bloater" names (doc 4 §4.3).
+
 | Type | Senses | Behaviour | Counter |
 |---|---|---|---|
 | **Drifter** | Hearing (good), sight (poor in fog) | Wanders tide paths and investigates noise | Sneak or distract |

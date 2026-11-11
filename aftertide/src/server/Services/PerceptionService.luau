@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Movement = require(Shared.Config.Movement)
 local Geometry = require(Shared.Util.Geometry)
+local Net = require(Shared.Net)
 
 local PerceptionService = {}
 local Services
@@ -66,6 +67,15 @@ function PerceptionService.sightFactor(enemy, info)
 	local eyes = enemy.head.Position
 	local toPlayer = root.Position - eyes
 	local dist = toPlayer.Magnitude
+	if cfg.sightRange <= 0 then
+		-- blind (Seekers): only "feel" someone moving right next to them
+		local close = (root.Position - enemy.root.Position).Magnitude
+		local moving = Geometry.flat(root.AssemblyLinearVelocity).Magnitude > 1
+		if close < cfg.closeRange and moving and char:GetAttribute("Stance") ~= "Crouch" then
+			return 3
+		end
+		return 0
+	end
 	local range = cfg.sightRange * (modifier.sightMult or 1)
 	local lit = char:GetAttribute("Torch") == true or Geometry.inTagged(root.Position, "LitZone")
 	if lit then
@@ -121,6 +131,10 @@ function PerceptionService.emitNoise(position, radius, kind, player)
 	radius *= modifier.noiseMult or 1
 	if radius <= 0 then
 		return
+	end
+	if kind ~= "footstep" and radius >= 18 then
+		-- show everyone how far a loud noise carried (gunshots, bottles, explosions)
+		Net.notifyAll("NoiseRing", { position = position, radius = radius, kind = kind })
 	end
 	Services.EnemyService.onNoise({ position = position, radius = radius, kind = kind, player = player })
 end

@@ -23,7 +23,7 @@ task.spawn(function()
 	end
 end)
 
-local ORDER = { "CameraController", "WeaponController", "MovementController", "ActionController", "EffectsController", "GraphicsController", "AnimationController", "UIController" }
+local ORDER = { "CameraController", "WeaponController", "MovementController", "ActionController", "EffectsController", "GraphicsController", "AnimationController", "EnemyAnimator", "UIController" }
 local controllers = {}
 for _, name in ORDER do
 	controllers[name] = require(Controllers:WaitForChild(name))

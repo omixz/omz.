@@ -33,60 +33,127 @@ occlusionParams.FilterType = Enum.RaycastFilterType.Exclude
 
 -- Model -----------------------------------------------------------------------------------
 
+local RAG_COLORS = {
+	Color3.fromRGB(70, 66, 58), Color3.fromRGB(58, 64, 70), Color3.fromRGB(86, 70, 52),
+	Color3.fromRGB(64, 58, 66), Color3.fromRGB(92, 88, 78), Color3.fromRGB(54, 60, 52),
+}
+
+-- Builds a jointed body (Motor6D skeleton) so clients can animate it procedurally:
+--   Root -> Torso (Waist) -> Head (Neck), UpperArms (Shoulders) -> LowerArms (Elbows)
+--   Root -> UpperLegs (Hips) -> LowerLegs (Knees)
+-- Each type gets its own proportions, head shape, salt-crust growths and clothing rags.
 local function buildModel(position, typeName, cfg)
 	local k = cfg.scale
+	local body = cfg.body
 	local model = Instance.new("Model")
 	model.Name = "Hushed_" .. typeName
 
+	local legLen = 1.6 * body.legs
+	local hipHeight = (legLen * 2 - 0.2) * k
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = Vector3.new(2, 2, 1) * k
 	root.Transparency = 1
 	root.CanCollide = true
-	root.CFrame = CFrame.new(position + Vector3.new(0, 4 * k, 0))
+	root.CFrame = CFrame.new(position + Vector3.new(0, hipHeight + 1 * k, 0))
 	root.Parent = model
 	model.PrimaryPart = root
 
 	local base = cfg.color
-	local function limb(name, size, offset, color)
+	local function part(name, size, color, material, shape)
 		local p = Instance.new("Part")
 		p.Name = name
 		p.Size = size * k
 		p.Color = color or base
-		p.Material = Enum.Material.Sand
+		p.Material = material or Enum.Material.Sand
 		p.CanCollide = false
 		p.CanTouch = false
 		p.Massless = true
-		p.CFrame = root.CFrame * CFrame.new(offset.Position * k) * offset.Rotation
+		if shape then
+			p.Shape = shape
+		end
+		p.CFrame = root.CFrame
 		p.Parent = model
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = root
-		weld.Part1 = p
-		weld.Parent = p
+		return p
+	end
+	local function joint(name, part0, part1, c0, c1)
+		local m = Instance.new("Motor6D")
+		m.Name = name
+		m.Part0 = part0
+		m.Part1 = part1
+		m.C0 = CFrame.new(c0.Position * k) * c0.Rotation
+		m.C1 = CFrame.new(c1.Position * k) * c1.Rotation
+		m.Parent = part0
+		return m
+	end
+	local function attach(name, target, size, offset, color, material, shape)
+		local p = part(name, size, color, material, shape)
+		local w = Instance.new("Weld")
+		w.Part0 = target
+		w.Part1 = p
+		w.C0 = CFrame.new(offset.Position * k) * offset.Rotation
+		w.Parent = p
 		return p
 	end
 
-	local bulky = typeName == "Tidewalker"
-	local torso = limb("Torso", bulky and Vector3.new(2.3, 2.6, 1.4) or Vector3.new(1.7, 2.4, 0.9), CFrame.new(0, 0.7, 0) * CFrame.Angles(math.rad(bulky and -16 or -8), 0, 0))
-	local headSize = typeName == "Bellwether" and Vector3.new(1.5, 1.0, 1.5) or Vector3.new(1.1, 1.45, 1.1)
-	local head = limb("Head", headSize, CFrame.new(0, 2.5, bulky and -0.6 or -0.3) * CFrame.Angles(math.rad(-18), 0, 0), Color3.new(base.R * 1.08, base.G * 1.08, base.B * 1.08))
+	local tw = body.torso
+	local torso = part("Torso", Vector3.new(1.5 * tw, 2.0, 0.85 * tw))
+	joint("Waist", root, torso, CFrame.new(0, 0.3, 0) * CFrame.Angles(math.rad(-body.hunch), 0, 0), CFrame.new(0, -1.0, 0))
+
+	local headColor = Color3.new(math.min(1, base.R * 1.08), math.min(1, base.G * 1.08), math.min(1, base.B * 1.08))
+	local headSize = ({
+		round = Vector3.new(1.0, 1.25, 1.0),
+		half = Vector3.new(0.95, 1.2, 0.95),
+		shell = Vector3.new(1.55, 1.5, 1.55),
+		disc = Vector3.new(1.5, 0.95, 1.5),
+		sunk = Vector3.new(1.05, 1.05, 1.05),
+	})[body.head] or Vector3.new(1, 1.25, 1)
+	local head = part("Head", headSize, headColor)
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
 	mesh.Parent = head
-	local armSize = bulky and Vector3.new(0.75, 3.3, 0.75) or Vector3.new(0.45, 3.1, 0.45)
-	local armX = bulky and 1.55 or 1.12
-	limb("LeftArm", armSize, CFrame.new(-armX, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(-4)))
-	limb("RightArm", armSize, CFrame.new(armX, 0.1, -0.15) * CFrame.Angles(math.rad(10), 0, math.rad(4)))
-	limb("LeftLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(-0.45, -2.5, 0))
-	limb("RightLeg", Vector3.new(0.6, 3, 0.6), CFrame.new(0.45, -2.5, 0))
-	if bulky then
-		-- crusted salt plates on the shoulders
-		limb("CrustL", Vector3.new(1.1, 0.7, 1.3), CFrame.new(-1.1, 1.9, 0) * CFrame.Angles(0, 0, math.rad(20)), Color3.fromRGB(120, 118, 110))
-		limb("CrustR", Vector3.new(1.1, 0.7, 1.3), CFrame.new(1.1, 1.9, 0) * CFrame.Angles(0, 0, math.rad(-20)), Color3.fromRGB(120, 118, 110))
+	local neckY = body.head == "sunk" and 0.75 or 1.0
+	joint("Neck", torso, head, CFrame.new(0, neckY, -0.1), CFrame.new(0, -headSize.Y * 0.5 + 0.1, 0.1))
+	if body.head == "half" then
+		-- salt has sealed half the face
+		attach("FaceCrust", head, Vector3.new(0.55, 0.9, 0.5), CFrame.new(0.25, 0.05, -0.32), Color3.fromRGB(232, 228, 216), Enum.Material.Sand, Enum.PartType.Ball)
+	end
+
+	local armLen = 1.5 * body.arms
+	for _, side in { -1, 1 } do
+		local name = side < 0 and "Left" or "Right"
+		local upper = part(name .. "UpperArm", Vector3.new(0.42 * tw, armLen, 0.42 * tw))
+		local lower = part(name .. "LowerArm", Vector3.new(0.38 * tw, armLen * 1.07, 0.38 * tw))
+		joint(name .. "Shoulder", torso, upper, CFrame.new(side * (0.75 * tw + 0.2), 0.85, 0) * CFrame.Angles(math.rad(8), 0, math.rad(side * 4)), CFrame.new(0, armLen * 0.5, 0))
+		joint(name .. "Elbow", upper, lower, CFrame.new(0, -armLen * 0.5, 0), CFrame.new(0, armLen * 0.535, 0))
+		local upperLeg = part(name .. "UpperLeg", Vector3.new(0.56 * tw, legLen, 0.56 * tw))
+		local lowerLeg = part(name .. "LowerLeg", Vector3.new(0.5 * tw, legLen, 0.5 * tw))
+		joint(name .. "Hip", root, upperLeg, CFrame.new(side * 0.42 * tw, -0.2, 0), CFrame.new(0, legLen * 0.5, 0))
+		joint(name .. "Knee", upperLeg, lowerLeg, CFrame.new(0, -legLen * 0.5, 0), CFrame.new(0, legLen * 0.5, 0))
+	end
+
+	-- what's left of their clothes: rags over torso and thighs
+	local rng = Random.new()
+	local ragColor = RAG_COLORS[rng:NextInteger(1, #RAG_COLORS)]
+	for i = 1, body.rags do
+		local onLeg = i % 2 == 0
+		local target = onLeg and model[(rng:NextNumber() < 0.5 and "Left" or "Right") .. "UpperLeg"] or torso
+		local size = onLeg and Vector3.new(0.62 * tw, 0.9, 0.62 * tw) or Vector3.new(1.55 * tw, rng:NextNumber(0.5, 1.1), 0.9 * tw)
+		local offset = onLeg and CFrame.new(0, rng:NextNumber(-0.2, 0.4), 0) or CFrame.new(0, rng:NextNumber(-0.6, 0.6), 0) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-10, 10)))
+		attach("Rag" .. i, target, size, offset, ragColor, Enum.Material.Fabric)
+	end
+
+	-- salt growths: lumpy crust on shoulders, back and head
+	local spots = { torso, torso, head, model.LeftUpperArm, model.RightUpperArm }
+	for i = 1, body.crust do
+		local target = spots[(i - 1) % #spots + 1]
+		local r = rng:NextNumber(0.25, 0.6) * (target == torso and 1.4 or 1)
+		local offset = CFrame.new(rng:NextNumber(-0.5, 0.5) * target.Size.X / k, rng:NextNumber(-0.3, 0.5) * target.Size.Y / k, (target == head and -1 or 1) * rng:NextNumber(0.2, 0.5) * target.Size.Z / k)
+		attach("Crust" .. i, target, Vector3.new(r, r * rng:NextNumber(0.7, 1.2), r), offset, Color3.fromRGB(232, 228, 216), Enum.Material.Sand, Enum.PartType.Ball)
 	end
 
 	local drift = Instance.new("ParticleEmitter")
-	drift.Rate = bulky and 8 or 4
+	drift.Rate = 3 + body.crust * 0.5
 	drift.Lifetime = NumberRange.new(2, 3)
 	drift.Speed = NumberRange.new(0.4, 1.2)
 	drift.SpreadAngle = Vector2.new(180, 180)
@@ -98,7 +165,7 @@ local function buildModel(position, typeName, cfg)
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.RigType = Enum.HumanoidRigType.R15 -- R15 so HipHeight (not leg parts) sets floor height
-	humanoid.HipHeight = 3 * k
+	humanoid.HipHeight = hipHeight
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.WalkSpeed = 5
@@ -108,16 +175,17 @@ local function buildModel(position, typeName, cfg)
 	humanoid.RequiresNeck = false
 	humanoid.BreakJointsOnDeath = false
 	humanoid.Parent = model
-	for _, s in {
+	for _, st in {
 		Enum.HumanoidStateType.Climbing,
 		Enum.HumanoidStateType.FallingDown,
 		Enum.HumanoidStateType.Ragdoll,
 		Enum.HumanoidStateType.Seated,
 		Enum.HumanoidStateType.Jumping,
 	} do
-		humanoid:SetStateEnabled(s, false)
+		humanoid:SetStateEnabled(st, false)
 	end
 	model:SetAttribute("Type", typeName)
+	model:SetAttribute("Gait", cfg.gait or "shamble")
 	model:SetAttribute("HP", 1)
 	return model, humanoid, root, head
 end
@@ -350,7 +418,7 @@ local function update(e, dt, now, active)
 		elseif bestSus >= cfg.noticeThreshold and bestSus < cfg.investigateThreshold and bestPlayer then
 			stop(e)
 			face(e, findInfo(active, bestPlayer).root.Position)
-		elseif moveTo(e, e.investigatePos, cfg.investigateSpeed) then
+		elseif moveTo(e, e.investigatePos, (cfg.rushToNoise and os.clock() - (e.heardAt or 0) < 3) and cfg.chaseSpeed or cfg.investigateSpeed) then
 			e.searchOrigin = e.investigatePos
 			e.investigatePos = nil
 			setState(e, "Search")
@@ -658,7 +726,7 @@ function EnemyService.onNoise(event)
 		if not e.dead and e.state ~= "Chase" and e.state ~= "Quieted" and os.clock() >= e.stunUntil then
 			local eyes = e.head.Position
 			local dist = (event.position - eyes).Magnitude
-			local radius = event.radius
+			local radius = event.radius * (e.cfg.hearingMult or 1)
 			if dist <= radius then
 				local hit = Workspace:Raycast(eyes, event.position - eyes, occlusionParams)
 				if hit and (hit.Position - event.position).Magnitude > 3 then
@@ -675,6 +743,10 @@ function EnemyService.onNoise(event)
 						e.suspicion[event.player] = math.min(1.2, (e.suspicion[event.player] or 0) + add)
 					end
 					e.investigatePos = event.position
+					e.heardAt = os.clock()
+					if loud > 0.15 and event.kind ~= "footstep" then
+						e.model:SetAttribute("Heard", os.clock()) -- clients show a "?" and turn the head
+					end
 				end
 			end
 		end

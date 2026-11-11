@@ -149,14 +149,14 @@ local function explosion(data)
 	shake = math.max(shake, math.clamp(1 - dist / 80, 0, 1))
 end
 
-local function humRing(data)
+local function humRing(data, color)
 	if typeof(data.position) ~= "Vector3" then
 		return
 	end
 	local ring = localPart(data.position + Vector3.new(0, 0.2, 0))
 	ring.Shape = Enum.PartType.Cylinder
 	ring.Material = Enum.Material.ForceField
-	ring.Color = Color3.fromRGB(200, 230, 230)
+	ring.Color = color or Color3.fromRGB(200, 230, 230)
 	ring.Transparency = 0.2
 	ring.Size = Vector3.new(0.2, 2, 2)
 	ring.CFrame = CFrame.new(data.position + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
@@ -233,6 +233,9 @@ function EffectsController.start()
 			explosion(data)
 		elseif kind == "Hum" then
 			humRing(data)
+		elseif kind == "NoiseRing" then
+			-- how far that sound carried: every Hushed inside this ring heard it
+			humRing(data, data.kind == "gunshot" and Color3.fromRGB(232, 168, 92) or Color3.fromRGB(226, 220, 206))
 		end
 	end)
 
