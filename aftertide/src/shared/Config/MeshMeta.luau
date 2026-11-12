@@ -3768,6 +3768,7 @@ return {
 			},
 		},
 		muzzle = { 0.0, 0.2376, -0.7344 },
+		support = { -0.036, -0.144, -0.0144 },
 		pack = "Weapons",
 	},
 	Weapon_rifle = {
@@ -3823,6 +3824,7 @@ return {
 			},
 		},
 		muzzle = { 0.0, 0.172, -2.58 },
+		support = { 0.0, 0.0688, -0.86 },
 		pack = "Weapons",
 	},
 	Weapon_carbine = {
@@ -3870,6 +3872,7 @@ return {
 			},
 		},
 		muzzle = { 0.0, 0.172, -2.021 },
+		support = { 0.0, 0.0688, -0.86 },
 		pack = "Weapons",
 	},
 	Weapon_shotgun = {
@@ -3917,6 +3920,7 @@ return {
 			},
 		},
 		muzzle = { 0.0, 0.1892, -2.15 },
+		support = { 0.0, 0.0516, -1.032 },
 		pack = "Weapons",
 	},
 	Weapon_bow = {
@@ -3964,6 +3968,7 @@ return {
 			},
 		},
 		muzzle = { 0.0, 0.08, -0.8 },
+		support = { 0.0, 0.08, 0.4 },
 		pack = "Weapons",
 	},
 	Flashlight = {

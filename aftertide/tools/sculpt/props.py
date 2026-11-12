@@ -25,6 +25,7 @@ def rx(a):
 # MUZZLES (in studs, after scaling) are exported to MeshMeta for muzzle flash and tracers.
 SCALE = {"revolver": 0.72, "rifle": 0.86, "carbine": 0.86, "shotgun": 0.86, "bow": 0.8}
 MUZZLES = {}
+SUPPORTS = {}  # where the left hand holds the gun (studs, grip space)
 
 
 def scaled(layers, k):
@@ -74,6 +75,7 @@ def revolver():
         return S.union(g + checker * (np.abs(P[:, 0]) > 0.05), np.maximum(medallion, -(np.abs(P[:, 0]) - 0.07)))
 
     MUZZLES["revolver"] = [0, by * SCALE["revolver"], -1.02 * SCALE["revolver"]]
+    SUPPORTS["revolver"] = [-0.05 * SCALE["revolver"], -0.2 * SCALE["revolver"], -0.02 * SCALE["revolver"]]  # cupping the grip
     layers = [("Frame", frame, "Metal", METAL), ("Cylinder", cyl, "Metal", STEEL), ("Barrel", barrel, "Metal", METAL), ("Grip", grip, "Wood", DARKWOOD)]
     return 0.016 * SCALE["revolver"], scaled(layers, SCALE["revolver"])
 
@@ -173,6 +175,7 @@ def long_gun(kind):
     if kind == "rifle":
         layers.append(("Scope", scope, "Metal", (0.1, 0.1, 0.11)))
     MUZZLES[kind] = [0, by * k, -L * k]
+    SUPPORTS[kind] = [0, (by - (0.16 if kind == "shotgun" else 0.12)) * k, (-1.2 if kind == "shotgun" else -1.0) * k]  # under the forend / pump
     return 0.02 * k, scaled(layers, k)
 
 
@@ -213,6 +216,7 @@ def bow():
         head = S.round_cone(P, (0, 0.1, -0.85), (0, 0.1, -1.0), 0.035, 0.004)
         return S.union(shaft, head)
     MUZZLES["bow"] = [0, 0.1 * SCALE["bow"], -1.0 * SCALE["bow"]]
+    SUPPORTS["bow"] = [0, 0.1 * SCALE["bow"], 0.5 * SCALE["bow"]]  # drawing hand at the string
     layers = [("Limbs", limbs, "Wood", WOOD), ("Riser", riser, "Wood", DARKWOOD), ("Grip", grip, "Leather", (0.2, 0.14, 0.1)), ("String", string, "Fabric", (0.85, 0.82, 0.74)), ("Arrow", arrow, "Wood", (0.7, 0.62, 0.5))]
     return 0.014 * SCALE["bow"], scaled(layers, SCALE["bow"])
 

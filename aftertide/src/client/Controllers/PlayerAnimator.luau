@@ -82,6 +82,46 @@ local function approach(current, target, rate, dt)
 	return current + (target - current) * math.min(1, dt * rate)
 end
 
+-- Two-bone IK: solves the left shoulder + elbow so the left hand lands on `target` (world).
+-- Works in the shoulder joint's frame. The elbow is a hinge about the upper arm's X axis
+-- (positive = forearm forward), the same convention the procedural poses use.
+local POLE = Vector3.new(-0.5, -1, 0.15) -- elbow tucked down and out (shoulder space)
+
+local function solveLeftArm(J, target)
+	local shoulder, elbow, wrist = J.ls, J.le, J.lw
+	local torso, upper, lower = shoulder.Part0, shoulder.Part1, elbow.Part1
+	local hand = wrist.Part1
+	if not (torso and upper and lower and hand) then
+		return nil
+	end
+	local a = (elbow.C0.Position - shoulder.C1.Position).Magnitude
+	local b = (wrist.C0.Position - elbow.C1.Position).Magnitude + hand.Size.Y * 0.45
+	local frame = torso.CFrame * shoulder.C0
+	local t = frame:PointToObjectSpace(target)
+	local d = math.clamp(t.Magnitude, math.abs(a - b) + 0.05, a + b - 0.02)
+	local cosB = math.clamp((d * d - a * a - b * b) / (2 * a * b), -1, 1)
+	local beta = math.acos(cosB) -- elbow flex
+	-- where the hand ends up in the upper arm's own frame with that flex
+	local h = Vector3.new(0, -a - b * math.cos(beta), -b * math.sin(beta))
+	local u1 = h.Unit
+	local u2 = Vector3.new(1, 0, 0)
+	local u3 = u1:Cross(u2)
+	local e3 = Vector3.new(0, -a, 0):Dot(u3) -- which side of the arm line the elbow sits
+	local w1 = t.Unit
+	local q = POLE - w1 * POLE:Dot(w1)
+	if q.Magnitude < 1e-3 then
+		return nil
+	end
+	q = q.Unit
+	local w3 = e3 >= 0 and q or -q
+	local w2 = w3:Cross(w1)
+	local function R(v)
+		return w1 * u1:Dot(v) + w2 * u2:Dot(v) + w3 * u3:Dot(v)
+	end
+	local rot = CFrame.fromMatrix(Vector3.zero, R(Vector3.xAxis), R(Vector3.yAxis), R(Vector3.zAxis))
+	return rot, CFrame.Angles(beta, 0, 0)
+end
+
 local function animate(char, rig, dt, serverNow, isLocal)
 	local J = rig.joints
 	local root = rig.root
@@ -305,6 +345,25 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	J.re.Transform = ang(rEl, 0, 0)
 	J.lw.Transform = ang(0, 0, 0)
 	J.rw.Transform = ang(a * 0.1, 0, 0)
+
+	-- left hand on the gun: IK onto the weapon's support point (forend / pump / under the grip)
+	local busyHands = melee < 0.45 or throw < 0.5 or takedown < 1.2 or heal < 2.2 or dodge < dodgeLen
+		or (reloadUntil > serverNow) or char:GetAttribute("Reloading") == true or (rig.drawAt and os.clock() - rig.drawAt < 0.4)
+	local wantIK = armed and not downed and not busyHands and (longGun or a > 0.3)
+	rig.ik = approach(rig.ik or 0, wantIK and 1 or 0, 12, dt)
+	if rig.ik > 0.01 then
+		local model = char:FindFirstChild("Weapon_" .. slot)
+		local grip = model and model.PrimaryPart
+		local support = grip and grip:FindFirstChild("Support")
+		if support then
+			local okIK, shoulderT, elbowT = pcall(solveLeftArm, J, support.WorldPosition)
+			if okIK and shoulderT then
+				J.ls.Transform = J.ls.Transform:Lerp(shoulderT, rig.ik)
+				J.le.Transform = J.le.Transform:Lerp(elbowT, rig.ik)
+				J.lw.Transform = J.lw.Transform:Lerp(CFrame.Angles(0.3, 0, 0), rig.ik)
+			end
+		end
+	end
 
 	-- local player's hips physically lower when crouched
 	if isLocal and rig.humanoid then

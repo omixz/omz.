@@ -14,6 +14,7 @@ local BONE = Color3.fromRGB(214, 206, 188)
 local SPECS = {
 	revolver = {
 		muzzle = Vector3.new(0, 0.38, -1.25),
+		support = Vector3.new(-0.04, -0.15, 0),
 		parts = {
 			{ Vector3.new(0.24, 0.55, 0.34), CFrame.new(0, 0, 0.05) * CFrame.Angles(math.rad(-12), 0, 0), DARKWOOD, Enum.Material.Wood },
 			{ Vector3.new(0.22, 0.34, 0.7), CFrame.new(0, 0.3, -0.25), METAL, Enum.Material.Metal },
@@ -23,6 +24,7 @@ local SPECS = {
 	},
 	rifle = {
 		muzzle = Vector3.new(0, 0.18, -2.85),
+		support = Vector3.new(0, 0.08, -1.1),
 		parts = {
 			{ Vector3.new(0.24, 0.45, 1.2), CFrame.new(0, -0.02, 0.75), WOOD, Enum.Material.Wood },
 			{ Vector3.new(0.22, 0.28, 1.1), CFrame.new(0, 0.15, -0.4), WOOD, Enum.Material.Wood },
@@ -33,6 +35,7 @@ local SPECS = {
 	},
 	carbine = {
 		muzzle = Vector3.new(0, 0.2, -2.2),
+		support = Vector3.new(0, 0.06, -1.0),
 		parts = {
 			{ Vector3.new(0.24, 0.42, 1.0), CFrame.new(0, -0.02, 0.65), WOOD, Enum.Material.Wood },
 			{ Vector3.new(0.22, 0.3, 0.9), CFrame.new(0, 0.15, -0.3), METAL, Enum.Material.Metal },
@@ -43,6 +46,7 @@ local SPECS = {
 	},
 	shotgun = {
 		muzzle = Vector3.new(0, 0.22, -2.3),
+		support = Vector3.new(0, 0.06, -1.25),
 		parts = {
 			{ Vector3.new(0.26, 0.45, 1.0), CFrame.new(0, -0.02, 0.6), DARKWOOD, Enum.Material.Wood },
 			{ Vector3.new(0.26, 0.32, 0.9), CFrame.new(0, 0.15, -0.35), METAL, Enum.Material.Metal },
@@ -53,6 +57,7 @@ local SPECS = {
 	},
 	bow = {
 		muzzle = Vector3.new(0, 0.1, -0.5),
+		support = Vector3.new(0, 0.1, 0.5),
 		parts = {
 			{ Vector3.new(0.2, 0.6, 0.26), CFrame.new(0, 0, 0), DARKWOOD, Enum.Material.Wood },
 			{ Vector3.new(0.12, 1.8, 0.18), CFrame.new(0, 1.15, 0.12) * CFrame.Angles(math.rad(-14), 0, 0), WOOD, Enum.Material.Wood },
@@ -98,6 +103,11 @@ function WeaponModels.build(weaponId, getPart, meta, skipLayers)
 			local m = meta.muzzle
 			muzzle.Position = m and Vector3.new(m[1], m[2], m[3]) or spec.muzzle -- the sculpted barrel tip
 			muzzle.Parent = grip
+			local sp = meta.support
+			local support = Instance.new("Attachment")
+			support.Name = "Support" -- where the left hand holds it (PlayerAnimator IK)
+			support.Position = sp and Vector3.new(sp[1], sp[2], sp[3]) or spec.support or Vector3.zero
+			support.Parent = grip
 			return model
 		end
 		model:Destroy()
@@ -136,6 +146,10 @@ function WeaponModels.build(weaponId, getPart, meta, skipLayers)
 	muzzle.Name = "Muzzle"
 	muzzle.Position = spec.muzzle
 	muzzle.Parent = grip
+	local support = Instance.new("Attachment")
+	support.Name = "Support"
+	support.Position = spec.support or Vector3.zero
+	support.Parent = grip
 	return model
 end
 

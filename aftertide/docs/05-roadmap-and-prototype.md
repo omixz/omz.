@@ -133,9 +133,14 @@ Code lives in `aftertide/src`. Open `aftertide/build/Aftertide.rbxlx` in Studio 
 | Interactive doors (Hushed push through them) | Built |
 | Graphics presets: Cinematic / Balanced / Performance, aim-focus depth of field | Built |
 | Custom realistic rigs and animation hooks | Built (needs your rig models, doc 7) |
-| Authored art, meshes, animations, music | **Not started** (doc 7 pipeline) |
-| Salt and Keepsakes; more maps | **Not started** |
-| Cosmetics, Tide Pass, subscription | **Not started** (Stage 10) |
+| **3D models:** sculpted crew, Harbour Watch & Tidebound factions, 5 Hushed (salt-crystal growths), 5 guns at real scale, nature & props, with fabric/leather/skin/salt surface maps; uploaded to Roblox | Built (doc 9) |
+| **Maps:** Cannery Row, Larkspur Street, Hollow Pines; tall & short grass, clouds, wind, per-map light | Built |
+| **Gunplay v2:** hit zones (head/torso/arm/leg) with directional reactions, limping, ragdolls for human enemies, recoil patterns, aim-in time, hold breath, shell-by-shell shotgun, left-hand IK on the gun | Built |
+| **Factions:** human AI with rifles/bows/hooks, flashlights, radio/bell callouts | Built |
+| **Audio:** 44 original sounds, uploaded | Built (doc 8) |
+| **Money:** Wardrobe (20 outfits), Ammo Cache, Starter Pack, Supporter pass, analytics | Built (products need creating, doc 3) |
+| Authored animations (mocap), music score | **Not started** (procedural for now) |
+| Salt and Keepsakes; Tide Pass, subscription | **Not started** (Stage 10) |
 
 **Testing honesty:** this environment can't run Roblox Studio. The code was checked with
 `tools/check_luau.py` (block and bracket balance, cross-module calls) and reviewed by hand,

@@ -89,6 +89,7 @@ def build(only=None):
             p.add_prop(k, cell, layers)
             if k.startswith("Weapon_") and k[7:] in props.MUZZLES:
                 p.meta[k]["muzzle"] = [round(float(x), 4) for x in props.MUZZLES[k[7:]]]
+                p.meta[k]["support"] = [round(float(x), 4) for x in props.SUPPORTS[k[7:]]]
         packs[gname] = p
 
     for name, p in packs.items():

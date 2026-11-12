@@ -4,8 +4,10 @@ A cinematic, third-person stealth-survival roguelike for Roblox. This folder hol
 pre-production design pack: what we are building, how, how it makes money, how we
 keep it legally clean, and in what order we build it.
 
-**Status: playable roguelike build: crossings of 3 encounters + finale, guns, scavenging,
-crafting, workbench and homebase. Waiting for its first Studio play-test.**
+**Status: feature-complete vertical slice.** Crossings of 3 encounters + finale on three maps,
+the Hushed and two human factions, gunplay with hit zones and ragdolls, scavenging, crafting,
+workbench, homebase, sculpted 3D models and sounds (uploaded to Roblox), a cosmetic wardrobe
+and run-aid store. **Next: the first full Studio play-test, then creating the Robux products.**
 Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 
 ## Play it now
@@ -13,6 +15,15 @@ Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 1. Install Roblox Studio (free).
 2. **File → Open from File…** → [`build/Aftertide.rbxlx`](build/Aftertide.rbxlx).
 3. Press **Play**. Pick a crew member and a perk, then hold **E** at the tide chart.
+
+**Controls:** WASD move · Shift sprint · C crouch · Space dodge (dive while sprinting) ·
+RMB aim (Shift while aiming = hold breath) · LMB fire · R reload · 1/2/3 long gun / sidearm /
+holster · F Quieting / melee · G throw, Z next throwable · Q ability · H heal · T flashlight ·
+V Ammo Cache · B Resupply · Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
+
+**Before publishing:** play a full crossing in Studio (with *Game Settings > Security >
+Enable Studio Access to API Services* on to test saving), then follow doc 3 to create the
+products and doc 6 for the publishing checklist.
 
 Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-publishing.md).
 
