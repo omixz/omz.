@@ -56,7 +56,11 @@ function MovementController.setSprint(on, toggled)
 end
 
 function MovementController.setAim(on)
+	local was = State.aiming
 	State.aiming = on and not State.downed
+	if State.aiming and not was then
+		State.aimSince = os.clock()
+	end
 	if State.aiming then
 		State.sprinting = false
 	end

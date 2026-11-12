@@ -165,6 +165,8 @@ function MapKit.fog(parent, position, size)
 	e.Color = ColorSequence.new(Color3.fromRGB(215, 220, 220))
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 16), NumberSequenceKeypoint.new(1, 28) })
 	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.9), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	e.Drag = 0.4
+	e.WindAffectsDrag = true -- fog drifts with the map's wind
 	e.Parent = p
 end
 

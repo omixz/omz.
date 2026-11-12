@@ -102,9 +102,44 @@ local function set(motor, cf)
 	end
 end
 
+local function readHit(model, rig)
+	local raw = model:GetAttribute("HitReact")
+	if raw and raw ~= rig.hitRaw then
+		rig.hitRaw = raw
+		local zone, side, dx, dy, dz, t = string.match(raw, "^(%a+)|(%a*)|([%-%d%.]+)|([%-%d%.]+)|([%-%d%.]+)|([%d%.]+)$")
+		if zone then
+			local dir = Vector3.new(tonumber(dx), tonumber(dy), tonumber(dz))
+			local localDir = rig.root.CFrame:VectorToObjectSpace(dir)
+			rig.hit = { zone = zone, side = side, at = tonumber(t), back = -localDir.Z, across = localDir.X }
+		end
+	end
+end
+
+-- 0..1 envelope for a hit reaction: sharp snap, slower recovery.
+local function hitEnvelope(rig)
+	local h = rig.hit
+	if not h then
+		return 0, nil
+	end
+	local since = Workspace:GetServerTimeNow() - h.at
+	local len = h.zone == "leg" and 0.7 or 0.45
+	if since < 0 or since > len then
+		return 0, h
+	end
+	local k = since < 0.06 and since / 0.06 or (1 - (since - 0.06) / (len - 0.06)) ^ 2
+	return k, h
+end
+
 local function animate(model, rig, dt, now)
 	local gait = GAITS[model:GetAttribute("Gait") or "shamble"] or GAITS.shamble
 	local state = model:GetAttribute("State") or "Patrol"
+	if state == "Ragdoll" then
+		if rig.label then
+			rig.label.Text = ""
+		end
+		return -- physics owns the body now
+	end
+	readHit(model, rig)
 	local v = rig.root.AssemblyLinearVelocity
 	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 	local moving = math.clamp(speed / 6, 0, 1)
@@ -195,8 +230,36 @@ local function animate(model, rig, dt, now)
 		rArm = math.max(rArm, 1.0 + math.sin(p + 1) * 0.25)
 	end
 
-	set(rig.waist, CFrame.Angles(-lean + fl * 0.45, math.sin(p * 0.5) * 0.08 * moving + sp * 0.5, roll + sp * 0.3))
-	set(rig.neck, CFrame.Angles(lean * 0.6 - fl * 0.5, sp * 0.9, sp * 0.6) * rig.twitch)
+	-- directional hit reactions: head snaps, shoulders spin, legs buckle
+	local hk, h = hitEnvelope(rig)
+	local hWaistX, hWaistY, hNeckX, hNeckY = 0, 0, 0, 0
+	if hk > 0 and h then
+		local push = math.clamp(h.back, -1, 1) -- +1: shot from the front, body goes back
+		local sideSign = h.side == "L" and -1 or (h.side == "R" and 1 or (h.across >= 0 and 1 or -1))
+		if h.zone == "head" then
+			hNeckX, hNeckY = -0.9 * hk * push, 0.4 * hk * h.across
+			hWaistX = -0.25 * hk * push
+		elseif h.zone == "torso" then
+			hWaistX, hWaistY = -0.45 * hk * push, 0.35 * hk * h.across
+		elseif h.zone == "arm" then
+			hWaistY = 0.55 * hk * sideSign
+			if sideSign > 0 then
+				rArm -= 1.2 * hk
+			else
+				lArm -= 1.2 * hk
+			end
+		elseif h.zone == "leg" then
+			hWaistX = 0.35 * hk
+			if sideSign > 0 then
+				rHip, rKnee = rHip + 0.5 * hk, rKnee - 1.3 * hk
+			else
+				lHip, lKnee = lHip + 0.5 * hk, lKnee - 1.3 * hk
+			end
+		end
+	end
+
+	set(rig.waist, CFrame.Angles(-lean + fl * 0.45 + hWaistX, math.sin(p * 0.5) * 0.08 * moving + sp * 0.5 + hWaistY, roll + sp * 0.3))
+	set(rig.neck, CFrame.Angles(lean * 0.6 - fl * 0.5 + hNeckX, sp * 0.9 + hNeckY, sp * 0.6) * rig.twitch)
 	lArm += sp * 0.8
 	rArm -= sp * 0.6
 	set(rig.lh, CFrame.Angles(lHip, 0, 0))

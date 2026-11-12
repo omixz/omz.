@@ -195,6 +195,7 @@ function WeaponService.equip(player, slot)
 	local s = st(player)
 	s.reloadId += 1 -- cancel reload
 	char:SetAttribute("ReloadUntil", 0)
+	char:SetAttribute("Reloading", false)
 	s.equipReadyAt = os.clock() + swapTime(player)
 	char:SetAttribute("Equipped", weaponId)
 	char:SetAttribute("EquippedSlot", slot)
@@ -230,7 +231,10 @@ local function excludeList(char)
 end
 
 -- Applies damage for a hit. Returns "enemy" | "world" | nil plus hit flags.
-local function applyHit(player, def, mods, result, distance)
+-- Damage by body zone (the head uses the weapon's headMult).
+local ZONE_MULT = { torso = 1, arm = 0.7, leg = 0.75 }
+
+local function applyHit(player, def, mods, result, distance, direction)
 	if not result then
 		return nil
 	end
@@ -238,13 +242,20 @@ local function applyHit(player, def, mods, result, distance)
 	if not e then
 		return "world"
 	end
-	local headshot = result.Instance.Name == "Head"
+	local zone = Services.EnemyService.zoneOf(result.Instance)
+	local headshot = zone == "head"
 	local headMult = 1 + (def.headMult - 1) * (e.cfg.headMultScale or 1)
-	local damage = def.damage * mods.damageMult * (headshot and headMult or 1)
+	local damage = def.damage * mods.damageMult * (headshot and headMult or (ZONE_MULT[zone] or 1))
 	if def.falloff then
 		damage *= math.clamp(1 - (distance / def.range) * 0.6, 0.35, 1)
 	end
-	local killed = Services.EnemyService.damage(e, damage, player, headshot)
+	local killed = Services.EnemyService.damage(e, damage, player, headshot, {
+		zone = zone,
+		instance = result.Instance,
+		direction = direction,
+		position = result.Position,
+		force = def.impact or 1,
+	})
 	return "enemy", headshot, killed
 end
 
@@ -274,7 +285,7 @@ local function simulateArrow(player, def, mods, origin, direction, params)
 			conn:Disconnect()
 			if result then
 				arrow.CFrame = CFrame.lookAt(result.Position - step.Unit * 0.6, result.Position)
-				local kind, headshot, killed = applyHit(player, def, mods, result, travelled)
+				local kind, headshot, killed = applyHit(player, def, mods, result, travelled, step.Unit)
 				if kind ~= "enemy" then
 					Services.PerceptionService.emitNoise(result.Position, 12, "impact", nil) -- arrows make a good distraction
 				end
@@ -311,10 +322,38 @@ function WeaponService.reload(player, info)
 	if w.mag >= size or Services.InventoryService.count(player, def.ammo) < 1 then
 		return
 	end
-	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() then
+	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() or char:GetAttribute("Reloading") then
 		return
 	end
 	local mods = WeaponService.mods(player, w.id)
+	if def.perShell then
+		-- one shell at a time; firing (or swapping) stops the reload with what's loaded
+		s.reloadId += 1
+		local id = s.reloadId
+		local shellTime = def.reload / def.mag * mods.reloadMult
+		char:SetAttribute("Reloading", true)
+		task.spawn(function()
+			while s.reloadId == id and char.Parent do
+				task.wait(shellTime)
+				local session = Services.CharacterService.getSession(player)
+				if s.reloadId ~= id or not session or session.downed or session.out or char:GetAttribute("EquippedSlot") ~= slot then
+					break
+				end
+				if w.mag >= size or not Services.InventoryService.take(player, def.ammo, 1) then
+					break
+				end
+				Services.InventoryService.setMag(player, slot, w.mag + 1)
+				Sfx.at(info.root.Position, "Reload", 0.3, 25, 0.1)
+				if w.mag >= size then
+					break
+				end
+			end
+			if s.reloadId == id then
+				char:SetAttribute("Reloading", false)
+			end
+		end)
+		return
+	end
 	local duration = def.reload * mods.reloadMult
 	s.reloadId += 1
 	local id = s.reloadId
@@ -367,6 +406,10 @@ function WeaponService.fire(player, info, direction, aiming)
 		WeaponService.reload(player, info)
 		return
 	end
+	if char:GetAttribute("Reloading") then
+		s.reloadId += 1 -- fire interrupts a shell-by-shell reload
+		char:SetAttribute("Reloading", false)
+	end
 	s.nextFireAt = now + def.fireDelay * mods.fireDelayMult * 0.9 -- small latency allowance
 	Services.InventoryService.setMag(player, slot, w.mag - 1)
 
@@ -400,7 +443,7 @@ function WeaponService.fire(player, info, direction, aiming)
 			local dir = spreadDirection(direction, spread)
 			local result = Workspace:Raycast(origin, dir * def.range, params)
 			local hitPos = result and result.Position or origin + dir * def.range
-			local kind, headshot, killed = applyHit(player, def, mods, result, (hitPos - origin).Magnitude)
+			local kind, headshot, killed = applyHit(player, def, mods, result, (hitPos - origin).Magnitude, dir)
 			table.insert(hits, { position = hitPos, kind = kind or "none" })
 			if kind == "world" then
 				impactNoise = hitPos -- stray rounds clatter: Hushed near the impact come to look

@@ -3,6 +3,7 @@
 --
 --   Keyboard/mouse                     Gamepad
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
+--   (Shift / L3 while aiming: hold breath to steady your aim)
 --   C / Ctrl crouch                    B crouch
 --   RMB aim, LMB fire                  L2 aim, R2 fire
 --   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
@@ -202,6 +203,10 @@ function ActionController.start()
 	bind("Sprint", function(state, input)
 		if not State.character then
 			return Pass
+		end
+		if State.aiming and not isTouch(input) then
+			Controllers.CameraController.holdBreath(state == Begin)
+			return
 		end
 		local toggle = isTouch(input) or (input and input.KeyCode == Enum.KeyCode.ButtonL3)
 		if toggle then

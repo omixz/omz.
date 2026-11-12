@@ -5411,6 +5411,9 @@ return Upgrades
 -- Hushed (Drifter = 100 HP). Gunshots are LOUD: every shot is a noise event, so going loud
 -- is a choice with consequences. The bow is the quiet option.
 -- spread values are degrees; noise is the radius (studs) Hushed hear the shot.
+-- impact = how hard a hit shoves / staggers (and throws a ragdoll); recoilPattern = sideways
+-- kick per shot in a repeating pattern (learnable, not random); adsTime = seconds to aim in;
+-- perShell = reload one shell at a time (you can fire mid-reload).
 return {
 	List = {
 		revolver = {
@@ -5418,6 +5421,7 @@ return {
 			mag = 6, damage = 38, headMult = 2.5, pellets = 1,
 			fireDelay = 0.42, reload = 2.2, range = 180,
 			spreadHip = 4, spreadAim = 0.7, moveSpread = 2.5, recoil = 3.2,
+			impact = 1.2, recoilPattern = { 0.15, -0.2, 0.25, -0.1, 0.2, -0.25 }, adsTime = 0.16,
 			noise = 75, aimFov = 52,
 		},
 		rifle = {
@@ -5425,6 +5429,7 @@ return {
 			mag = 4, damage = 95, headMult = 2.2, pellets = 1,
 			fireDelay = 1.25, reload = 3.0, range = 320,
 			spreadHip = 7, spreadAim = 0.12, moveSpread = 4, recoil = 7,
+			impact = 2.2, recoilPattern = { 0.1 }, adsTime = 0.3,
 			noise = 115, aimFov = 42,
 		},
 		carbine = {
@@ -5432,13 +5437,15 @@ return {
 			mag = 7, damage = 55, headMult = 2.0, pellets = 1,
 			fireDelay = 0.55, reload = 3.2, range = 240,
 			spreadHip = 5, spreadAim = 0.4, moveSpread = 3, recoil = 4.5,
+			impact = 1.4, recoilPattern = { 0.2, 0.3, -0.1, 0.35, 0.1, -0.2, 0.3 }, adsTime = 0.22,
 			noise = 95, aimFov = 48,
 		},
 		shotgun = {
 			name = "Pump Shotgun", slot = "long", ammo = "shells",
-			mag = 4, damage = 16, headMult = 1.5, pellets = 9, falloff = true,
+			mag = 4, damage = 16, headMult = 1.5, pellets = 9, falloff = true, perShell = true,
 			fireDelay = 0.95, reload = 3.2, range = 55,
 			spreadHip = 7.5, spreadAim = 5, moveSpread = 2, recoil = 8,
+			impact = 2.6, recoilPattern = { -0.25, 0.3, -0.2, 0.25 }, adsTime = 0.24,
 			noise = 100, aimFov = 56,
 		},
 		bow = {
@@ -5446,6 +5453,7 @@ return {
 			mag = 1, damage = 70, headMult = 2.2, pellets = 1, autoReload = true,
 			fireDelay = 0.85, reload = 0.6, range = 220,
 			spreadHip = 3, spreadAim = 0.35, moveSpread = 1.5, recoil = 1.5,
+			impact = 1.6, recoilPattern = { 0 }, adsTime = 0.26,
 			noise = 5, aimFov = 50, projectile = { speed = 170, gravityScale = 0.35 },
 		},
 	},
@@ -6184,7 +6192,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
 }
 
 function Map.build(parent, rng)
@@ -6362,7 +6370,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
 }
 
 local function creekX(z)
@@ -6514,7 +6522,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "LarkspurStreet",
 	name = "Larkspur Street",
-	lighting = { clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
+	lighting = { clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
 }
 
 function Map.build(parent, rng)
@@ -6792,6 +6800,8 @@ function MapKit.fog(parent, position, size)
 	e.Color = ColorSequence.new(Color3.fromRGB(215, 220, 220))
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 16), NumberSequenceKeypoint.new(1, 28) })
 	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.9), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	e.Drag = 0.4
+	e.WindAffectsDrag = true -- fog drifts with the map's wind
 	e.Parent = p
 end
 
@@ -9494,6 +9504,26 @@ function EnemyService.count()
 	return #enemies
 end
 
+-- Which body zone a hit part belongs to: "head" | "torso" | "arm" | "leg" (+ side "L"/"R").
+-- Bits welded onto a limb (rags, salt crust, nets) count as that limb.
+function EnemyService.zoneOf(instance)
+	local part = instance
+	local weld = part and part:FindFirstChildOfClass("Weld")
+	if weld and weld.Part1 == part and weld.Part0 then
+		part = weld.Part0 -- a rag / crust / net welded onto a body part
+	end
+	local name = part and part.Name or ""
+	local side = name:sub(1, 4) == "Left" and "L" or (name:sub(1, 5) == "Right" and "R" or "")
+	if name == "Head" then
+		return "head", side
+	elseif name:find("Leg") then
+		return "leg", side
+	elseif name:find("Arm") then
+		return "arm", side
+	end
+	return "torso", side
+end
+
 function EnemyService.fromInstance(instance)
 	local model = instance and instance:FindFirstAncestorOfClass("Model")
 	while model and not byModel[model] do
@@ -9586,16 +9616,20 @@ function EnemyService.disperse(e, byPlayer)
 	if index then
 		table.remove(enemies, index)
 	end
-	e.model:SetAttribute("State", "Dispersed")
 	e.model:SetAttribute("HP", 0)
-	e.root.Anchored = true
 	if e.cfg.human then
-		-- people are knocked down, not turned to salt
-		e.model:SetAttribute("State", "Down")
+		-- people fall as physics ragdolls, thrown by the shot that dropped them
+		e.model:SetAttribute("State", "Ragdoll")
 		Services.CharacterService.setFlashlight(e.model, false)
 		Services.MatchService.onEnemyKilled(byPlayer, e)
+		local ok, err = pcall(EnemyService.ragdoll, e)
+		if not ok then
+			warn("[EnemyService] ragdoll failed: " .. tostring(err))
+			e.model:SetAttribute("State", "Down")
+			e.root.Anchored = true
+		end
 		local model = e.model
-		task.delay(8, function()
+		task.delay(14, function()
 			for _, part in model:GetDescendants() do
 				if part:IsA("BasePart") then
 					TweenService:Create(part, TweenInfo.new(1.5), { Transparency = 1 }):Play()
@@ -9606,6 +9640,8 @@ function EnemyService.disperse(e, byPlayer)
 		end)
 		return
 	end
+	e.model:SetAttribute("State", "Dispersed")
+	e.root.Anchored = true
 
 	local attachment = Instance.new("Attachment")
 	attachment.Position = Vector3.new(0, 0.8, 0)
@@ -9640,19 +9676,92 @@ function EnemyService.disperse(e, byPlayer)
 	end)
 end
 
+-- Turns a dead human enemy into a ragdoll: every Motor6D becomes a limited ball socket,
+-- the body parts collide with the world, and the killing shot pushes the body.
+function EnemyService.ragdoll(e)
+	local model, humanoid = e.model, e.humanoid
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	humanoid.PlatformStand = true
+	humanoid.AutoRotate = false
+	local bones = {}
+	for _, m in model:GetDescendants() do
+		if m:IsA("Motor6D") and m.Part0 and m.Part1 then
+			bones[m.Part0], bones[m.Part1] = true, true
+			local a0 = Instance.new("Attachment")
+			a0.CFrame = m.C0
+			a0.Parent = m.Part0
+			local a1 = Instance.new("Attachment")
+			a1.CFrame = m.C1
+			a1.Parent = m.Part1
+			local socket = Instance.new("BallSocketConstraint")
+			socket.Attachment0 = a0
+			socket.Attachment1 = a1
+			socket.LimitsEnabled = true
+			socket.TwistLimitsEnabled = true
+			local neck = m.Name == "Neck"
+			local knee = m.Name:find("Knee") or m.Name:find("Elbow")
+			socket.UpperAngle = neck and 35 or (knee and 70 or 55)
+			socket.TwistLowerAngle = -25
+			socket.TwistUpperAngle = 25
+			socket.Parent = m.Part0
+			m.Enabled = false
+		end
+	end
+	for _, part in model:GetChildren() do
+		if part:IsA("BasePart") then
+			-- the skeleton's bones collide with the world; meshes, rags and crust just ride on them
+			part.CanCollide = bones[part] == true and part ~= e.root
+			part.Massless = not bones[part]
+			part.Anchored = false
+		end
+	end
+	e.root.CanCollide = false
+	pcall(function()
+		e.root:SetNetworkOwner(nil)
+	end)
+	local hit = e.lastHit
+	local dir = hit and hit.direction or -e.root.CFrame.LookVector
+	local push = Vector3.new(dir.X, 0, dir.Z)
+	push = (push.Magnitude > 0.01 and push.Unit or Vector3.zero) * 22 * (hit and hit.force or 1) + Vector3.new(0, 6, 0)
+	local hitPart = hit and hit.instance
+	local target = (hitPart and hitPart:IsDescendantOf(model) and not hitPart.Name:match("^Mesh_")) and hitPart or model:FindFirstChild("Torso") or e.root
+	target:ApplyImpulse(push * target.AssemblyMass)
+end
+
 -- Weapon / explosive / fire damage. Returns true if this killed it.
-function EnemyService.damage(e, amount, byPlayer, headshot)
+function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 	if e.dead or amount <= 0 then
 		return false
 	end
 	e.hp -= amount
 	e.model:SetAttribute("HP", math.max(0, e.hp / e.cfg.hp))
+	if hit then
+		e.lastHit = hit
+		local _, side = EnemyService.zoneOf(hit.instance or e.root)
+		local dir = hit.direction or Vector3.zero
+		-- clients play a directional flinch from this (EnemyAnimator)
+		e.model:SetAttribute("HitReact", ("%s|%s|%.2f|%.2f|%.2f|%.3f"):format(hit.zone or "torso", side, dir.X, dir.Y, dir.Z, Workspace:GetServerTimeNow()))
+	end
 	if e.hp <= 0 then
 		EnemyService.disperse(e, byPlayer)
 		return true
 	end
 	-- stagger, and being shot always alerts it to the shooter
 	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
+	if hit then
+		local force = hit.force or 1
+		if hit.zone == "leg" then
+			stagger = math.max(stagger, 0.55 * force) -- the leg buckles
+			e.limpUntil = os.clock() + 3.5
+		elseif hit.zone == "head" then
+			stagger = math.max(stagger, 0.45 * force)
+		elseif force >= 2 and e.cfg.shoveable ~= false then
+			stagger = math.max(stagger, 0.35 * force) -- heavy rounds rock them back
+		end
+		if e.cfg.staggerTime < 0.1 then
+			stagger = math.min(stagger, 0.15) -- Tidewalkers barely notice
+		end
+	end
 	if stagger > 0.05 and e.state ~= "Quieted" then
 		e.stunUntil = math.max(e.stunUntil, os.clock() + stagger)
 	end
@@ -9769,6 +9878,9 @@ function EnemyService.start()
 			local e = enemies[i]
 			if e and not e.dead then
 				local ok, err = pcall(update, e, step, now, active)
+				if ok and e.limpUntil and now < e.limpUntil and not e.dead then
+					e.humanoid.WalkSpeed *= 0.6 -- shot in the leg
+				end
 				if not ok then
 					warn("[EnemyService] brain error: " .. tostring(err))
 				end
@@ -10668,8 +10780,10 @@ local function setupLighting()
 	Lighting.Ambient = Color3.fromRGB(62, 68, 74)
 	Lighting.OutdoorAmbient = Color3.fromRGB(112, 120, 128)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 224, 196)
-	Lighting.EnvironmentDiffuseScale = 0.4
-	Lighting.EnvironmentSpecularScale = 0.6
+	-- sky light on every surface: makes normal / roughness maps and wet metal read properly
+	Lighting.EnvironmentDiffuseScale = 0.65
+	Lighting.EnvironmentSpecularScale = 1
+	Lighting.ShadowSoftness = 0.25
 	Lighting.GlobalShadows = true
 	Lighting.ExposureCompensation = 0.25
 
@@ -10697,7 +10811,16 @@ local function setupLighting()
 	bloom.Parent = Lighting
 end
 
-local FERRY_LIGHT = { clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+local clouds
+local function setupSky()
+	clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = 0.55
+	clouds.Density = 0.6
+	clouds.Color = Color3.fromRGB(230, 232, 234)
+	clouds.Parent = Workspace.Terrain
+end
+
+local FERRY_LIGHT = { clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])
@@ -10720,6 +10843,18 @@ local function applyPreset(L, modifier)
 		atmosphere.Haze = L.haze
 		atmosphere.Color = rgb(L.fogColor)
 	end
+	-- weather: volumetric clouds and wind (moves grass, clouds and particles)
+	if clouds then
+		local cover = L.clouds or 0.55
+		TweenService:Create(clouds, TweenInfo.new(4), {
+			Cover = night and math.max(cover, 0.6) or cover,
+			Density = L.cloudDensity or 0.6,
+			Color = night and Color3.fromRGB(70, 76, 86) or rgb(L.cloudColor or { 232, 234, 236 }),
+		}):Play()
+	end
+	local wind = L.wind or { 6, 0, 3 }
+	local gust = modifier.id == "Squall" and 3 or 1
+	Workspace.GlobalWind = Vector3.new(wind[1], wind[2], wind[3]) * gust
 	if colorCorrection then
 		colorCorrection.TintColor = rgb(L.tint)
 		colorCorrection.Saturation = L.saturation
@@ -11031,6 +11166,7 @@ function MapService.start()
 	encounterFolder.Parent = world
 
 	setupLighting()
+	setupSky()
 	MapService.applyFerryLighting()
 	MapService.setFerryRepairs({})
 	MapService.ready = true
@@ -12510,6 +12646,7 @@ function WeaponService.equip(player, slot)
 	local s = st(player)
 	s.reloadId += 1 -- cancel reload
 	char:SetAttribute("ReloadUntil", 0)
+	char:SetAttribute("Reloading", false)
 	s.equipReadyAt = os.clock() + swapTime(player)
 	char:SetAttribute("Equipped", weaponId)
 	char:SetAttribute("EquippedSlot", slot)
@@ -12545,7 +12682,10 @@ local function excludeList(char)
 end
 
 -- Applies damage for a hit. Returns "enemy" | "world" | nil plus hit flags.
-local function applyHit(player, def, mods, result, distance)
+-- Damage by body zone (the head uses the weapon's headMult).
+local ZONE_MULT = { torso = 1, arm = 0.7, leg = 0.75 }
+
+local function applyHit(player, def, mods, result, distance, direction)
 	if not result then
 		return nil
 	end
@@ -12553,13 +12693,20 @@ local function applyHit(player, def, mods, result, distance)
 	if not e then
 		return "world"
 	end
-	local headshot = result.Instance.Name == "Head"
+	local zone = Services.EnemyService.zoneOf(result.Instance)
+	local headshot = zone == "head"
 	local headMult = 1 + (def.headMult - 1) * (e.cfg.headMultScale or 1)
-	local damage = def.damage * mods.damageMult * (headshot and headMult or 1)
+	local damage = def.damage * mods.damageMult * (headshot and headMult or (ZONE_MULT[zone] or 1))
 	if def.falloff then
 		damage *= math.clamp(1 - (distance / def.range) * 0.6, 0.35, 1)
 	end
-	local killed = Services.EnemyService.damage(e, damage, player, headshot)
+	local killed = Services.EnemyService.damage(e, damage, player, headshot, {
+		zone = zone,
+		instance = result.Instance,
+		direction = direction,
+		position = result.Position,
+		force = def.impact or 1,
+	})
 	return "enemy", headshot, killed
 end
 
@@ -12589,7 +12736,7 @@ local function simulateArrow(player, def, mods, origin, direction, params)
 			conn:Disconnect()
 			if result then
 				arrow.CFrame = CFrame.lookAt(result.Position - step.Unit * 0.6, result.Position)
-				local kind, headshot, killed = applyHit(player, def, mods, result, travelled)
+				local kind, headshot, killed = applyHit(player, def, mods, result, travelled, step.Unit)
 				if kind ~= "enemy" then
 					Services.PerceptionService.emitNoise(result.Position, 12, "impact", nil) -- arrows make a good distraction
 				end
@@ -12626,10 +12773,38 @@ function WeaponService.reload(player, info)
 	if w.mag >= size or Services.InventoryService.count(player, def.ammo) < 1 then
 		return
 	end
-	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() then
+	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() or char:GetAttribute("Reloading") then
 		return
 	end
 	local mods = WeaponService.mods(player, w.id)
+	if def.perShell then
+		-- one shell at a time; firing (or swapping) stops the reload with what's loaded
+		s.reloadId += 1
+		local id = s.reloadId
+		local shellTime = def.reload / def.mag * mods.reloadMult
+		char:SetAttribute("Reloading", true)
+		task.spawn(function()
+			while s.reloadId == id and char.Parent do
+				task.wait(shellTime)
+				local session = Services.CharacterService.getSession(player)
+				if s.reloadId ~= id or not session or session.downed or session.out or char:GetAttribute("EquippedSlot") ~= slot then
+					break
+				end
+				if w.mag >= size or not Services.InventoryService.take(player, def.ammo, 1) then
+					break
+				end
+				Services.InventoryService.setMag(player, slot, w.mag + 1)
+				Sfx.at(info.root.Position, "Reload", 0.3, 25, 0.1)
+				if w.mag >= size then
+					break
+				end
+			end
+			if s.reloadId == id then
+				char:SetAttribute("Reloading", false)
+			end
+		end)
+		return
+	end
 	local duration = def.reload * mods.reloadMult
 	s.reloadId += 1
 	local id = s.reloadId
@@ -12682,6 +12857,10 @@ function WeaponService.fire(player, info, direction, aiming)
 		WeaponService.reload(player, info)
 		return
 	end
+	if char:GetAttribute("Reloading") then
+		s.reloadId += 1 -- fire interrupts a shell-by-shell reload
+		char:SetAttribute("Reloading", false)
+	end
 	s.nextFireAt = now + def.fireDelay * mods.fireDelayMult * 0.9 -- small latency allowance
 	Services.InventoryService.setMag(player, slot, w.mag - 1)
 
@@ -12715,7 +12894,7 @@ function WeaponService.fire(player, info, direction, aiming)
 			local dir = spreadDirection(direction, spread)
 			local result = Workspace:Raycast(origin, dir * def.range, params)
 			local hitPos = result and result.Position or origin + dir * def.range
-			local kind, headshot, killed = applyHit(player, def, mods, result, (hitPos - origin).Magnitude)
+			local kind, headshot, killed = applyHit(player, def, mods, result, (hitPos - origin).Magnitude, dir)
 			table.insert(hits, { position = hitPos, kind = kind or "none" })
 			if kind == "world" then
 				impactNoise = hitPos -- stray rounds clatter: Hushed near the impact come to look
@@ -12903,6 +13082,7 @@ return WorkbenchService
 --
 --   Keyboard/mouse                     Gamepad
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
+--   (Shift / L3 while aiming: hold breath to steady your aim)
 --   C / Ctrl crouch                    B crouch
 --   RMB aim, LMB fire                  L2 aim, R2 fire
 --   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
@@ -13103,6 +13283,10 @@ function ActionController.start()
 		if not State.character then
 			return Pass
 		end
+		if State.aiming and not isTouch(input) then
+			Controllers.CameraController.holdBreath(state == Begin)
+			return
+		end
 		local toggle = isTouch(input) or (input and input.KeyCode == Enum.KeyCode.ButtonL3)
 		if toggle then
 			if state == Begin then
@@ -13281,10 +13465,29 @@ function CameraController.getPitch()
 end
 
 -- Recoil: the view climbs (you pull it back down), with a little sideways jitter.
-function CameraController.kick(degrees)
+local breath = { holding = false, since = 0, spentUntil = 0 }
+local BREATH_HOLD = 4 -- seconds of steady aim before you have to breathe
+
+-- Hold breath while aiming (sprint key): sway stops for a few seconds, then you gasp.
+function CameraController.holdBreath(on)
+	local now = os.clock()
+	if on and State.aiming and now >= breath.spentUntil then
+		breath.holding, breath.since = true, now
+	elseif not on and breath.holding then
+		breath.holding = false
+		breath.spentUntil = now + 1
+	end
+end
+
+function CameraController.isHoldingBreath()
+	return breath.holding
+end
+
+-- Recoil: the view climbs (you pull it back down); `side` is the gun's pattern step.
+function CameraController.kick(degrees, side)
 	recoilPitch += math.rad(degrees) * 0.6
 	pitch += math.rad(degrees) * 0.08 -- a little permanent climb to manage
-	recoilYaw += math.rad(degrees) * (math.random() - 0.5) * 0.35
+	recoilYaw += math.rad(degrees) * ((side or 0) * 0.45 + (math.random() - 0.5) * 0.08)
 	fovPunch = math.min(fovPunch + degrees * 0.35, 4)
 end
 
@@ -13406,6 +13609,7 @@ local function update(dt)
 	focusSpring.target = focusTarget
 	offsetSpring.target = offset
 	fovSpring.target = fov
+	fovSpring.frequency = State.aiming and 14 or 6 -- snap into the sights, ease back out
 	local focus = focusSpring:update(dt)
 	local off = offsetSpring:update(dt)
 	camera.FieldOfView = fovSpring:update(dt) + fovPunch
@@ -13420,6 +13624,18 @@ local function update(dt)
 		local v = State.root.AssemblyLinearVelocity
 		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
 		aimSway = (State.crouched and 0.0018 or 0.003) * (1 + moving * 1.5)
+		if breath.holding then
+			if os.clock() - breath.since > BREATH_HOLD then
+				breath.holding = false
+				breath.spentUntil = os.clock() + 2.5 -- out of breath: shaky for a moment
+			else
+				aimSway *= 0.08
+			end
+		elseif os.clock() < breath.spentUntil then
+			aimSway *= 2.2
+		end
+	elseif breath.holding then
+		breath.holding = false
 	end
 	local rot = CFrame.fromEulerAnglesYXZ(
 		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
@@ -13746,6 +13962,7 @@ function EffectsController.start()
 			knockback(data)
 		elseif kind == "Hurt" then
 			hitFlash = 1
+			shake = math.max(shake, math.clamp((tonumber(data.amount) or 20) / 40, 0.25, 0.8))
 		elseif kind == "Takedown" then
 			State.takedownUntil = os.clock() + (tonumber(data.duration) or 0.9)
 		elseif kind == "Shot" then
@@ -13894,9 +14111,44 @@ local function set(motor, cf)
 	end
 end
 
+local function readHit(model, rig)
+	local raw = model:GetAttribute("HitReact")
+	if raw and raw ~= rig.hitRaw then
+		rig.hitRaw = raw
+		local zone, side, dx, dy, dz, t = string.match(raw, "^(%a+)|(%a*)|([%-%d%.]+)|([%-%d%.]+)|([%-%d%.]+)|([%d%.]+)$")
+		if zone then
+			local dir = Vector3.new(tonumber(dx), tonumber(dy), tonumber(dz))
+			local localDir = rig.root.CFrame:VectorToObjectSpace(dir)
+			rig.hit = { zone = zone, side = side, at = tonumber(t), back = -localDir.Z, across = localDir.X }
+		end
+	end
+end
+
+-- 0..1 envelope for a hit reaction: sharp snap, slower recovery.
+local function hitEnvelope(rig)
+	local h = rig.hit
+	if not h then
+		return 0, nil
+	end
+	local since = Workspace:GetServerTimeNow() - h.at
+	local len = h.zone == "leg" and 0.7 or 0.45
+	if since < 0 or since > len then
+		return 0, h
+	end
+	local k = since < 0.06 and since / 0.06 or (1 - (since - 0.06) / (len - 0.06)) ^ 2
+	return k, h
+end
+
 local function animate(model, rig, dt, now)
 	local gait = GAITS[model:GetAttribute("Gait") or "shamble"] or GAITS.shamble
 	local state = model:GetAttribute("State") or "Patrol"
+	if state == "Ragdoll" then
+		if rig.label then
+			rig.label.Text = ""
+		end
+		return -- physics owns the body now
+	end
+	readHit(model, rig)
 	local v = rig.root.AssemblyLinearVelocity
 	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 	local moving = math.clamp(speed / 6, 0, 1)
@@ -13987,8 +14239,36 @@ local function animate(model, rig, dt, now)
 		rArm = math.max(rArm, 1.0 + math.sin(p + 1) * 0.25)
 	end
 
-	set(rig.waist, CFrame.Angles(-lean + fl * 0.45, math.sin(p * 0.5) * 0.08 * moving + sp * 0.5, roll + sp * 0.3))
-	set(rig.neck, CFrame.Angles(lean * 0.6 - fl * 0.5, sp * 0.9, sp * 0.6) * rig.twitch)
+	-- directional hit reactions: head snaps, shoulders spin, legs buckle
+	local hk, h = hitEnvelope(rig)
+	local hWaistX, hWaistY, hNeckX, hNeckY = 0, 0, 0, 0
+	if hk > 0 and h then
+		local push = math.clamp(h.back, -1, 1) -- +1: shot from the front, body goes back
+		local sideSign = h.side == "L" and -1 or (h.side == "R" and 1 or (h.across >= 0 and 1 or -1))
+		if h.zone == "head" then
+			hNeckX, hNeckY = -0.9 * hk * push, 0.4 * hk * h.across
+			hWaistX = -0.25 * hk * push
+		elseif h.zone == "torso" then
+			hWaistX, hWaistY = -0.45 * hk * push, 0.35 * hk * h.across
+		elseif h.zone == "arm" then
+			hWaistY = 0.55 * hk * sideSign
+			if sideSign > 0 then
+				rArm -= 1.2 * hk
+			else
+				lArm -= 1.2 * hk
+			end
+		elseif h.zone == "leg" then
+			hWaistX = 0.35 * hk
+			if sideSign > 0 then
+				rHip, rKnee = rHip + 0.5 * hk, rKnee - 1.3 * hk
+			else
+				lHip, lKnee = lHip + 0.5 * hk, lKnee - 1.3 * hk
+			end
+		end
+	end
+
+	set(rig.waist, CFrame.Angles(-lean + fl * 0.45 + hWaistX, math.sin(p * 0.5) * 0.08 * moving + sp * 0.5 + hWaistY, roll + sp * 0.3))
+	set(rig.neck, CFrame.Angles(lean * 0.6 - fl * 0.5 + hNeckX, sp * 0.9 + hNeckY, sp * 0.6) * rig.twitch)
 	lArm += sp * 0.8
 	rArm -= sp * 0.6
 	set(rig.lh, CFrame.Angles(lHip, 0, 0))
@@ -14066,7 +14346,7 @@ local player = Players.LocalPlayer
 
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
-local dof, rays, bloom, grade
+local dof, rays, bloom, grade, vignette
 local mistPart, mist, dust, rainPart, rain
 local current = nil
 
@@ -14144,6 +14424,14 @@ local function apply(mode)
 	grade.TintColor = cinematic and Color3.fromRGB(255, 246, 236) or Color3.new(1, 1, 1)
 	mist.Rate = cinematic and 5 or (performance and 0 or 2)
 	dust.Rate = cinematic and 18 or 0
+	for _, f in vignette or {} do
+		f.Visible = not performance
+		f.BackgroundTransparency = cinematic and 0.5 or 0.68
+	end
+	-- wind-swayed terrain grass (cheap on PC/console, off on phones)
+	pcall(function()
+		Workspace.Terrain.Decoration = not performance
+	end)
 	setLightShadows(cinematic and "all" or (performance and "none" or "base"))
 	scaleWorldFog(cinematic and 1.6 or (performance and 0.35 or 1))
 	player:SetAttribute("GraphicsMode", mode)
@@ -14178,6 +14466,33 @@ local function buildEffects()
 	grade.Name = "AftertideFilmic"
 	grade.Parent = Lighting
 
+	-- a soft lens vignette (darkened corners), like a film camera
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "CinematicVignette"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = -5
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+	vignette = {}
+	for i, spec in {
+		{ UDim2.new(0.22, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0 },
+		{ UDim2.new(0.22, 0, 1, 0), UDim2.new(0.78, 0, 0, 0), 180 },
+		{ UDim2.new(1, 0, 0.22, 0), UDim2.new(0, 0, 0, 0), 90 },
+		{ UDim2.new(1, 0, 0.22, 0), UDim2.new(0, 0, 0.78, 0), 270 },
+	} do
+		local f = Instance.new("Frame")
+		f.Size, f.Position = spec[1], spec[2]
+		f.BackgroundColor3 = Color3.new(0, 0, 0)
+		f.BorderSizePixel = 0
+		f.BackgroundTransparency = 0.55
+		local g = Instance.new("UIGradient")
+		g.Rotation = spec[3]
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+		g.Parent = f
+		f.Parent = gui
+		vignette[i] = f
+	end
+
 	-- local ground mist and dust that follow the camera (client-only, costs nothing on the server)
 	mistPart = Instance.new("Part")
 	mistPart.Name = "LocalMist"
@@ -14200,6 +14515,8 @@ local function buildEffects()
 	mist.Color = ColorSequence.new(Color3.fromRGB(205, 212, 212))
 	mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 12), NumberSequenceKeypoint.new(1, 22) })
 	mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.35, 0.9), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	mist.Drag = 0.4
+	mist.WindAffectsDrag = true -- fog drifts with the map's wind
 	mist.Parent = mistPart
 
 	dust = Instance.new("ParticleEmitter")
@@ -14336,7 +14653,11 @@ function MovementController.setSprint(on, toggled)
 end
 
 function MovementController.setAim(on)
+	local was = State.aiming
 	State.aiming = on and not State.downed
+	if State.aiming and not was then
+		State.aimSince = os.clock()
+	end
 	if State.aiming then
 		State.sprinting = false
 	end
@@ -14662,7 +14983,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 
 	-- reload: left hand works the weapon, gun tilts in
 	local reloadUntil = char:GetAttribute("ReloadUntil") or 0
-	if reloadUntil > serverNow and armed then
+	if (reloadUntil > serverNow or char:GetAttribute("Reloading") == true) and armed then
 		local cycle = math.sin((serverNow % 0.8) / 0.8 * math.pi * 2)
 		lSh = 0.9 + cycle * 0.15
 		lEl = 1.3 + cycle * 0.2
@@ -15198,6 +15519,7 @@ local Controllers
 local player = Players.LocalPlayer
 
 local nextFireAt = 0
+local shotIndex, lastShotAt = 0, 0
 local cachedJson, cachedStats = nil, {}
 
 local function act(name, payload)
@@ -15230,9 +15552,16 @@ function WeaponController.current()
 	return slot, id, WeaponController.stats()[slot]
 end
 
-function WeaponController.isReloading()
+-- A full (magazine) reload is running: you can't fire.
+local function fullReload()
 	local char = State.character
 	return char ~= nil and (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow()
+end
+
+-- Any reload, including a shell-by-shell one you can fire out of (shown on the HUD).
+function WeaponController.isReloading()
+	local char = State.character
+	return fullReload() or (char ~= nil and char:GetAttribute("Reloading") == true)
 end
 
 function WeaponController.equip(slot)
@@ -15287,11 +15616,28 @@ local function muzzleFlash(slot)
 	flash.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
 	flash.Parent = muzzle
 	flash:Emit(6)
+	-- a breath of gun smoke that hangs at the muzzle
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Rate = 0
+	smoke.Lifetime = NumberRange.new(0.6, 1.2)
+	smoke.Speed = NumberRange.new(1, 3)
+	smoke.SpreadAngle = Vector2.new(20, 20)
+	smoke.EmissionDirection = Enum.NormalId.Front
+	smoke.Drag = 3
+	smoke.Acceleration = Vector3.new(0, 1.5, 0)
+	smoke.LightInfluence = 1
+	smoke.Color = ColorSequence.new(Color3.fromRGB(200, 196, 188))
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1.4) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Parent = muzzle
+	smoke:Emit(4)
 	task.delay(0.06, function()
 		light:Destroy()
 	end)
-	task.delay(0.3, function()
+	task.delay(1.4, function()
 		flash:Destroy()
+		smoke:Destroy()
 	end)
 end
 
@@ -15304,7 +15650,7 @@ function WeaponController.fire()
 		return
 	end
 	local now = os.clock()
-	if now < nextFireAt or WeaponController.isReloading() then
+	if now < nextFireAt or fullReload() then
 		return
 	end
 	local mag = player:GetAttribute("W_" .. slot .. "Mag") or 0
@@ -15313,7 +15659,8 @@ function WeaponController.fire()
 		return
 	end
 	nextFireAt = now + (stat.fireDelay or 0.5)
-	act("Fire", { dir = Controllers.CameraController.aimDirection(), aim = State.aiming })
+	local aimedIn = State.aiming and (os.clock() - (State.aimSince or 0)) >= ((Weapons.List[id] and Weapons.List[id].adsTime) or 0.2)
+	act("Fire", { dir = Controllers.CameraController.aimDirection(), aim = aimedIn })
 	local def = Weapons.List[id]
 	local runUpgrades = player:GetAttribute("RunUpgrades") or ""
 	local quiet = id == "revolver" and runUpgrades:find('"baffle":true') ~= nil
@@ -15324,7 +15671,16 @@ function WeaponController.fire()
 			WeaponController.ejectShell(slot, id == "shotgun")
 		end
 	end
-	Controllers.CameraController.kick(stat.recoil or 3)
+	-- learnable recoil: each gun kicks sideways in a fixed, repeating pattern
+	if now - lastShotAt > 0.7 then
+		shotIndex = 0
+	end
+	shotIndex += 1
+	lastShotAt = now
+	local pattern = def and def.recoilPattern or { 0 }
+	local side = pattern[(shotIndex - 1) % #pattern + 1]
+	local steady = State.aiming and (State.crouched and 0.75 or 1) or 1.25
+	Controllers.CameraController.kick((stat.recoil or 3) * steady, side)
 	State.bloom = math.min(State.bloom + (stat.recoil or 3) * 0.5, 8)
 end
 
@@ -15363,7 +15719,8 @@ function WeaponController.spread()
 		return 0
 	end
 	local def = Weapons.List[id]
-	local spread = State.aiming and stat.spreadAim or stat.spreadHip
+	local aimedIn = State.aiming and (os.clock() - (State.aimSince or 0)) >= (def.adsTime or 0.2)
+	local spread = aimedIn and stat.spreadAim or (State.aiming and (stat.spreadAim + stat.spreadHip) * 0.5 or stat.spreadHip)
 	local root = State.root
 	if root then
 		local v = root.AssemblyLinearVelocity

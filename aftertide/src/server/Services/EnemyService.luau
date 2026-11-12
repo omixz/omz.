@@ -675,6 +675,26 @@ function EnemyService.count()
 	return #enemies
 end
 
+-- Which body zone a hit part belongs to: "head" | "torso" | "arm" | "leg" (+ side "L"/"R").
+-- Bits welded onto a limb (rags, salt crust, nets) count as that limb.
+function EnemyService.zoneOf(instance)
+	local part = instance
+	local weld = part and part:FindFirstChildOfClass("Weld")
+	if weld and weld.Part1 == part and weld.Part0 then
+		part = weld.Part0 -- a rag / crust / net welded onto a body part
+	end
+	local name = part and part.Name or ""
+	local side = name:sub(1, 4) == "Left" and "L" or (name:sub(1, 5) == "Right" and "R" or "")
+	if name == "Head" then
+		return "head", side
+	elseif name:find("Leg") then
+		return "leg", side
+	elseif name:find("Arm") then
+		return "arm", side
+	end
+	return "torso", side
+end
+
 function EnemyService.fromInstance(instance)
 	local model = instance and instance:FindFirstAncestorOfClass("Model")
 	while model and not byModel[model] do
@@ -767,16 +787,20 @@ function EnemyService.disperse(e, byPlayer)
 	if index then
 		table.remove(enemies, index)
 	end
-	e.model:SetAttribute("State", "Dispersed")
 	e.model:SetAttribute("HP", 0)
-	e.root.Anchored = true
 	if e.cfg.human then
-		-- people are knocked down, not turned to salt
-		e.model:SetAttribute("State", "Down")
+		-- people fall as physics ragdolls, thrown by the shot that dropped them
+		e.model:SetAttribute("State", "Ragdoll")
 		Services.CharacterService.setFlashlight(e.model, false)
 		Services.MatchService.onEnemyKilled(byPlayer, e)
+		local ok, err = pcall(EnemyService.ragdoll, e)
+		if not ok then
+			warn("[EnemyService] ragdoll failed: " .. tostring(err))
+			e.model:SetAttribute("State", "Down")
+			e.root.Anchored = true
+		end
 		local model = e.model
-		task.delay(8, function()
+		task.delay(14, function()
 			for _, part in model:GetDescendants() do
 				if part:IsA("BasePart") then
 					TweenService:Create(part, TweenInfo.new(1.5), { Transparency = 1 }):Play()
@@ -787,6 +811,8 @@ function EnemyService.disperse(e, byPlayer)
 		end)
 		return
 	end
+	e.model:SetAttribute("State", "Dispersed")
+	e.root.Anchored = true
 
 	local attachment = Instance.new("Attachment")
 	attachment.Position = Vector3.new(0, 0.8, 0)
@@ -821,19 +847,92 @@ function EnemyService.disperse(e, byPlayer)
 	end)
 end
 
+-- Turns a dead human enemy into a ragdoll: every Motor6D becomes a limited ball socket,
+-- the body parts collide with the world, and the killing shot pushes the body.
+function EnemyService.ragdoll(e)
+	local model, humanoid = e.model, e.humanoid
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	humanoid.PlatformStand = true
+	humanoid.AutoRotate = false
+	local bones = {}
+	for _, m in model:GetDescendants() do
+		if m:IsA("Motor6D") and m.Part0 and m.Part1 then
+			bones[m.Part0], bones[m.Part1] = true, true
+			local a0 = Instance.new("Attachment")
+			a0.CFrame = m.C0
+			a0.Parent = m.Part0
+			local a1 = Instance.new("Attachment")
+			a1.CFrame = m.C1
+			a1.Parent = m.Part1
+			local socket = Instance.new("BallSocketConstraint")
+			socket.Attachment0 = a0
+			socket.Attachment1 = a1
+			socket.LimitsEnabled = true
+			socket.TwistLimitsEnabled = true
+			local neck = m.Name == "Neck"
+			local knee = m.Name:find("Knee") or m.Name:find("Elbow")
+			socket.UpperAngle = neck and 35 or (knee and 70 or 55)
+			socket.TwistLowerAngle = -25
+			socket.TwistUpperAngle = 25
+			socket.Parent = m.Part0
+			m.Enabled = false
+		end
+	end
+	for _, part in model:GetChildren() do
+		if part:IsA("BasePart") then
+			-- the skeleton's bones collide with the world; meshes, rags and crust just ride on them
+			part.CanCollide = bones[part] == true and part ~= e.root
+			part.Massless = not bones[part]
+			part.Anchored = false
+		end
+	end
+	e.root.CanCollide = false
+	pcall(function()
+		e.root:SetNetworkOwner(nil)
+	end)
+	local hit = e.lastHit
+	local dir = hit and hit.direction or -e.root.CFrame.LookVector
+	local push = Vector3.new(dir.X, 0, dir.Z)
+	push = (push.Magnitude > 0.01 and push.Unit or Vector3.zero) * 22 * (hit and hit.force or 1) + Vector3.new(0, 6, 0)
+	local hitPart = hit and hit.instance
+	local target = (hitPart and hitPart:IsDescendantOf(model) and not hitPart.Name:match("^Mesh_")) and hitPart or model:FindFirstChild("Torso") or e.root
+	target:ApplyImpulse(push * target.AssemblyMass)
+end
+
 -- Weapon / explosive / fire damage. Returns true if this killed it.
-function EnemyService.damage(e, amount, byPlayer, headshot)
+function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 	if e.dead or amount <= 0 then
 		return false
 	end
 	e.hp -= amount
 	e.model:SetAttribute("HP", math.max(0, e.hp / e.cfg.hp))
+	if hit then
+		e.lastHit = hit
+		local _, side = EnemyService.zoneOf(hit.instance or e.root)
+		local dir = hit.direction or Vector3.zero
+		-- clients play a directional flinch from this (EnemyAnimator)
+		e.model:SetAttribute("HitReact", ("%s|%s|%.2f|%.2f|%.2f|%.3f"):format(hit.zone or "torso", side, dir.X, dir.Y, dir.Z, Workspace:GetServerTimeNow()))
+	end
 	if e.hp <= 0 then
 		EnemyService.disperse(e, byPlayer)
 		return true
 	end
 	-- stagger, and being shot always alerts it to the shooter
 	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
+	if hit then
+		local force = hit.force or 1
+		if hit.zone == "leg" then
+			stagger = math.max(stagger, 0.55 * force) -- the leg buckles
+			e.limpUntil = os.clock() + 3.5
+		elseif hit.zone == "head" then
+			stagger = math.max(stagger, 0.45 * force)
+		elseif force >= 2 and e.cfg.shoveable ~= false then
+			stagger = math.max(stagger, 0.35 * force) -- heavy rounds rock them back
+		end
+		if e.cfg.staggerTime < 0.1 then
+			stagger = math.min(stagger, 0.15) -- Tidewalkers barely notice
+		end
+	end
 	if stagger > 0.05 and e.state ~= "Quieted" then
 		e.stunUntil = math.max(e.stunUntil, os.clock() + stagger)
 	end
@@ -950,6 +1049,9 @@ function EnemyService.start()
 			local e = enemies[i]
 			if e and not e.dead then
 				local ok, err = pcall(update, e, step, now, active)
+				if ok and e.limpUntil and now < e.limpUntil and not e.dead then
+					e.humanoid.WalkSpeed *= 0.6 -- shot in the leg
+				end
 				if not ok then
 					warn("[EnemyService] brain error: " .. tostring(err))
 				end

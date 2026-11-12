@@ -23,7 +23,7 @@ local player = Players.LocalPlayer
 
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
-local dof, rays, bloom, grade
+local dof, rays, bloom, grade, vignette
 local mistPart, mist, dust, rainPart, rain
 local current = nil
 
@@ -101,6 +101,14 @@ local function apply(mode)
 	grade.TintColor = cinematic and Color3.fromRGB(255, 246, 236) or Color3.new(1, 1, 1)
 	mist.Rate = cinematic and 5 or (performance and 0 or 2)
 	dust.Rate = cinematic and 18 or 0
+	for _, f in vignette or {} do
+		f.Visible = not performance
+		f.BackgroundTransparency = cinematic and 0.5 or 0.68
+	end
+	-- wind-swayed terrain grass (cheap on PC/console, off on phones)
+	pcall(function()
+		Workspace.Terrain.Decoration = not performance
+	end)
 	setLightShadows(cinematic and "all" or (performance and "none" or "base"))
 	scaleWorldFog(cinematic and 1.6 or (performance and 0.35 or 1))
 	player:SetAttribute("GraphicsMode", mode)
@@ -135,6 +143,33 @@ local function buildEffects()
 	grade.Name = "AftertideFilmic"
 	grade.Parent = Lighting
 
+	-- a soft lens vignette (darkened corners), like a film camera
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "CinematicVignette"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = -5
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+	vignette = {}
+	for i, spec in {
+		{ UDim2.new(0.22, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0 },
+		{ UDim2.new(0.22, 0, 1, 0), UDim2.new(0.78, 0, 0, 0), 180 },
+		{ UDim2.new(1, 0, 0.22, 0), UDim2.new(0, 0, 0, 0), 90 },
+		{ UDim2.new(1, 0, 0.22, 0), UDim2.new(0, 0, 0.78, 0), 270 },
+	} do
+		local f = Instance.new("Frame")
+		f.Size, f.Position = spec[1], spec[2]
+		f.BackgroundColor3 = Color3.new(0, 0, 0)
+		f.BorderSizePixel = 0
+		f.BackgroundTransparency = 0.55
+		local g = Instance.new("UIGradient")
+		g.Rotation = spec[3]
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+		g.Parent = f
+		f.Parent = gui
+		vignette[i] = f
+	end
+
 	-- local ground mist and dust that follow the camera (client-only, costs nothing on the server)
 	mistPart = Instance.new("Part")
 	mistPart.Name = "LocalMist"
@@ -157,6 +192,8 @@ local function buildEffects()
 	mist.Color = ColorSequence.new(Color3.fromRGB(205, 212, 212))
 	mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 12), NumberSequenceKeypoint.new(1, 22) })
 	mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.35, 0.9), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	mist.Drag = 0.4
+	mist.WindAffectsDrag = true -- fog drifts with the map's wind
 	mist.Parent = mistPart
 
 	dust = Instance.new("ParticleEmitter")

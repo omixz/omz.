@@ -236,6 +236,7 @@ function EffectsController.start()
 			knockback(data)
 		elseif kind == "Hurt" then
 			hitFlash = 1
+			shake = math.max(shake, math.clamp((tonumber(data.amount) or 20) / 40, 0.25, 0.8))
 		elseif kind == "Takedown" then
 			State.takedownUntil = os.clock() + (tonumber(data.duration) or 0.9)
 		elseif kind == "Shot" then

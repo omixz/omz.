@@ -47,10 +47,29 @@ function CameraController.getPitch()
 end
 
 -- Recoil: the view climbs (you pull it back down), with a little sideways jitter.
-function CameraController.kick(degrees)
+local breath = { holding = false, since = 0, spentUntil = 0 }
+local BREATH_HOLD = 4 -- seconds of steady aim before you have to breathe
+
+-- Hold breath while aiming (sprint key): sway stops for a few seconds, then you gasp.
+function CameraController.holdBreath(on)
+	local now = os.clock()
+	if on and State.aiming and now >= breath.spentUntil then
+		breath.holding, breath.since = true, now
+	elseif not on and breath.holding then
+		breath.holding = false
+		breath.spentUntil = now + 1
+	end
+end
+
+function CameraController.isHoldingBreath()
+	return breath.holding
+end
+
+-- Recoil: the view climbs (you pull it back down); `side` is the gun's pattern step.
+function CameraController.kick(degrees, side)
 	recoilPitch += math.rad(degrees) * 0.6
 	pitch += math.rad(degrees) * 0.08 -- a little permanent climb to manage
-	recoilYaw += math.rad(degrees) * (math.random() - 0.5) * 0.35
+	recoilYaw += math.rad(degrees) * ((side or 0) * 0.45 + (math.random() - 0.5) * 0.08)
 	fovPunch = math.min(fovPunch + degrees * 0.35, 4)
 end
 
@@ -172,6 +191,7 @@ local function update(dt)
 	focusSpring.target = focusTarget
 	offsetSpring.target = offset
 	fovSpring.target = fov
+	fovSpring.frequency = State.aiming and 14 or 6 -- snap into the sights, ease back out
 	local focus = focusSpring:update(dt)
 	local off = offsetSpring:update(dt)
 	camera.FieldOfView = fovSpring:update(dt) + fovPunch
@@ -186,6 +206,18 @@ local function update(dt)
 		local v = State.root.AssemblyLinearVelocity
 		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
 		aimSway = (State.crouched and 0.0018 or 0.003) * (1 + moving * 1.5)
+		if breath.holding then
+			if os.clock() - breath.since > BREATH_HOLD then
+				breath.holding = false
+				breath.spentUntil = os.clock() + 2.5 -- out of breath: shaky for a moment
+			else
+				aimSway *= 0.08
+			end
+		elseif os.clock() < breath.spentUntil then
+			aimSway *= 2.2
+		end
+	elseif breath.holding then
+		breath.holding = false
 	end
 	local rot = CFrame.fromEulerAnglesYXZ(
 		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,

@@ -17,6 +17,7 @@ local Controllers
 local player = Players.LocalPlayer
 
 local nextFireAt = 0
+local shotIndex, lastShotAt = 0, 0
 local cachedJson, cachedStats = nil, {}
 
 local function act(name, payload)
@@ -49,9 +50,16 @@ function WeaponController.current()
 	return slot, id, WeaponController.stats()[slot]
 end
 
-function WeaponController.isReloading()
+-- A full (magazine) reload is running: you can't fire.
+local function fullReload()
 	local char = State.character
 	return char ~= nil and (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow()
+end
+
+-- Any reload, including a shell-by-shell one you can fire out of (shown on the HUD).
+function WeaponController.isReloading()
+	local char = State.character
+	return fullReload() or (char ~= nil and char:GetAttribute("Reloading") == true)
 end
 
 function WeaponController.equip(slot)
@@ -106,11 +114,28 @@ local function muzzleFlash(slot)
 	flash.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
 	flash.Parent = muzzle
 	flash:Emit(6)
+	-- a breath of gun smoke that hangs at the muzzle
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Rate = 0
+	smoke.Lifetime = NumberRange.new(0.6, 1.2)
+	smoke.Speed = NumberRange.new(1, 3)
+	smoke.SpreadAngle = Vector2.new(20, 20)
+	smoke.EmissionDirection = Enum.NormalId.Front
+	smoke.Drag = 3
+	smoke.Acceleration = Vector3.new(0, 1.5, 0)
+	smoke.LightInfluence = 1
+	smoke.Color = ColorSequence.new(Color3.fromRGB(200, 196, 188))
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1.4) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Parent = muzzle
+	smoke:Emit(4)
 	task.delay(0.06, function()
 		light:Destroy()
 	end)
-	task.delay(0.3, function()
+	task.delay(1.4, function()
 		flash:Destroy()
+		smoke:Destroy()
 	end)
 end
 
@@ -123,7 +148,7 @@ function WeaponController.fire()
 		return
 	end
 	local now = os.clock()
-	if now < nextFireAt or WeaponController.isReloading() then
+	if now < nextFireAt or fullReload() then
 		return
 	end
 	local mag = player:GetAttribute("W_" .. slot .. "Mag") or 0
@@ -132,7 +157,8 @@ function WeaponController.fire()
 		return
 	end
 	nextFireAt = now + (stat.fireDelay or 0.5)
-	act("Fire", { dir = Controllers.CameraController.aimDirection(), aim = State.aiming })
+	local aimedIn = State.aiming and (os.clock() - (State.aimSince or 0)) >= ((Weapons.List[id] and Weapons.List[id].adsTime) or 0.2)
+	act("Fire", { dir = Controllers.CameraController.aimDirection(), aim = aimedIn })
 	local def = Weapons.List[id]
 	local runUpgrades = player:GetAttribute("RunUpgrades") or ""
 	local quiet = id == "revolver" and runUpgrades:find('"baffle":true') ~= nil
@@ -143,7 +169,16 @@ function WeaponController.fire()
 			WeaponController.ejectShell(slot, id == "shotgun")
 		end
 	end
-	Controllers.CameraController.kick(stat.recoil or 3)
+	-- learnable recoil: each gun kicks sideways in a fixed, repeating pattern
+	if now - lastShotAt > 0.7 then
+		shotIndex = 0
+	end
+	shotIndex += 1
+	lastShotAt = now
+	local pattern = def and def.recoilPattern or { 0 }
+	local side = pattern[(shotIndex - 1) % #pattern + 1]
+	local steady = State.aiming and (State.crouched and 0.75 or 1) or 1.25
+	Controllers.CameraController.kick((stat.recoil or 3) * steady, side)
 	State.bloom = math.min(State.bloom + (stat.recoil or 3) * 0.5, 8)
 end
 
@@ -182,7 +217,8 @@ function WeaponController.spread()
 		return 0
 	end
 	local def = Weapons.List[id]
-	local spread = State.aiming and stat.spreadAim or stat.spreadHip
+	local aimedIn = State.aiming and (os.clock() - (State.aimSince or 0)) >= (def.adsTime or 0.2)
+	local spread = aimedIn and stat.spreadAim or (State.aiming and (stat.spreadAim + stat.spreadHip) * 0.5 or stat.spreadHip)
 	local root = State.root
 	if root then
 		local v = root.AssemblyLinearVelocity

@@ -9,7 +9,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
 }
 
 function Map.build(parent, rng)

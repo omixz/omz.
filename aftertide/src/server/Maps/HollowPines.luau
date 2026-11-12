@@ -9,7 +9,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
 }
 
 local function creekX(z)

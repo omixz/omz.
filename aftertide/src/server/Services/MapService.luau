@@ -269,8 +269,10 @@ local function setupLighting()
 	Lighting.Ambient = Color3.fromRGB(62, 68, 74)
 	Lighting.OutdoorAmbient = Color3.fromRGB(112, 120, 128)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 224, 196)
-	Lighting.EnvironmentDiffuseScale = 0.4
-	Lighting.EnvironmentSpecularScale = 0.6
+	-- sky light on every surface: makes normal / roughness maps and wet metal read properly
+	Lighting.EnvironmentDiffuseScale = 0.65
+	Lighting.EnvironmentSpecularScale = 1
+	Lighting.ShadowSoftness = 0.25
 	Lighting.GlobalShadows = true
 	Lighting.ExposureCompensation = 0.25
 
@@ -298,7 +300,16 @@ local function setupLighting()
 	bloom.Parent = Lighting
 end
 
-local FERRY_LIGHT = { clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+local clouds
+local function setupSky()
+	clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = 0.55
+	clouds.Density = 0.6
+	clouds.Color = Color3.fromRGB(230, 232, 234)
+	clouds.Parent = Workspace.Terrain
+end
+
+local FERRY_LIGHT = { clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])
@@ -321,6 +332,18 @@ local function applyPreset(L, modifier)
 		atmosphere.Haze = L.haze
 		atmosphere.Color = rgb(L.fogColor)
 	end
+	-- weather: volumetric clouds and wind (moves grass, clouds and particles)
+	if clouds then
+		local cover = L.clouds or 0.55
+		TweenService:Create(clouds, TweenInfo.new(4), {
+			Cover = night and math.max(cover, 0.6) or cover,
+			Density = L.cloudDensity or 0.6,
+			Color = night and Color3.fromRGB(70, 76, 86) or rgb(L.cloudColor or { 232, 234, 236 }),
+		}):Play()
+	end
+	local wind = L.wind or { 6, 0, 3 }
+	local gust = modifier.id == "Squall" and 3 or 1
+	Workspace.GlobalWind = Vector3.new(wind[1], wind[2], wind[3]) * gust
 	if colorCorrection then
 		colorCorrection.TintColor = rgb(L.tint)
 		colorCorrection.Saturation = L.saturation
@@ -632,6 +655,7 @@ function MapService.start()
 	encounterFolder.Parent = world
 
 	setupLighting()
+	setupSky()
 	MapService.applyFerryLighting()
 	MapService.setFerryRepairs({})
 	MapService.ready = true

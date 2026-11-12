@@ -173,7 +173,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 
 	-- reload: left hand works the weapon, gun tilts in
 	local reloadUntil = char:GetAttribute("ReloadUntil") or 0
-	if reloadUntil > serverNow and armed then
+	if (reloadUntil > serverNow or char:GetAttribute("Reloading") == true) and armed then
 		local cycle = math.sin((serverNow % 0.8) / 0.8 * math.pi * 2)
 		lSh = 0.9 + cycle * 0.15
 		lEl = 1.3 + cycle * 0.2
