@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from . import glb, mesher, preview
+from . import glb, mesher, preview, textures
 
 TRI_BUDGET = 12000  # per MeshPart (Roblox limit is ~20k; lighter is faster on phones)
 
@@ -45,7 +45,7 @@ class Pack:
                 if len(f) == 0:
                     continue
                 pname = f"{kit}_{segname}_{layer}"
-                self.parts.append({"name": pname, "verts": v, "normals": n, "faces": f, "color": color})
+                self.parts.append({"name": pname, "verts": v, "normals": n, "faces": f, "color": color, "tex": textures.kind_for(material, layer)})
                 s["layers"][layer] = {"part": pname, "material": material, "color": _r(color)}
                 prev.append((v, f, color))
             entry["segments"][segname] = s
@@ -65,7 +65,7 @@ class Pack:
             if len(f) == 0:
                 continue
             pname = f"{kit}_{layer}"
-            self.parts.append({"name": pname, "verts": v, "normals": n, "faces": f, "color": color})
+            self.parts.append({"name": pname, "verts": v, "normals": n, "faces": f, "color": color, "tex": textures.kind_for(material, layer)})
             entry["layers"][layer] = {"part": pname, "material": material, "color": _r(color)}
             prev.append((v, f, color))
         self.meta[kit] = entry

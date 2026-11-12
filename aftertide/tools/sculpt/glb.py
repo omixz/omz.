@@ -25,12 +25,17 @@ def write(path, parts):
     Returns {name: {"center": [...], "size": [...], "tris": n}}."""
     buf = bytearray()
     views, accessors, meshes, nodes, materials = [], [], [], [], []
+    images, textures = [], []
+    tex_index = {}  # (kind, "n"|"mr") -> texture index
     meta = {}
 
     def add_view(data, target):
         offset = len(buf)
         buf.extend(_pad(data))
-        views.append({"buffer": 0, "byteOffset": offset, "byteLength": len(data), "target": target})
+        view = {"buffer": 0, "byteOffset": offset, "byteLength": len(data)}
+        if target:
+            view["target"] = target
+        views.append(view)
         return len(views) - 1
 
     for i, p in enumerate(parts):
@@ -55,14 +60,31 @@ def write(path, parts):
             {"bufferView": iv, "componentType": 5125, "count": len(f), "type": "SCALAR"},
         ]
         c = p.get("color", (0.7, 0.7, 0.7))
-        materials.append({
+        mat = {
             "name": p["name"] + "_mat",
             "pbrMetallicRoughness": {
                 "baseColorFactor": [c[0], c[1], c[2], 1.0],
                 "metallicFactor": p.get("metallic", 0.0),
                 "roughnessFactor": p.get("roughness", 0.8),
             },
-        })
+        }
+        kind = p.get("tex")
+        if kind:
+            # surface detail: shared tiling normal + roughness maps (no colour map, so the
+            # game can still recolour the part)
+            from . import textures as T
+            for slot, maker in (("n", T.normal_png), ("mr", T.mr_png)):
+                if (kind, slot) not in tex_index:
+                    png = maker(kind)
+                    bv = add_view(png, None)
+                    images.append({"bufferView": bv, "mimeType": "image/png", "name": f"{kind}_{slot}"})
+                    textures.append({"source": len(images) - 1, "sampler": 0})
+                    tex_index[(kind, slot)] = len(textures) - 1
+            mat["normalTexture"] = {"index": tex_index[(kind, "n")], "scale": 1.0}
+            mat["pbrMetallicRoughness"]["metallicRoughnessTexture"] = {"index": tex_index[(kind, "mr")]}
+            mat["pbrMetallicRoughness"]["roughnessFactor"] = 1.0
+            mat["pbrMetallicRoughness"]["metallicFactor"] = 1.0
+        materials.append(mat)
         meshes.append({"name": p["name"], "primitives": [{"attributes": {"POSITION": base, "NORMAL": base + 1, "TEXCOORD_0": base + 2}, "indices": base + 3, "material": len(materials) - 1}]})
         nodes.append({"name": p["name"], "mesh": len(meshes) - 1, "translation": center.tolist()})
         meta[p["name"]] = {"center": center.tolist(), "size": (hi - lo).tolist(), "tris": int(len(f) // 3)}
@@ -74,6 +96,7 @@ def write(path, parts):
         "nodes": nodes,
         "meshes": meshes,
         "materials": materials,
+        **({"images": images, "textures": textures, "samplers": [{"wrapS": 10497, "wrapT": 10497}]} if images else {}),
         "accessors": accessors,
         "bufferViews": views,
         "buffers": [{"byteLength": len(buf)}],

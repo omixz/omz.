@@ -248,7 +248,9 @@ def build_segments(kind="Drifter", rng_seed=1):
         def lower(P, s=s):
             arm = H.skin_lower_arm(P, J, s, lb)
             hand = H.skin_hand(P, J, s, lb)
-            claws = S.union(*[S.round_cone(P, J[s + "handEnd"] + [0, 0.06, -0.09 + i * 0.06], J[s + "handEnd"] + [0, -0.12, -0.12 + i * 0.06], 0.025, 0.008) for i in range(4)])
+            sx = 1 if s == "R" else -1
+            tips = [J[s + "wrist"] + [-sx * 0.12, -0.42, z] for z in (-0.08, -0.027, 0.027, 0.078)]  # curled fingertips
+            claws = S.union(*[S.round_cone(P, t + [sx * 0.01, 0.02, 0], t + [-sx * 0.07, -0.07, 0], 0.022, 0.006) for t in tips])
             return S.smooth_union(0.04, arm, hand, claws)
         seg[name + "LowerArm"] = [("Skin", sd(lower, 4), "SmoothPlastic", skin)]
         if name == arm_side and xtals["LowerArm"]:

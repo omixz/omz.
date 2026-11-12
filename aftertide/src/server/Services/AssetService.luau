@@ -57,8 +57,17 @@ local function index(container)
 			local name = resolveName(d)
 			if name then
 				-- our colours/materials come from MeshMeta, so drop imported surface looks
+				-- keep imported surface detail (normal / roughness maps) but never a colour map:
+				-- colours come from MeshMeta so outfits can recolour the part
 				for _, child in d:GetChildren() do
-					if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then
+					if child:IsA("SurfaceAppearance") then
+						local okRead, colorMap = pcall(function()
+							return child.ColorMap
+						end)
+						if okRead and colorMap ~= nil and tostring(colorMap) ~= "" then
+							child:Destroy()
+						end
+					elseif child:IsA("Decal") or child:IsA("Texture") then
 						child:Destroy()
 					end
 				end

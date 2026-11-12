@@ -70,10 +70,12 @@ def irises(P, J):
 
 def skin_chest(P, J, b, f):
     w = J["waist"]
-    chest = S.ellipsoid(P, w + [0, 0.82, 0.02], [0.66 * b, 0.62, 0.38 * b])
+    # chest top sits at shoulder height (no dome above it); the trapezius slopes from the
+    # neck down to each shoulder, which is what makes a silhouette read as a real person
+    chest = S.ellipsoid(P, w + [0, 0.7, 0.02], [0.64 * b, 0.52, 0.37 * b])
     ribs = S.ellipsoid(P, w + [0, 0.35, 0.0], [0.56 * b, 0.5, 0.34 * b])
     belly = S.ellipsoid(P, w + [0, 0.0, -0.01], [0.5 * b + 0.04 * f, 0.36, 0.32 * b])
-    traps = S.ellipsoid(P, J["neck"] + [0, -0.16, 0.06], [0.4 * b, 0.16, 0.22])
+    traps = S.union(*[S.capsule(P, J["neck"] + [sx * 0.12, -0.08, 0.05], J[side + "shoulder"] + [-sx * 0.12, 0.02, 0.03], 0.1 * b) for sx, side in ((1, "R"), (-1, "L"))])
     d = S.smooth_union(0.15, chest, ribs, belly, traps)
     for side in "RL":
         d = S.smooth_union(0.16, d, S.ellipsoid(P, J[side + "shoulder"] + [(-0.04 if side == "R" else 0.04), -0.02, 0], [0.13 * b, 0.11 * b, 0.13 * b]))
@@ -107,12 +109,28 @@ def skin_lower_arm(P, J, s, b):
 
 
 def skin_hand(P, J, s, b):
+    """A relaxed hand: thick palm, four jointed fingers curling toward the palm, opposed thumb."""
     w, e = J[s + "wrist"], J[s + "handEnd"]
     sx = 1 if s == "R" else -1
-    palm = S.rbox(P, w + [0, -0.2, -0.01], [0.055 * b, 0.15, 0.12], 0.045)
-    fingers = S.union(*[S.capsule(P, w + [0, -0.3, -0.09 + i * 0.06], e + [0, 0.04, -0.09 + i * 0.06], 0.03) for i in range(4)])
-    thumb = S.capsule(P, w + [sx * 0.02, -0.12, -0.12], w + [sx * 0.03, -0.3, -0.2], 0.035)
-    return S.smooth_union(0.03, palm, fingers, thumb, S.sphere(P, w, 0.07))
+    palm = S.smooth_union(0.04, S.rbox(P, w + [0, -0.16, -0.01], [0.06 * b, 0.13, 0.105], 0.055), S.ellipsoid(P, w + [-(1 if s == "R" else -1) * 0.02, -0.15, -0.06], [0.06, 0.09, 0.07]))
+    fingers = []
+    for i, (z, length) in enumerate(((-0.08, 0.93), (-0.027, 1.0), (0.027, 0.95), (0.078, 0.78))):
+        k = w + [0, -0.28, z]
+        seg = [0.095 * length, 0.065 * length, 0.05 * length]
+        angles = [0.3, 0.85, 1.35]  # cumulative curl per joint (radians)
+        r = [0.031, 0.028, 0.024]
+        p0 = k
+        for a, L, rr in zip(angles, seg, r):
+            step = np.array([-sx * np.sin(a) * L, -np.cos(a) * L, 0.0])  # curl toward the palm (body side)
+            p1 = p0 + step
+            fingers.append(S.capsule(P, p0, p1, rr * min(1.0, b + 0.05)))
+            p0 = p1
+    thumb_base = w + [-sx * 0.04, -0.1, -0.12]
+    thumb_mid = thumb_base + [-sx * 0.05, -0.1, -0.05]
+    thumb_tip = thumb_mid + [-sx * 0.05, -0.08, 0.0]
+    thumb = S.union(S.capsule(P, thumb_base, thumb_mid, 0.04), S.capsule(P, thumb_mid, thumb_tip, 0.033))
+    knuckles = S.capsule(P, w + [0, -0.275, -0.08], w + [0, -0.275, 0.078], 0.036)
+    return S.smooth_union(0.025, palm, S.union(*fingers), thumb, knuckles, S.sphere(P, w, 0.07))
 
 
 def skin_upper_leg(P, J, s, b):

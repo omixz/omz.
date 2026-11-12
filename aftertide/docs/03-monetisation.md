@@ -148,6 +148,31 @@ What we **won't** sell: unlimited revives (Second Wind stays capped at once per 
 extra satchel space, permanent stat upgrades, XP or salt boosts, paid characters with abilities,
 loot boxes, or "skip the run" purchases.
 
+### What's built (in the game now)
+
+| Item | Type | Robux | What you get | Free route |
+|------|------|------:|--------------|------------|
+| Deckhand Starter Pack | product, **one time** | 99 | 2 Second Wind, 2 Resupply, 3 Ammo Cache + Deckhand outfit for all 4 crew | - |
+| Second Wind / x3 | product | 49 / 129 | get up once when downed (max 1 per crossing) | 1 for your first win each day |
+| Resupply Satchel | product | 29 | +6 rounds, +1 dressing, +1 bottle (1 per crossing) | 1 per successful crossing |
+| Ammo Cache / x5 | product | 25 / 99 | refills reserve ammo for both guns (1 per encounter, key **V**) | 1 per successful crossing |
+| Outfits (Night Pilot, Boiler Stoker, Field Surgeon, Reef Diver) | product | 79 each | cosmetic recolour of one crew member | or 1,500 Scrip each |
+| Scrip outfits (Storm Watch, Rust Bucket, Mourning Grey, Dune Walker) | earned | - | cosmetic | 400 Scrip each |
+| Meridian Supporter | **game pass** | 149 | officer outfits for all crew, +10% Scrip, a badge on your name | - |
+
+Everything is in `src/shared/Config/Commerce.luau` (prices, contents) and
+`Config/Cosmetics.luau` (outfits). Players browse it in the **Purser's Office** (Supplies /
+Wardrobe / Supporter tabs) or at the **crew lockers** on the ferry (Wardrobe).
+Purchases and Scrip flows are logged to Creator Hub Analytics (economy + custom events).
+
+**Creating the products on Roblox (one command):**
+
+1. Publish the place once (File > Publish to Roblox) and copy its **Place ID** (Creator Hub URL).
+2. Creator Hub > Open Cloud > API Keys > edit your key > add **Developer Products** (write)
+   and **Game Passes** (write) for this experience. (Already added Assets.)
+3. `python3 tools/create_products.py --place-id <id>` creates all 10 products and the pass
+   and writes their IDs into `Commerce.luau`. Run with `--dry-run` first to see the list.
+
 ## 3.4 Revenue model
 
 Assumptions are in [`tools/revenue_model.py`](../tools/revenue_model.py). Steady state
