@@ -12,7 +12,7 @@
 --   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
 --   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
 --   X swap shoulder, Tab satchel       R3 shoulder, View/Back satchel
---   B resupply, P settings             Start/Menu: Roblox menu
+--   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
 
@@ -232,6 +232,12 @@ function ActionController.start()
 			act("Resupply")
 		end
 	end, Enum.KeyCode.B)
+
+	bind("AmmoCache", function(state)
+		if state == Begin and canAct() then
+			act("AmmoCache")
+		end
+	end, Enum.KeyCode.V)
 
 	bind("Settings", function(state)
 		if state == Begin then

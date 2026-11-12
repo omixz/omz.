@@ -23,7 +23,7 @@ local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
 local function defaultData()
 	return {
 		version = 1,
-		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply },
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo },
 		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
@@ -31,6 +31,10 @@ local function defaultData()
 		scrip = 0, -- homebase currency, earned only by playing
 		repairs = {}, -- [repairId] = true
 		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
+		outfits = {}, -- [outfitId] = true (bought or unlocked; defaults are implicit)
+		equipped = {}, -- [charId] = outfitId
+		oneTime = {}, -- [productKey] = true (Starter Pack)
+		spent = 0, -- Robux spent (for thank-you messaging only; never affects gameplay)
 	}
 end
 
@@ -39,7 +43,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -63,6 +67,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Set_graphics", data.settings.graphics)
 	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
 	player:SetAttribute("Set_reduceMotion", data.settings.reduceMotion)
+	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
+	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
+	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))
 end
 
 function PlayerDataService.publish(player)
@@ -90,6 +97,30 @@ function PlayerDataService.spendScrip(player, amount)
 	data.scrip -= amount
 	publishTokens(player, data)
 	return true
+end
+
+function PlayerDataService.ownOutfit(player, outfitId)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.outfits[outfitId] = true
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.markOneTime(player, key)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.oneTime[key] = true
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.setEquipped(player, charId, outfitId)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.equipped[charId] = outfitId
+		publishTokens(player, data)
+	end
 end
 
 function PlayerDataService.hasRepair(player, repairId)

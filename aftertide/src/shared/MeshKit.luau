@@ -58,7 +58,8 @@ local function jointsOf(model)
 end
 
 -- getPart(name) -> MeshPart clone or nil. Returns true if every segment was fitted.
-function MeshKit.applyRig(model, meta, getPart, format, yawFix)
+-- colorOverrides (optional): { [layerName] = Color3 } for outfits.
+function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 	local own, byParent = jointsOf(model)
 	local scales = {}
 	local fitted = {}
@@ -93,7 +94,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix)
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
 					mp.Size = v3(layer.size) * s
 					mp.Material = material(layer.material)
-					mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
+					mp.Color = (colorOverrides and colorOverrides[layerName]) or Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
 					mp.CanCollide = false
 					mp.CanQuery = false

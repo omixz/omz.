@@ -161,6 +161,22 @@ local function buildFerry(parent)
 		Services.MatchService.openCharacterSelect(player)
 	end)
 
+	-- Crew lockers: the wardrobe (outfits)
+	local lockers = block(parent, Vector3.new(4, 7, 1.4), o + Vector3.new(-15.3, 3.5, 10.5), Color3.fromRGB(72, 80, 78), Enum.Material.DiamondPlate, { Name = "CrewLockers" })
+	for i = -1, 1 do
+		block(parent, Vector3.new(0.08, 6.4, 0.08), o + Vector3.new(-15.3 + i * 1.3 + 0.65, 3.5, 9.75), C.metal, Enum.Material.Metal, { CanCollide = false })
+	end
+	local lockerPrompt = Instance.new("ProximityPrompt")
+	lockerPrompt.ActionText = "Open wardrobe"
+	lockerPrompt.ObjectText = "Crew lockers"
+	lockerPrompt.MaxActivationDistance = 9
+	lockerPrompt.RequiresLineOfSight = false
+	lockerPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	lockerPrompt.Parent = lockers
+	lockerPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openShop(player, "Wardrobe")
+	end)
+
 	-- Workbench: per-crossing upgrades
 	local bench = block(parent, Vector3.new(6, 3, 2.6), o + Vector3.new(-6, 1.5, -10.5), Color3.fromRGB(86, 66, 46), Enum.Material.WoodPlanks, { Name = "Workbench" })
 	block(parent, Vector3.new(5, 0.2, 0.2), o + Vector3.new(-6, 5.5, -11.6), C.metal, Enum.Material.Metal)

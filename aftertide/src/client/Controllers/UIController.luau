@@ -76,7 +76,7 @@ function UIController.start()
 		elseif kind == "OpenCharacterSelect" then
 			CharacterSelect.open()
 		elseif kind == "OpenShop" then
-			Shop.open()
+			Shop.open(data and data.tab)
 		elseif kind == "Results" then
 			Satchel.close()
 			Results.show(data)

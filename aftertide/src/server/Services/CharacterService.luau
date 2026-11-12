@@ -21,6 +21,7 @@ local Rigs = require(Shared.Config.Rigs)
 local BodyBuilder = require(Shared.BodyBuilder)
 local MeshKit = require(Shared.MeshKit)
 local AssetIds = require(Shared.Config.AssetIds)
+local Cosmetics = require(Shared.Config.Cosmetics)
 
 local CharacterService = {}
 local Services
@@ -124,6 +125,31 @@ function CharacterService.setGrace(player, seconds)
 	end
 end
 
+-- The crew member's definition with their equipped outfit's colours (for the part-built body).
+function CharacterService.dressedDef(player, charId)
+	local base = Characters.List[charId]
+	local outfit = Cosmetics.Outfits[Services.CosmeticsService.equippedFor(player, charId)]
+	if not outfit or next(outfit.colors) == nil then
+		return base
+	end
+	local def = table.clone(base)
+	def.colors = table.clone(base.colors)
+	def.outfit = table.clone(base.outfit or {})
+	local c = outfit.colors
+	if c.top then
+		def.colors.torso, def.colors.arms = c.top, c.top
+	end
+	if c.pants then
+		def.colors.legs = c.pants
+	end
+	def.outfit.hatColor = c.hat or def.outfit.hatColor
+	def.outfit.boots = c.boots or def.outfit.boots
+	def.outfit.pack = c.pack or def.outfit.pack
+	def.outfit.scarf = c.scarf or def.outfit.scarf
+	def.outfit.mask = c.mask or def.outfit.mask
+	return def
+end
+
 local function buildDescription(def, charId)
 	local desc = Instance.new("HumanoidDescription")
 	desc.HeightScale = def.height or 1
@@ -206,9 +232,10 @@ local function setupCharacter(player, char, session, isCustomRig)
 		local ok, err
 		if Services.AssetService.hasKit(kit) then
 			-- sculpted, realistic crew model fitted onto the skeleton
-			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix)
+			local colors = Services.CosmeticsService.layerColors(player, session.charId)
+			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix, colors)
 		else
-			ok, err = pcall(BodyBuilder.build, char, Characters.List[session.charId])
+			ok, err = pcall(BodyBuilder.build, char, CharacterService.dressedDef(player, session.charId))
 		end
 		if not ok then
 			warn("[CharacterService] body build failed: " .. tostring(err))
@@ -230,6 +257,8 @@ local function setupCharacter(player, char, session, isCustomRig)
 	char:SetAttribute("Noise", 0)
 	char:SetAttribute("AbilityReadyAt", 0)
 	char:SetAttribute("CharId", session.charId)
+	char:SetAttribute("Supporter", player:GetAttribute("Supporter") == true)
+	humanoid.DisplayName = (player:GetAttribute("Supporter") and "◆ " or "") .. player.DisplayName
 	return root
 end
 

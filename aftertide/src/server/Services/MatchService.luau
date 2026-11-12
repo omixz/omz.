@@ -105,6 +105,10 @@ function MatchService.getFerryInfo(player)
 	return { player = player, char = char, root = root, session = session }
 end
 
+function MatchService.getEncounterId()
+	return MatchService.encounterId or 0
+end
+
 function MatchService.isParticipant(player)
 	return run ~= nil and run.participants[player] == true
 end
@@ -123,8 +127,8 @@ function MatchService.openCharacterSelect(player)
 	Net.notify(player, "OpenCharacterSelect", {})
 end
 
-function MatchService.openShop(player)
-	Net.notify(player, "OpenShop", {})
+function MatchService.openShop(player, tab)
+	Net.notify(player, "OpenShop", { tab = tab })
 end
 
 function MatchService.openMenu(player, kind)
@@ -365,6 +369,7 @@ function MatchService.beginEncounter(option)
 		end
 	end
 
+	MatchService.encounterId = (MatchService.encounterId or 0) + 1
 	enc = {
 		type = kind,
 		finale = isFinale,
@@ -493,7 +498,7 @@ end
 local function grantTokens(player, rewards, list)
 	for kind, amount in rewards do
 		if Services.PlayerDataService.addTokens(player, kind, amount) then
-			table.insert(list, ("+%d %s"):format(amount, kind == "secondWind" and "Second Wind" or "Resupply"))
+			table.insert(list, ("+%d %s"):format(amount, ({ secondWind = "Second Wind", resupply = "Resupply", ammo = "Ammo Cache" })[kind] or kind))
 		end
 	end
 end
@@ -540,8 +545,9 @@ function MatchService.endEncounter(win)
 					local salvage = R.salvagePerEncounter + 5 * run.pall + (enc.option.bonus or 0)
 					Services.InventoryService.add(player, "salvage", salvage)
 					table.insert(rewards, ("+%d Salvage"):format(salvage))
-					local scrip = R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)
+					local scrip = math.floor((R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) + 0.5)
 					Services.PlayerDataService.addScrip(player, scrip)
+					Services.AnalyticsHelper.economy(player, "source", scrip, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, enc.finale and "CrossingComplete" or "Encounter")
 					table.insert(rewards, ("+%d Scrip"):format(scrip))
 					if enc.finale and Game.RunAidsEnabled then
 						grantTokens(player, Game.WinReward, rewards)

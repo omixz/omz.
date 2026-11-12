@@ -133,6 +133,12 @@ function HomebaseService.start()
 		Repair = repair,
 		SetLongGun = setLongGun,
 		SaveSettings = saveSettings,
+		BuyOutfit = function(player, a)
+			Services.CosmeticsService.buyWithScrip(player, a)
+		end,
+		EquipOutfit = function(player, a)
+			Services.CosmeticsService.equip(player, a)
+		end,
 	}
 	Net.onServer("Request", 8, function(player, kind, a, b)
 		local handler = type(kind) == "string" and handlers[kind]

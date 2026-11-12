@@ -14,6 +14,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Characters = require(Shared.Config.Characters)
 local Game = require(Shared.Config.Game)
 local Items = require(Shared.Config.Items)
+local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 local Geometry = require(Shared.Util.Geometry)
 local Sfx = require(Shared.Util.Sfx)
@@ -590,6 +591,41 @@ function ActionService.useResupply(player)
 	return true
 end
 
+-- Ammo Cache: tops up reserve ammo for the guns you carry. Once per encounter.
+function ActionService.useAmmoCache(player)
+	if not Game.RunAidsEnabled then
+		return false
+	end
+	local session = Services.CharacterService.getSession(player)
+	local info = Services.MatchService.getActiveInfo(player)
+	if not session or not info then
+		toast(player, "Ammo Cache works during an encounter")
+		return false
+	end
+	local encounterId = Services.MatchService.getEncounterId()
+	if session.ammoCacheEncounter == encounterId then
+		toast(player, "Ammo Cache is limited to once per encounter")
+		return false
+	end
+	if not Services.PlayerDataService.useToken(player, "ammo") then
+		Net.notify(player, "NeedProduct", { productKey = "AmmoCache" })
+		return false
+	end
+	session.ammoCacheEncounter = encounterId
+	local given = {}
+	for _, w in Services.InventoryService.weaponSlots(player) do
+		local ammo = Weapons.List[w.id] and Weapons.List[w.id].ammo
+		local amount = ammo and Game.AmmoCache[ammo]
+		if amount and not given[ammo] then
+			given[ammo] = true
+			Services.InventoryService.add(player, ammo, amount)
+		end
+	end
+	Sfx.at(info.root.Position, "Pickup", 0.7, 30)
+	toast(player, "Ammo Cache opened: reserves topped up")
+	return true
+end
+
 -- Dispatcher ---------------------------------------------------------------------------------
 
 local HANDLERS = {
@@ -631,6 +667,9 @@ function ActionService.start()
 			return
 		elseif action == "Resupply" then
 			ActionService.useResupply(player)
+			return
+		elseif action == "AmmoCache" then
+			ActionService.useAmmoCache(player)
 			return
 		elseif action == "Torch" then
 			local char = player.Character

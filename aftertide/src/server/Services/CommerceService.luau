@@ -35,9 +35,27 @@ local function processReceipt(receipt)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 
-	for kind, amount in entry.product.grant do
+	local grant = entry.product.grant
+	local data_ = Services.PlayerDataService.get(player)
+	if grant.oneTime and data_.oneTime[entry.key] then
+		-- already bought (e.g. a second prompt slipped through): give the tokens anyway so
+		-- nobody loses Robux, but the outfits are already owned
+		warn("[Commerce] one-time product bought again by " .. player.Name .. ": " .. entry.key)
+	end
+	for kind, amount in grant.tokens or {} do
 		Services.PlayerDataService.addTokens(player, kind, amount)
 	end
+	if grant.outfit then
+		Services.PlayerDataService.ownOutfit(player, grant.outfit)
+	end
+	for _, outfitId in grant.outfits or {} do
+		Services.PlayerDataService.ownOutfit(player, outfitId)
+	end
+	if grant.oneTime then
+		Services.PlayerDataService.markOneTime(player, entry.key)
+	end
+	data_.spent = (data_.spent or 0) + (receipt.CurrencySpent or entry.product.price or 0)
+	Services.AnalyticsHelper.purchase(player, entry.key, receipt.CurrencySpent)
 	Services.PlayerDataService.recordReceipt(player, receipt.PurchaseId)
 
 	if not Services.PlayerDataService.save(player) and not Services.PlayerDataService.isMemoryOnly() then
@@ -46,6 +64,16 @@ local function processReceipt(receipt)
 	end
 
 	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
+	if grant.outfit then
+		task.defer(Services.CosmeticsService.equip, player, grant.outfit)
+	end
+	if entry.key == "AmmoCache" or entry.key == "AmmoCache5" then
+		task.defer(function()
+			if Services.MatchService.getActiveInfo(player) then
+				Services.ActionService.useAmmoCache(player)
+			end
+		end)
+	end
 	if entry.key == "SecondWind" or entry.key == "SecondWind3" then
 		task.defer(function()
 			local session = Services.CharacterService.getSession(player)

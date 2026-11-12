@@ -3,7 +3,7 @@
 </Item>
 <Item class="Lighting" referent="RBX00000003"><Properties><string name="Name">Lighting</string><token name="Technology">4</token></Properties></Item>
 <Item class="Players" referent="RBX00000004"><Properties><string name="Name">Players</string><bool name="CharacterAutoLoads">false</bool></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX0000001F"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX0000001E"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ReplicatedStorage" referent="RBX00000020"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX0000001F"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds a sculpted, clothed body over the (hidden) R15 skeleton so the crew don't look like
 -- Roblox avatars: tapered limbs, shaped torso, jacket, trousers, boots, backpack, a hat or
 -- hood, and a fog mask over the lower face (everyone wears one against the Pall).
@@ -183,7 +183,7 @@ end
 
 return BodyBuilder
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000015"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000016"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Roblox asset IDs of the uploaded 3D packs (aftertide/assets/*.glb). Filled in by
 -- tools/upload_assets.py (Open Cloud) or by hand after importing them in Studio.
 -- 0 = not uploaded yet: the game falls back to its built-in part models.
@@ -372,13 +372,16 @@ Characters.List = {
 return Characters
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">Commerce</string><ProtectedString name="Source"><![CDATA[--!nonstrict
--- Developer products. Create each one in Creator Hub > your experience > Monetization >
--- Developer Products, then paste its ID below (docs/06-publishing.md, step 5).
+-- Everything sold for Robux. Create the products automatically with tools/create_products.py
+-- (Open Cloud) or by hand in Creator Hub > your experience > Monetization, then paste the IDs.
 -- An ID of 0 means "not configured": the shop shows the item but will not prompt a purchase.
 --
--- `price` is only a fallback label: the shop always shows the live price Roblox reports.
--- Rules (docs/03-monetisation.md): fixed contents, never random; Second Wind max once per
--- crossing; every aid can also be earned free by playing.
+-- `price` is the Robux price the creation tool sets; the shop always shows Roblox's live price.
+-- Rules (docs/03-monetisation.md): fixed contents, never random; every run aid has a per-crossing
+-- or per-encounter limit and can also be earned free by playing; cosmetics never change stats.
+--
+-- grant kinds:  tokens = { secondWind | resupply | ammo = n }   outfit = "<Cosmetics outfit id>"
+--               outfits = { ids }   oneTime = true (can only be bought once per account)
 return {
 	Products = {
 		SecondWind = {
@@ -386,27 +389,169 @@ return {
 			name = "Second Wind",
 			price = 49,
 			desc = "Get back up once when you're downed. Max one per crossing.",
-			grant = { secondWind = 1 },
+			grant = { tokens = { secondWind = 1 } },
 		},
 		SecondWind3 = {
 			productId = 0,
 			name = "Second Wind x3",
 			price = 129,
 			desc = "Three Second Wind tokens. Same limit: one per crossing.",
-			grant = { secondWind = 3 },
+			grant = { tokens = { secondWind = 3 } },
 		},
 		Resupply = {
 			productId = 0,
 			name = "Resupply Satchel",
 			price = 29,
 			desc = "+6 revolver rounds, +1 Field Dressing, +1 Bottle. Once per crossing.",
-			grant = { resupply = 1 },
+			grant = { tokens = { resupply = 1 } },
+		},
+		AmmoCache = {
+			productId = 0,
+			name = "Ammo Cache",
+			price = 25,
+			desc = "Refills reserve ammo for both your guns mid-encounter. Once per encounter.",
+			grant = { tokens = { ammo = 1 } },
+		},
+		AmmoCache5 = {
+			productId = 0,
+			name = "Ammo Cache x5",
+			price = 99,
+			desc = "Five Ammo Cache tokens. Same limit: one per encounter.",
+			grant = { tokens = { ammo = 5 } },
+		},
+		StarterPack = {
+			productId = 0,
+			name = "Deckhand Starter Pack",
+			price = 99,
+			desc = "One time only: 2 Second Wind, 2 Resupply, 3 Ammo Cache and the Deckhand outfit for all four crew.",
+			grant = { oneTime = true, tokens = { secondWind = 2, resupply = 2, ammo = 3 }, outfits = { "mara_deckhand", "tobias_deckhand", "ines_deckhand", "sefa_deckhand" } },
+		},
+		Outfit_mara_pilot = {
+			productId = 0,
+			name = "Mara: Night Pilot",
+			price = 79,
+			desc = "Navy oilskin, brass-buttoned cap and a red signal scarf. Cosmetic.",
+			grant = { outfit = "mara_pilot" },
+		},
+		Outfit_tobias_stoker = {
+			productId = 0,
+			name = "Tobias: Boiler Stoker",
+			price = 79,
+			desc = "Soot-black overalls, leather apron tones and a welder's cap. Cosmetic.",
+			grant = { outfit = "tobias_stoker" },
+		},
+		Outfit_ines_field = {
+			productId = 0,
+			name = "Ines: Field Surgeon",
+			price = 79,
+			desc = "Bone-white coat, slate trousers, red-cross satchel. Cosmetic.",
+			grant = { outfit = "ines_field" },
+		},
+		Outfit_sefa_reef = {
+			productId = 0,
+			name = "Sefa: Reef Diver",
+			price = 79,
+			desc = "Kelp-green wetsuit layers and a sun-faded diver's hood. Cosmetic.",
+			grant = { outfit = "sefa_reef" },
 		},
 	},
-	Order = { "SecondWind", "SecondWind3", "Resupply" },
+	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
+	Order = { "StarterPack", "SecondWind", "SecondWind3", "Resupply", "AmmoCache", "AmmoCache5" },
+
+	-- Game passes (permanent). Created by tools/create_products.py like the products above.
+	Passes = {
+		Supporter = {
+			passId = 0,
+			name = "Meridian Supporter",
+			price = 149,
+			desc = "Supporter outfits for every crew member (officer's colours), a Supporter badge on your name and +10% Scrip from crossings. Thank you for keeping the lights on.",
+			scripBonus = 0.10,
+		},
+	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">Encounters</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">Cosmetics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Wardrobe: cosmetic outfits (recolours of each crew member's clothing layers). They never
+-- change stats. Unlocks:
+--   default    everyone owns it
+--   scrip      buy with Scrip (earned only by playing crossings)
+--   product    Robux (Commerce.Products[product]) or Scrip (scrip > 0 means it can be earned too)
+--   pack       comes with a bundle (the Starter Pack)
+--   supporter  owned while you hold the Supporter game pass
+-- colours: top (jacket/robe/sleeves), pants, boots, hat (hat/hood), pack, scarf, mask.
+local function rgb(r, g, b)
+	return Color3.fromRGB(r, g, b)
+end
+
+local Cosmetics = {}
+
+Cosmetics.Outfits = {
+	-- Mara ---------------------------------------------------------------------------------
+	mara_default = { char = "mara", name = "Harbour Pilot", unlock = "default", colors = {} },
+	mara_storm = { char = "mara", name = "Storm Watch", unlock = "scrip", scrip = 400, colors = { top = rgb(84, 92, 74), pants = rgb(40, 40, 38), hat = rgb(46, 50, 44), scarf = rgb(180, 160, 110) } },
+	mara_pilot = { char = "mara", name = "Night Pilot", unlock = "product", product = "Outfit_mara_pilot", scrip = 1500, colors = { top = rgb(34, 42, 64), pants = rgb(30, 30, 34), hat = rgb(30, 34, 52), scarf = rgb(160, 40, 36), pack = rgb(70, 58, 40) } },
+	mara_deckhand = { char = "mara", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
+	mara_officer = { char = "mara", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), scarf = rgb(196, 160, 80), pack = rgb(60, 50, 40) } },
+	-- Tobias -------------------------------------------------------------------------------
+	tobias_default = { char = "tobias", name = "Ferry Engineer", unlock = "default", colors = {} },
+	tobias_rust = { char = "tobias", name = "Rust Bucket", unlock = "scrip", scrip = 400, colors = { top = rgb(120, 60, 36), pants = rgb(70, 64, 54), hat = rgb(90, 50, 30) } },
+	tobias_stoker = { char = "tobias", name = "Boiler Stoker", unlock = "product", product = "Outfit_tobias_stoker", scrip = 1500, colors = { top = rgb(34, 32, 30), pants = rgb(46, 40, 34), hat = rgb(70, 50, 34), pack = rgb(60, 44, 30), boots = rgb(26, 22, 20) } },
+	tobias_deckhand = { char = "tobias", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
+	tobias_officer = { char = "tobias", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), pack = rgb(60, 50, 40) } },
+	-- Ines ---------------------------------------------------------------------------------
+	ines_default = { char = "ines", name = "Ship's Medic", unlock = "default", colors = {} },
+	ines_mourning = { char = "ines", name = "Mourning Grey", unlock = "scrip", scrip = 400, colors = { top = rgb(70, 72, 76), pants = rgb(36, 38, 42), pack = rgb(120, 116, 108) } },
+	ines_field = { char = "ines", name = "Field Surgeon", unlock = "product", product = "Outfit_ines_field", scrip = 1500, colors = { top = rgb(214, 208, 194), pants = rgb(60, 66, 72), pack = rgb(150, 40, 36), mask = rgb(150, 40, 36) } },
+	ines_deckhand = { char = "ines", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70) } },
+	ines_officer = { char = "ines", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), pack = rgb(60, 50, 40), mask = rgb(196, 160, 80) } },
+	-- Sefa ---------------------------------------------------------------------------------
+	sefa_default = { char = "sefa", name = "Salvage Diver", unlock = "default", colors = {} },
+	sefa_dune = { char = "sefa", name = "Dune Walker", unlock = "scrip", scrip = 400, colors = { top = rgb(170, 150, 110), hat = rgb(150, 130, 96), pants = rgb(90, 80, 64) } },
+	sefa_reef = { char = "sefa", name = "Reef Diver", unlock = "product", product = "Outfit_sefa_reef", scrip = 1500, colors = { top = rgb(44, 70, 56), hat = rgb(150, 140, 110), pants = rgb(30, 40, 38), boots = rgb(20, 30, 30) } },
+	sefa_deckhand = { char = "sefa", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
+	sefa_officer = { char = "sefa", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), pack = rgb(60, 50, 40) } },
+}
+
+-- Wardrobe order per crew member.
+Cosmetics.Order = {
+	mara = { "mara_default", "mara_storm", "mara_pilot", "mara_deckhand", "mara_officer" },
+	tobias = { "tobias_default", "tobias_rust", "tobias_stoker", "tobias_deckhand", "tobias_officer" },
+	ines = { "ines_default", "ines_mourning", "ines_field", "ines_deckhand", "ines_officer" },
+	sefa = { "sefa_default", "sefa_dune", "sefa_reef", "sefa_deckhand", "sefa_officer" },
+}
+
+-- Which sculpted mesh layers each colour slot repaints (see tools/sculpt/human.py layer names).
+Cosmetics.Layers = {
+	top = { "Jacket", "Sleeve", "JacketHem", "Robe" },
+	pants = { "Pants" },
+	boots = { "Boot" },
+	hat = { "Hat", "Hood" },
+	pack = { "Pack" },
+	scarf = { "Scarf" },
+	mask = { "Mask" },
+}
+
+function Cosmetics.defaultFor(charId)
+	return charId .. "_default"
+end
+
+-- { [layerName] = Color3 } for MeshKit, from an outfit id.
+function Cosmetics.layerColors(outfitId)
+	local outfit = Cosmetics.Outfits[outfitId]
+	local out = {}
+	if outfit then
+		for slot, color in outfit.colors do
+			for _, layer in Cosmetics.Layers[slot] or {} do
+				out[layer] = color
+			end
+		end
+	end
+	return out
+end
+
+return Cosmetics
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000000A"><Properties><string name="Name">Encounters</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The run ("crossing"): RunLength encounters chosen on the tide chart, each followed by a
 -- return to the Meridian, then the finale. The Pall rises after every encounter.
 return {
@@ -459,7 +604,7 @@ return {
 	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000A"><Properties><string name="Name">Enemies</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">Enemies</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Hushed: people taken by the Pall, in stages. Original designs (salt-crusted, faceless,
 -- never gory: they burst into salt). Bodies are built in code from jointed parts and
 -- animated procedurally on clients (EnemyService builds, EnemyAnimator animates).
@@ -570,7 +715,7 @@ return {
 	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">Game</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">Game</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Global tuning for a Crossing. Everything a designer may want to change lives in Config/.
 local Game = {
 	MaxPartySize = 4, -- per server; also set "Server size" to this in Creator Hub (docs/06-publishing.md)
@@ -585,16 +730,19 @@ local Game = {
 	-- Paid / earnable run aids (Second Wind, Resupply). Set false to make the game cosmetics-only.
 	RunAidsEnabled = true,
 	SecondWindHP = 60,
-	StartingTokens = { secondWind = 1, resupply = 1 }, -- new players
-	WinReward = { resupply = 1 }, -- every successful crossing
+	StartingTokens = { secondWind = 1, resupply = 1, ammo = 1 }, -- new players
+	WinReward = { resupply = 1, ammo = 1 }, -- every successful crossing
 	DailyWinReward = { secondWind = 1 }, -- first successful crossing each UTC day
+
+	-- Ammo Cache: reserve ammo added per weapon ammo type (once per encounter).
+	AmmoCache = { pistolAmmo = 12, rifleAmmo = 8, shells = 6, arrows = 6 },
 
 	FerryOrigin = Vector3.new(0, 0, 700),
 }
 
 return Game
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">Items</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">Items</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Everything that can live in the satchel. Scarcity is the point: several recipes compete
 -- for the same parts, so every craft is a decision. Satchel capacity is NEVER sold;
 -- it is upgraded at the workbench with Salvage earned in the run.
@@ -657,7 +805,7 @@ return {
 	CapBonus = { satchel = 1, ammoPouch = 0.5 },
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">Loot</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">Loot</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Searchable containers and loose items. Loot rolls are free and random (never paid).
 -- entry = { item, weight, min, max }; item "salvage" is the run currency.
 return {
@@ -690,7 +838,7 @@ return {
 	PallBonusRolls = 0.15, -- extra roll chance per Pall level
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">MeshMeta</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">MeshMeta</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- GENERATED by tools/build_assets.py - do not edit by hand.
 -- Placement data for the sculpted meshes (segment anchors, layer centres/sizes,
 -- materials, colours). MeshKit uses it to fit each mesh onto its skeleton.
@@ -5031,7 +5179,7 @@ return {
 	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">Modifiers</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000010"><Properties><string name="Name">Modifiers</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Environmental modifiers. One is rolled per encounter (or none) for replayability.
 -- Fields: sightMult, noiseMult (all noise), footstepMult, partsMult, fogDensity, ambientBoost, lightning, night
 return {
@@ -5047,7 +5195,7 @@ return {
 	NoneChance = 0.2,
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000010"><Properties><string name="Name">Movement</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">Movement</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Speeds are studs/second. Noise values are the radius (studs) in which Hushed can hear you.
 return {
 	Speeds = {
@@ -5071,7 +5219,7 @@ return {
 	CrouchHipMult = 0.66, -- procedural crouch pose lowers hips to this fraction
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000011"><Properties><string name="Name">Rigs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">Rigs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Realistic characters. Three ways to give a crew member a realistic body, best first:
 --   1. Custom rig: put an R15-compatible Model named e.g. "Mara" in ServerStorage > Rigs
 --      (made in Blender from a MakeHuman/your own mesh, then Studio's Avatar Setup tool).
@@ -5102,7 +5250,7 @@ return {
 	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">Sounds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">Sounds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every sound in the game. The audio itself is our own (generated by tools/make_sounds.py
 -- into aftertide/audio/*.ogg). Upload those files to Roblox (docs/08-audio.md) and paste
 -- each ID here as "rbxassetid://123456". An empty ID is silent; the noise the Hushed hear
@@ -5198,7 +5346,7 @@ Sounds.Volume = VOLUME
 
 return Sounds
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Two kinds of upgrade:
 --   * Workbench (per run, paid with Salvage found in the run): weapon parts, satchel, perks.
 --   * Meridian repairs (permanent, paid with Scrip earned by playing): the homebase.
@@ -5258,7 +5406,7 @@ Upgrades.Repairs = {
 
 return Upgrades
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000015"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fictional, stylised weapons (no real brands or real-world specs). Damage is against the
 -- Hushed (Drifter = 100 HP). Gunshots are LOUD: every shot is a noise event, so going loud
 -- is a choice with consequences. The bow is the quiet option.
@@ -5308,7 +5456,7 @@ return {
 }
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fits sculpted meshes (from tools/build_assets.py) onto a live skeleton.
 --
 -- Each segment mesh was sculpted around canonical joints (MeshMeta: top / bottom anchors).
@@ -5368,7 +5516,8 @@ local function jointsOf(model)
 end
 
 -- getPart(name) -> MeshPart clone or nil. Returns true if every segment was fitted.
-function MeshKit.applyRig(model, meta, getPart, format, yawFix)
+-- colorOverrides (optional): { [layerName] = Color3 } for outfits.
+function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 	local own, byParent = jointsOf(model)
 	local scales = {}
 	local fitted = {}
@@ -5403,7 +5552,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix)
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
 					mp.Size = v3(layer.size) * s
 					mp.Material = material(layer.material)
-					mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
+					mp.Color = (colorOverrides and colorOverrides[layerName]) or Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
 					mp.CanCollide = false
 					mp.CanQuery = false
@@ -5493,7 +5642,7 @@ end
 
 return MeshKit
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every client<->server message goes through these RemoteEvents. The server creates them;
 -- clients wait for them. Server handlers are rate-limited and wrapped in pcall so a bad
 -- payload can never crash a service. Validate EVERY argument in the handler.
@@ -5583,7 +5732,7 @@ end
 
 return Net
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Combines a character's innate perk and chosen perk into one modifier table.
 local Characters = require(script.Parent.Config.Characters)
 
@@ -5668,7 +5817,7 @@ end
 
 return Stats
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000001C"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000001D"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 local CollectionService = game:GetService("CollectionService")
 
 local Geometry = {}
@@ -5711,7 +5860,7 @@ end
 
 return Geometry
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- One-shot 3D sounds (server: everyone hears it; client: only you) and attached loops.
 local Debris = game:GetService("Debris")
 local Workspace = game:GetService("Workspace")
@@ -5793,7 +5942,7 @@ end
 
 return Sfx
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Critically damped spring. Works for numbers and Vector3s.
 -- frequency = how quickly it settles (higher = snappier).
 local Spring = {}
@@ -5827,7 +5976,7 @@ end
 return Spring
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds stylised weapon models from parts (placeholders until Stage 5 meshes).
 -- Each model: PrimaryPart "Grip" (held in the right hand), barrel along -Z, and an
 -- Attachment "Muzzle" at the barrel tip. Parts are massless and ignored by raycasts.
@@ -5976,7 +6125,7 @@ return WeaponModels
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX00000037"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000036"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000020"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ServerScriptService" referent="RBX0000003A"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000039"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000021"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE server bootstrap. Every service exposes optional init(registry) and start().
 -- init wires dependencies (no yielding); start begins loops and connections.
 local Players = game:GetService("Players")
@@ -5987,6 +6136,8 @@ local Services = script.Parent:WaitForChild("Services")
 
 local ORDER = {
 	"PlayerDataService",
+	"AnalyticsHelper",
+	"CosmeticsService",
 	"AssetService",
 	"MapService",
 	"PerceptionService",
@@ -6022,7 +6173,7 @@ end
 
 print("[AFTERTIDE] server ready")
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000025"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000026"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- CANNERY ROW: a coastal fish cannery, container yard, net shed and tidal shallows.
 -- Bright overcast midday. Terrain ground (asphalt yard, concrete, grass verges, mud),
 -- real terrain water in the shallows, reeds and tall grass to hide in.
@@ -6200,7 +6351,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- HOLLOW PINES: forest hills above the coast. Pines, rocks, ferns, a creek, meadows of tall
 -- grass, three cabins and an old ranger lookout. Misty morning.
 local MapKit = require(script.Parent.MapKit)
@@ -6353,7 +6504,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- LARKSPUR STREET: an overgrown suburban street. Weatherboard houses you can enter, yards
 -- gone to tall grass, wrecked cars, power poles, a corner store. Warm golden afternoon.
 local MapKit = require(script.Parent.MapKit)
@@ -6474,7 +6625,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000024"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared building blocks for the encounter maps: parts, volumes, walls, lights, terrain,
 -- grass, props (sculpted meshes when loaded, part fallbacks otherwise) and houses.
 local CollectionService = game:GetService("CollectionService")
@@ -6913,7 +7064,7 @@ end
 return MapKit
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="Folder" referent="RBX00000035"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000038"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every non-gun player action, validated server-side. The client only sends intent:
 --   Action("Quiet")                     Quieting from behind / with a Tide Spike, else shove
 --   Action("Throw", {dir, item})        bottle / flare pot / fog pot / salt bomb
@@ -6929,6 +7080,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Characters = require(Shared.Config.Characters)
 local Game = require(Shared.Config.Game)
 local Items = require(Shared.Config.Items)
+local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 local Geometry = require(Shared.Util.Geometry)
 local Sfx = require(Shared.Util.Sfx)
@@ -7505,6 +7657,41 @@ function ActionService.useResupply(player)
 	return true
 end
 
+-- Ammo Cache: tops up reserve ammo for the guns you carry. Once per encounter.
+function ActionService.useAmmoCache(player)
+	if not Game.RunAidsEnabled then
+		return false
+	end
+	local session = Services.CharacterService.getSession(player)
+	local info = Services.MatchService.getActiveInfo(player)
+	if not session or not info then
+		toast(player, "Ammo Cache works during an encounter")
+		return false
+	end
+	local encounterId = Services.MatchService.getEncounterId()
+	if session.ammoCacheEncounter == encounterId then
+		toast(player, "Ammo Cache is limited to once per encounter")
+		return false
+	end
+	if not Services.PlayerDataService.useToken(player, "ammo") then
+		Net.notify(player, "NeedProduct", { productKey = "AmmoCache" })
+		return false
+	end
+	session.ammoCacheEncounter = encounterId
+	local given = {}
+	for _, w in Services.InventoryService.weaponSlots(player) do
+		local ammo = Weapons.List[w.id] and Weapons.List[w.id].ammo
+		local amount = ammo and Game.AmmoCache[ammo]
+		if amount and not given[ammo] then
+			given[ammo] = true
+			Services.InventoryService.add(player, ammo, amount)
+		end
+	end
+	Sfx.at(info.root.Position, "Pickup", 0.7, 30)
+	toast(player, "Ammo Cache opened: reserves topped up")
+	return true
+end
+
 -- Dispatcher ---------------------------------------------------------------------------------
 
 local HANDLERS = {
@@ -7547,6 +7734,9 @@ function ActionService.start()
 		elseif action == "Resupply" then
 			ActionService.useResupply(player)
 			return
+		elseif action == "AmmoCache" then
+			ActionService.useAmmoCache(player)
+			return
 		elseif action == "Torch" then
 			local char = player.Character
 			local session = Services.CharacterService.getSession(player)
@@ -7571,7 +7761,51 @@ end
 
 return ActionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Thin wrapper over AnalyticsService so we can see (Creator Hub > Analytics) where Scrip is
+-- earned and spent and which products sell. Never throws: analytics must not break gameplay.
+local AnalyticsService = game:GetService("AnalyticsService")
+
+local AnalyticsHelper = {}
+
+-- flow "source" (earned) or "sink" (spent) of Scrip.
+function AnalyticsHelper.economy(player, flow, amount, transactionType, itemSku)
+	pcall(function()
+		local data = AnalyticsHelper.balance and AnalyticsHelper.balance(player) or 0
+		AnalyticsService:LogEconomyEvent(
+			player,
+			flow == "sink" and Enum.AnalyticsEconomyFlowType.Sink or Enum.AnalyticsEconomyFlowType.Source,
+			"Scrip",
+			amount,
+			data,
+			transactionType,
+			itemSku
+		)
+	end)
+end
+
+function AnalyticsHelper.purchase(player, key, robux)
+	pcall(function()
+		AnalyticsService:LogCustomEvent(player, "RobuxPurchase", robux or 0, { [Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = key })
+	end)
+end
+
+function AnalyticsHelper.funnel(player, step, name)
+	pcall(function()
+		AnalyticsService:LogOnboardingFunnelStepEvent(player, step, name)
+	end)
+end
+
+function AnalyticsHelper.init(registry)
+	AnalyticsHelper.balance = function(player)
+		local data = registry.PlayerDataService.get(player)
+		return data and data.scrip or 0
+	end
+end
+
+return AnalyticsHelper
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Lightweight movement sanity checks. Roblox lets clients simulate their own character, so
 -- speed hacks are possible; we detect impossible displacement and pull the player back.
 -- PvE-only design keeps the stakes low (docs/02-technical-architecture.md section 2.4).
@@ -7630,7 +7864,7 @@ end
 
 return AntiCheatService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Loads the sculpted mesh packs (Config/AssetIds) once at server start and hands out clones.
 -- Sources, in order: ServerStorage > Assets > <Pack> (imported in Studio), then
 -- InsertService:LoadAsset(id) for uploaded packs. Missing packs => built-in fallbacks.
@@ -7778,7 +8012,7 @@ end
 
 return AssetService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
 -- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
 --
@@ -7801,6 +8035,7 @@ local Rigs = require(Shared.Config.Rigs)
 local BodyBuilder = require(Shared.BodyBuilder)
 local MeshKit = require(Shared.MeshKit)
 local AssetIds = require(Shared.Config.AssetIds)
+local Cosmetics = require(Shared.Config.Cosmetics)
 
 local CharacterService = {}
 local Services
@@ -7904,6 +8139,31 @@ function CharacterService.setGrace(player, seconds)
 	end
 end
 
+-- The crew member's definition with their equipped outfit's colours (for the part-built body).
+function CharacterService.dressedDef(player, charId)
+	local base = Characters.List[charId]
+	local outfit = Cosmetics.Outfits[Services.CosmeticsService.equippedFor(player, charId)]
+	if not outfit or next(outfit.colors) == nil then
+		return base
+	end
+	local def = table.clone(base)
+	def.colors = table.clone(base.colors)
+	def.outfit = table.clone(base.outfit or {})
+	local c = outfit.colors
+	if c.top then
+		def.colors.torso, def.colors.arms = c.top, c.top
+	end
+	if c.pants then
+		def.colors.legs = c.pants
+	end
+	def.outfit.hatColor = c.hat or def.outfit.hatColor
+	def.outfit.boots = c.boots or def.outfit.boots
+	def.outfit.pack = c.pack or def.outfit.pack
+	def.outfit.scarf = c.scarf or def.outfit.scarf
+	def.outfit.mask = c.mask or def.outfit.mask
+	return def
+end
+
 local function buildDescription(def, charId)
 	local desc = Instance.new("HumanoidDescription")
 	desc.HeightScale = def.height or 1
@@ -7986,9 +8246,10 @@ local function setupCharacter(player, char, session, isCustomRig)
 		local ok, err
 		if Services.AssetService.hasKit(kit) then
 			-- sculpted, realistic crew model fitted onto the skeleton
-			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix)
+			local colors = Services.CosmeticsService.layerColors(player, session.charId)
+			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix, colors)
 		else
-			ok, err = pcall(BodyBuilder.build, char, Characters.List[session.charId])
+			ok, err = pcall(BodyBuilder.build, char, CharacterService.dressedDef(player, session.charId))
 		end
 		if not ok then
 			warn("[CharacterService] body build failed: " .. tostring(err))
@@ -8010,6 +8271,8 @@ local function setupCharacter(player, char, session, isCustomRig)
 	char:SetAttribute("Noise", 0)
 	char:SetAttribute("AbilityReadyAt", 0)
 	char:SetAttribute("CharId", session.charId)
+	char:SetAttribute("Supporter", player:GetAttribute("Supporter") == true)
+	humanoid.DisplayName = (player:GetAttribute("Supporter") and "◆ " or "") .. player.DisplayName
 	return root
 end
 
@@ -8308,7 +8571,7 @@ end
 
 return CharacterService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Developer product receipts. Rules that matter:
 --   * Idempotent: a receipt (PurchaseId) is granted exactly once, even if Roblox retries.
 --   * Only report PurchaseGranted once the grant is saved (or we're in memory-only Studio mode).
@@ -8345,9 +8608,27 @@ local function processReceipt(receipt)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 
-	for kind, amount in entry.product.grant do
+	local grant = entry.product.grant
+	local data_ = Services.PlayerDataService.get(player)
+	if grant.oneTime and data_.oneTime[entry.key] then
+		-- already bought (e.g. a second prompt slipped through): give the tokens anyway so
+		-- nobody loses Robux, but the outfits are already owned
+		warn("[Commerce] one-time product bought again by " .. player.Name .. ": " .. entry.key)
+	end
+	for kind, amount in grant.tokens or {} do
 		Services.PlayerDataService.addTokens(player, kind, amount)
 	end
+	if grant.outfit then
+		Services.PlayerDataService.ownOutfit(player, grant.outfit)
+	end
+	for _, outfitId in grant.outfits or {} do
+		Services.PlayerDataService.ownOutfit(player, outfitId)
+	end
+	if grant.oneTime then
+		Services.PlayerDataService.markOneTime(player, entry.key)
+	end
+	data_.spent = (data_.spent or 0) + (receipt.CurrencySpent or entry.product.price or 0)
+	Services.AnalyticsHelper.purchase(player, entry.key, receipt.CurrencySpent)
 	Services.PlayerDataService.recordReceipt(player, receipt.PurchaseId)
 
 	if not Services.PlayerDataService.save(player) and not Services.PlayerDataService.isMemoryOnly() then
@@ -8356,6 +8637,16 @@ local function processReceipt(receipt)
 	end
 
 	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
+	if grant.outfit then
+		task.defer(Services.CosmeticsService.equip, player, grant.outfit)
+	end
+	if entry.key == "AmmoCache" or entry.key == "AmmoCache5" then
+		task.defer(function()
+			if Services.MatchService.getActiveInfo(player) then
+				Services.ActionService.useAmmoCache(player)
+			end
+		end)
+	end
 	if entry.key == "SecondWind" or entry.key == "SecondWind3" then
 		task.defer(function()
 			local session = Services.CharacterService.getSession(player)
@@ -8382,7 +8673,142 @@ end
 
 return CommerceService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Wardrobe (server side): who owns which outfit, buying outfits with Scrip, equipping,
+-- the Supporter game pass, and the colours a crew member should be dressed in.
+-- Cosmetic only: nothing here touches stats.
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Commerce = require(Shared.Config.Commerce)
+local Cosmetics = require(Shared.Config.Cosmetics)
+local Net = require(Shared.Net)
+
+local CosmeticsService = {}
+local Services
+
+local supporter = {} -- [Player] = true
+
+function CosmeticsService.isSupporter(player)
+	return supporter[player] == true
+end
+
+local function setSupporter(player, on)
+	supporter[player] = on or nil
+	player:SetAttribute("Supporter", on == true)
+end
+
+function CosmeticsService.owns(player, outfitId)
+	local outfit = Cosmetics.Outfits[outfitId]
+	if not outfit then
+		return false
+	end
+	if outfit.unlock == "default" then
+		return true
+	end
+	if outfit.unlock == "supporter" then
+		return supporter[player] == true
+	end
+	local data = Services.PlayerDataService.get(player)
+	return data ~= nil and data.outfits[outfitId] == true
+end
+
+-- The outfit a player has on for a crew member (falls back to the default if not owned).
+function CosmeticsService.equippedFor(player, charId)
+	local data = Services.PlayerDataService.get(player)
+	local id = data and data.equipped[charId]
+	if id and Cosmetics.Outfits[id] and Cosmetics.Outfits[id].char == charId and CosmeticsService.owns(player, id) then
+		return id
+	end
+	return Cosmetics.defaultFor(charId)
+end
+
+function CosmeticsService.layerColors(player, charId)
+	return Cosmetics.layerColors(CosmeticsService.equippedFor(player, charId))
+end
+
+-- Scrip multiplier for crossing rewards (Supporter pass).
+function CosmeticsService.scripMult(player)
+	return supporter[player] and (1 + (Commerce.Passes.Supporter.scripBonus or 0)) or 1
+end
+
+local function respawnIfOnFerry(player)
+	-- show the new look straight away when it's safe (not mid-encounter)
+	local session = Services.CharacterService.getSession(player)
+	if session and session.charId and not Services.MatchService.getActiveInfo(player) and player.Character then
+		local root = player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			Services.CharacterService.spawn(player, root.CFrame, false)
+		end
+	end
+end
+
+function CosmeticsService.equip(player, outfitId)
+	local outfit = type(outfitId) == "string" and Cosmetics.Outfits[outfitId]
+	if not outfit or not CosmeticsService.owns(player, outfitId) then
+		return
+	end
+	Services.PlayerDataService.setEquipped(player, outfit.char, outfitId)
+	if player:GetAttribute("CharId") == outfit.char then
+		respawnIfOnFerry(player)
+	end
+end
+
+function CosmeticsService.buyWithScrip(player, outfitId)
+	local outfit = type(outfitId) == "string" and Cosmetics.Outfits[outfitId]
+	if not outfit or not outfit.scrip or outfit.scrip <= 0 or CosmeticsService.owns(player, outfitId) then
+		return
+	end
+	if not Services.PlayerDataService.spendScrip(player, outfit.scrip) then
+		Net.notify(player, "Toast", { text = ("Not enough Scrip (%d needed). Earn it by finishing crossings."):format(outfit.scrip) })
+		return
+	end
+	Services.PlayerDataService.ownOutfit(player, outfitId)
+	Services.AnalyticsHelper.economy(player, "sink", outfit.scrip, Enum.AnalyticsEconomyTransactionType.Shop.Name, outfitId)
+	Net.notify(player, "Toast", { text = outfit.name .. " added to your wardrobe" })
+	CosmeticsService.equip(player, outfitId)
+end
+
+function CosmeticsService.init(registry)
+	Services = registry
+end
+
+local function checkPass(player)
+	local passId = Commerce.Passes.Supporter.passId
+	if not passId or passId == 0 then
+		return
+	end
+	local ok, owns = pcall(function()
+		return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+	end)
+	if ok then
+		setSupporter(player, owns)
+	end
+end
+
+function CosmeticsService.start()
+	Players.PlayerAdded:Connect(function(player)
+		task.spawn(checkPass, player)
+	end)
+	for _, player in Players:GetPlayers() do
+		task.spawn(checkPass, player)
+	end
+	Players.PlayerRemoving:Connect(function(player)
+		supporter[player] = nil
+	end)
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		if purchased and passId == Commerce.Passes.Supporter.passId then
+			setSupporter(player, true)
+			Services.AnalyticsHelper.purchase(player, "Pass_Supporter", Commerce.Passes.Supporter.price)
+			Net.notify(player, "Toast", { text = "Welcome aboard, Supporter. Officer's colours are in your wardrobe." })
+		end
+	end)
+end
+
+return CosmeticsService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Hushed. Server-simulated, one state machine per enemy:
 --   Patrol -> (notice) -> Investigate -> Search -> Patrol
 --   any    -> (suspicion >= 1 or shot) -> Chase -> (lost sight) -> Search
@@ -9344,7 +9770,7 @@ end
 
 return EnemyService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian as a homebase that persists between crossings:
 --   * Repairs bought with Scrip (earned only by playing) unlock permanent bonuses and change
 --     how the ferry looks (deck lights, generator, radio mast, sick bay, armory rack).
@@ -9479,6 +9905,12 @@ function HomebaseService.start()
 		Repair = repair,
 		SetLongGun = setLongGun,
 		SaveSettings = saveSettings,
+		BuyOutfit = function(player, a)
+			Services.CosmeticsService.buyWithScrip(player, a)
+		end,
+		EquipOutfit = function(player, a)
+			Services.CosmeticsService.equip(player, a)
+		end,
 	}
 	Net.onServer("Request", 8, function(player, kind, a, b)
 		local handler = type(kind) == "string" and handlers[kind]
@@ -9500,7 +9932,7 @@ end
 
 return HomebaseService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: items, reserve ammo, two weapon slots (long gun + sidearm, with magazines)
 -- and Salvage (run currency). Server-owned; replicated to the owner as player attributes:
 --   Inv_<item>, Cap_<item>, W_long, W_longMag, W_sidearm, W_sidearmMag, Salvage
@@ -9758,7 +10190,7 @@ end
 
 return InventoryService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Scavenging: searchable containers (drawers, lockers, toolboxes, ammo crates) that open
 -- with a short animation, and loose items that glint in the fog. Loot is rolled from
 -- Config/Loot tables (free, never paid). What doesn't fit your satchel is dropped on the
@@ -9956,7 +10388,7 @@ end
 
 return LootService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds the grey-box world in code so the project is fully self-contained:
 --   * The Meridian (ferry hideout deck) far from the encounter
 --   * the encounter maps (src/server/Maps/*), one loaded at a time
@@ -10117,6 +10549,22 @@ local function buildFerry(parent)
 	cabinPrompt.Parent = cabin
 	cabinPrompt.Triggered:Connect(function(player)
 		Services.MatchService.openCharacterSelect(player)
+	end)
+
+	-- Crew lockers: the wardrobe (outfits)
+	local lockers = block(parent, Vector3.new(4, 7, 1.4), o + Vector3.new(-15.3, 3.5, 10.5), Color3.fromRGB(72, 80, 78), Enum.Material.DiamondPlate, { Name = "CrewLockers" })
+	for i = -1, 1 do
+		block(parent, Vector3.new(0.08, 6.4, 0.08), o + Vector3.new(-15.3 + i * 1.3 + 0.65, 3.5, 9.75), C.metal, Enum.Material.Metal, { CanCollide = false })
+	end
+	local lockerPrompt = Instance.new("ProximityPrompt")
+	lockerPrompt.ActionText = "Open wardrobe"
+	lockerPrompt.ObjectText = "Crew lockers"
+	lockerPrompt.MaxActivationDistance = 9
+	lockerPrompt.RequiresLineOfSight = false
+	lockerPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
+	lockerPrompt.Parent = lockers
+	lockerPrompt.Triggered:Connect(function(player)
+		Services.MatchService.openShop(player, "Wardrobe")
 	end)
 
 	-- Workbench: per-crossing upgrades
@@ -10591,7 +11039,7 @@ end
 
 return MapService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Crossing director (the roguelike run):
 --   Ferry      no crossing; pick crew, shop, repairs. Tide chart -> start a crossing.
 --   Planning   at the Meridian mid-crossing: workbench, crafting, choose the next route.
@@ -10698,6 +11146,10 @@ function MatchService.getFerryInfo(player)
 	return { player = player, char = char, root = root, session = session }
 end
 
+function MatchService.getEncounterId()
+	return MatchService.encounterId or 0
+end
+
 function MatchService.isParticipant(player)
 	return run ~= nil and run.participants[player] == true
 end
@@ -10716,8 +11168,8 @@ function MatchService.openCharacterSelect(player)
 	Net.notify(player, "OpenCharacterSelect", {})
 end
 
-function MatchService.openShop(player)
-	Net.notify(player, "OpenShop", {})
+function MatchService.openShop(player, tab)
+	Net.notify(player, "OpenShop", { tab = tab })
 end
 
 function MatchService.openMenu(player, kind)
@@ -10958,6 +11410,7 @@ function MatchService.beginEncounter(option)
 		end
 	end
 
+	MatchService.encounterId = (MatchService.encounterId or 0) + 1
 	enc = {
 		type = kind,
 		finale = isFinale,
@@ -11086,7 +11539,7 @@ end
 local function grantTokens(player, rewards, list)
 	for kind, amount in rewards do
 		if Services.PlayerDataService.addTokens(player, kind, amount) then
-			table.insert(list, ("+%d %s"):format(amount, kind == "secondWind" and "Second Wind" or "Resupply"))
+			table.insert(list, ("+%d %s"):format(amount, ({ secondWind = "Second Wind", resupply = "Resupply", ammo = "Ammo Cache" })[kind] or kind))
 		end
 	end
 end
@@ -11133,8 +11586,9 @@ function MatchService.endEncounter(win)
 					local salvage = R.salvagePerEncounter + 5 * run.pall + (enc.option.bonus or 0)
 					Services.InventoryService.add(player, "salvage", salvage)
 					table.insert(rewards, ("+%d Salvage"):format(salvage))
-					local scrip = R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)
+					local scrip = math.floor((R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) + 0.5)
 					Services.PlayerDataService.addScrip(player, scrip)
+					Services.AnalyticsHelper.economy(player, "source", scrip, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, enc.finale and "CrossingComplete" or "Encounter")
 					table.insert(rewards, ("+%d Scrip"):format(scrip))
 					if enc.finale and Game.RunAidsEnabled then
 						grantTokens(player, Game.WinReward, rewards)
@@ -11340,7 +11794,7 @@ end
 
 return MatchService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- How the Hushed sense players.
 --   Sight: range + field-of-view cone + line-of-sight raycasts, scaled by stance, cover (reeds),
 --          light (lamp pools, your torch), movement and fog.
@@ -11531,7 +11985,7 @@ end
 
 return PerceptionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Persistent player data (tokens, stats, purchase receipts) in a DataStore.
 -- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
 -- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
@@ -11556,7 +12010,7 @@ local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
 local function defaultData()
 	return {
 		version = 1,
-		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply },
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo },
 		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
@@ -11564,6 +12018,10 @@ local function defaultData()
 		scrip = 0, -- homebase currency, earned only by playing
 		repairs = {}, -- [repairId] = true
 		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
+		outfits = {}, -- [outfitId] = true (bought or unlocked; defaults are implicit)
+		equipped = {}, -- [charId] = outfitId
+		oneTime = {}, -- [productKey] = true (Starter Pack)
+		spent = 0, -- Robux spent (for thank-you messaging only; never affects gameplay)
 	}
 end
 
@@ -11572,7 +12030,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -11596,6 +12054,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Set_graphics", data.settings.graphics)
 	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
 	player:SetAttribute("Set_reduceMotion", data.settings.reduceMotion)
+	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
+	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
+	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))
 end
 
 function PlayerDataService.publish(player)
@@ -11623,6 +12084,30 @@ function PlayerDataService.spendScrip(player, amount)
 	data.scrip -= amount
 	publishTokens(player, data)
 	return true
+end
+
+function PlayerDataService.ownOutfit(player, outfitId)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.outfits[outfitId] = true
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.markOneTime(player, key)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.oneTime[key] = true
+		publishTokens(player, data)
+	end
+end
+
+function PlayerDataService.setEquipped(player, charId, outfitId)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.equipped[charId] = outfitId
+		publishTokens(player, data)
+	end
 end
 
 function PlayerDataService.hasRepair(player, repairId)
@@ -11819,7 +12304,7 @@ end
 
 return PlayerDataService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Guns and the bow, fully server-authoritative:
 --   * equip/holster (long gun on the back, sidearm on the hip; models replicate to everyone)
 --   * fire: client sends only aim direction + whether it's aiming; the server applies spread
@@ -12285,7 +12770,7 @@ end
 
 return WeaponService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian's workbench, used between encounters (Planning phase) with Salvage found in
 -- the run: weapon parts, satchel upgrades, and your character's other perks.
 -- Upgrades last for the current crossing only (roguelike), like everything in the satchel.
@@ -12404,7 +12889,7 @@ return WorkbenchService
 </Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX00000053"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000052"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000051"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX00000043"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="StarterPlayer" referent="RBX00000056"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000055"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000054"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX00000046"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
 --   Keyboard/mouse                     Gamepad
@@ -12418,7 +12903,7 @@ return WorkbenchService
 --   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
 --   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
 --   X swap shoulder, Tab satchel       R3 shoulder, View/Back satchel
---   B resupply, P settings             Start/Menu: Roblox menu
+--   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
 
@@ -12639,6 +13124,12 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.B)
 
+	bind("AmmoCache", function(state)
+		if state == Begin and canAct() then
+			act("AmmoCache")
+		end
+	end, Enum.KeyCode.V)
+
 	bind("Settings", function(state)
 		if state == Begin then
 			Controllers.UIController.toggleSettings()
@@ -12656,7 +13147,7 @@ end
 
 return ActionController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Locomotion for custom realistic rigs that don't carry Roblox's default "Animate" script:
 -- blends idle / walk / run (and crouch variants) by speed using the animation IDs in
 -- Config/Rigs.Animations. Characters with an Animate script (the placeholder mannequin,
@@ -12732,7 +13223,7 @@ end
 
 return AnimationController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
 -- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
 -- swap, and mouse / gamepad / touch look.
@@ -13008,7 +13499,7 @@ end
 
 return CameraController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client-only feedback: Tide Sense highlights, knockback, hit flash, low-health grade,
 -- takedown framing, Squall lightning, and hiding your own revive prompt.
 local Lighting = game:GetService("Lighting")
@@ -13290,7 +13781,7 @@ end
 
 return EffectsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural animation for the Hushed (no animation assets needed). Drives each enemy's
 -- Motor6D skeleton from its replicated velocity, State and Gait:
 --   shamble (Drifter)   uneven, dragging steps, arms hanging and swaying
@@ -13541,7 +14032,7 @@ end
 
 return EnemyAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Graphics presets. Roblox decides the core render quality per device (from the player's
 -- graphics slider); these presets layer extra effects on top and decide how many costly
 -- things run:
@@ -13778,7 +14269,7 @@ end
 
 return GraphicsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Stances, speed states with acceleration, wading, aim-facing (strafe while aiming), and the
 -- dodge / sprint-dive movement. Poses are drawn by PlayerAnimator.
 local Players = game:GetService("Players")
@@ -13987,7 +14478,7 @@ end
 
 return MovementController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural full-body animation for every crew character (replaces Roblox's default
 -- Animate script, so movement doesn't look like a Roblox avatar). Runs on each client for
 -- all characters from replicated velocity + attributes:
@@ -14328,7 +14819,7 @@ end
 
 return PlayerAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- All client-side audio:
 --   ambience     wind + sea + low drone, mixed by where you are (ferry vs encounter)
 --   music        a tension loop that swells when Hushed are suspicious of / hunting you,
@@ -14545,7 +15036,7 @@ end
 
 return SoundController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Owns the ScreenGui and routes server notifications to the UI modules.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14623,7 +15114,7 @@ function UIController.start()
 		elseif kind == "OpenCharacterSelect" then
 			CharacterSelect.open()
 		elseif kind == "OpenShop" then
-			Shop.open()
+			Shop.open(data and data.tab)
 		elseif kind == "Results" then
 			Satchel.close()
 			Results.show(data)
@@ -14679,7 +15170,7 @@ end
 
 return UIController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client side of the gun system: input -> server intents, plus instant local feedback
 -- (muzzle flash, recoil kick, crosshair bloom) so shooting feels responsive. The server
 -- decides every hit (WeaponService).
@@ -14930,7 +15421,7 @@ end
 return WeaponController
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="LocalScript" referent="RBX00000044"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="LocalScript" referent="RBX00000047"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE client bootstrap.
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -14999,7 +15490,7 @@ if player.Character then
 	task.spawn(bindCharacter, player.Character)
 end
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared client-side state for controllers and UI.
 local State = {
 	character = nil,
@@ -15031,7 +15522,7 @@ end
 
 return State
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000050"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000053"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
 local Players = game:GetService("Players")
 
@@ -15167,7 +15658,7 @@ end
 
 return CharacterSelect
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The tide chart: choose the next encounter route (type, conditions, bonus).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15273,7 +15764,7 @@ end
 
 return Chart
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The HUD, designed to stay out of the way (survival-game minimal, not a Roblox overlay):
 --   top        compass bar with objective / teammate markers and distances; one-line objective
 --   bottom-right  fading cluster: segmented health, weapon + ammo pips, throwable;
@@ -15768,7 +16259,7 @@ end
 
 return HUD
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004C"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian repairs board: permanent homebase upgrades bought with Scrip (earned only by
 -- playing), plus the armory once its rack is repaired.
 local HttpService = game:GetService("HttpService")
@@ -15887,7 +16378,7 @@ end
 
 return Repairs
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004D"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- End-of-encounter debrief.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -15959,7 +16450,7 @@ end
 
 return Results
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: everything you carry, throwable selection, field crafting and run aids.
 local Players = game:GetService("Players")
 
@@ -16100,7 +16591,7 @@ end
 
 return Satchel
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004C"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Settings: graphics preset (Auto / Performance / Balanced / Cinematic), look sensitivity,
 -- reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
@@ -16201,22 +16692,46 @@ end
 
 return Settings
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004D"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
--- The Purser's Office ledger: the in-world shop. Prices come live from Roblox, contents are
--- fixed and shown in full, and every item says how to earn it for free.
+<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Purser's Office ledger: the in-world shop, in three tabs.
+--   SUPPLIES   run aids (tokens) and the one-time Starter Pack. Fixed contents, never random.
+--   WARDROBE   outfits for each crew member: equip, buy with Scrip, or buy with Robux.
+--   SUPPORTER  the Supporter game pass.
+-- Prices come live from Roblox; every run aid says how to earn it for free.
+local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Characters = require(Shared.Config.Characters)
 local Commerce = require(Shared.Config.Commerce)
+local Cosmetics = require(Shared.Config.Cosmetics)
 local Game = require(Shared.Config.Game)
+local Net = require(Shared.Net)
 local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
 
 local Shop = {}
 local C = Theme.Colors
 local player = Players.LocalPlayer
-local backdrop, tokenText
+local backdrop, body, tokenText, scripText
+local tabButtons = {}
+local currentTab = "Supplies"
+local wardrobeChar = nil
+local lastSig = ""
+local livePrices = {}
+
+local function decode(attr)
+	local ok, t = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute(attr) or "{}")
+	end)
+	return ok and t or {}
+end
+
+local function request(kind, a)
+	Net.event("Request"):FireServer(kind, a)
+end
 
 function Shop.prompt(productKey)
 	local product = Commerce.Products[productKey]
@@ -16227,53 +16742,218 @@ function Shop.prompt(productKey)
 	return true
 end
 
-function Shop.build(gui)
-	local panel
-	backdrop, panel = Theme.modal(gui, "Shop", UDim2.new(0.92, 0, 0.86, 0), Vector2.new(640, 600))
-	Theme.list(Enum.FillDirection.Vertical, 8).Parent = panel
-	Theme.heading({ LayoutOrder = 1, Text = "THE PURSER'S LEDGER", TextSize = 28, Size = UDim2.new(1, 0, 0, 32), Parent = panel })
-	Theme.label({ LayoutOrder = 2, Text = "\"Fair trade only. Nothing comes in a sealed box.\"  (Agnes Pell, Purser of the Meridian)", TextColor3 = C.dim, TextSize = 13, Size = UDim2.new(1, 0, 0, 34), Parent = panel })
+local function promptPass(key)
+	local pass = Commerce.Passes[key]
+	if pass and pass.passId ~= 0 then
+		MarketplaceService:PromptGamePassPurchase(player, pass.passId)
+	end
+end
 
-	for i, key in Commerce.Order do
+local function priceLabel(productKey)
+	local product = Commerce.Products[productKey]
+	if not product or product.productId == 0 then
+		return "NOT SET UP"
+	end
+	if livePrices[productKey] == nil then
+		livePrices[productKey] = product.price
+		task.spawn(function()
+			local ok, info = pcall(function()
+				return MarketplaceService:GetProductInfo(product.productId, Enum.InfoType.Product)
+			end)
+			if ok and info and info.PriceInRobux then
+				livePrices[productKey] = info.PriceInRobux
+				lastSig = "" -- redraw with the live price
+			end
+		end)
+	end
+	return "R$ " .. tostring(livePrices[productKey])
+end
+
+local function row(order, title, desc, height)
+	local r = Theme.panel({ LayoutOrder = order, Size = UDim2.new(1, -8, 0, height or 74), BackgroundColor3 = C.panelHi, Parent = body })
+	Theme.padding(10).Parent = r
+	Theme.heading({ Text = string.upper(title), TextSize = 17, Size = UDim2.new(1, -300, 0, 20), Parent = r })
+	Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 22), Size = UDim2.new(1, -300, 1, -22), TextSize = 12, TextWrapped = true, Parent = r })
+	local buttons = Theme.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 290, 0, 38), BackgroundTransparency = 1, Parent = r })
+	local l = Theme.list(Enum.FillDirection.Horizontal, 6)
+	l.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	l.Parent = buttons
+	return r, buttons
+end
+
+local function button(parent, text, enabled, onClick, accent)
+	local b = Theme.button({ Text = text, Size = UDim2.new(0, 136, 1, 0), AutoButtonColor = enabled, Parent = parent })
+	if not enabled then
+		b.TextTransparency = 0.5
+		b.BackgroundTransparency = 0.5
+	elseif accent then
+		b.BackgroundColor3 = C.lantern
+		b.TextColor3 = C.panel
+	end
+	if enabled and onClick then
+		b.Activated:Connect(onClick)
+	end
+	return b
+end
+
+-- Tabs ---------------------------------------------------------------------------------------
+
+local function drawSupplies()
+	local oneTime = decode("OneTime")
+	local order = 0
+	for _, key in Commerce.Order do
 		local product = Commerce.Products[key]
-		local row = Theme.panel({ LayoutOrder = 2 + i, Size = UDim2.new(1, 0, 0, 74), BackgroundColor3 = C.panelHi, Parent = panel })
-		Theme.padding(10).Parent = row
-		Theme.heading({ Text = string.upper(product.name), TextSize = 17, Size = UDim2.new(1, -150, 0, 20), Parent = row })
-		Theme.label({ Text = product.desc, Position = UDim2.new(0, 0, 0, 22), Size = UDim2.new(1, -150, 0, 32), TextSize = 12, Parent = row })
-		local configured = product.productId ~= 0
-		local buy = Theme.button({
-			Text = configured and ("R$ " .. product.price) or "NOT SET UP",
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.new(0, 136, 0, 38),
-			AutoButtonColor = configured,
-			Parent = row,
-		})
-		if configured then
-			task.spawn(function()
-				local ok, info = pcall(function()
-					return MarketplaceService:GetProductInfo(product.productId, Enum.InfoType.Product)
-				end)
-				if ok and info and info.PriceInRobux then
-					buy.Text = "R$ " .. info.PriceInRobux
-				end
-			end)
-			buy.Activated:Connect(function()
+		if not (product.grant.oneTime and oneTime[key]) then
+			order += 1
+			local _, buttons = row(order, product.name, product.desc)
+			button(buttons, priceLabel(key), product.productId ~= 0, function()
 				Shop.prompt(key)
-			end)
+			end, key == "StarterPack")
 		end
 	end
+	tokenText = Theme.label({ LayoutOrder = 50, Text = "", TextSize = 13, Size = UDim2.new(1, -8, 0, 74), TextWrapped = true, Parent = body })
+end
 
-	tokenText = Theme.label({ LayoutOrder = 10, Text = "", TextSize = 13, Size = UDim2.new(1, 0, 0, 70), Parent = panel })
-	Theme.label({
-		LayoutOrder = 11,
-		Text = "Coming soon in this office: crew outfits, lantern skins and cabin décor. Cosmetic only, never random.",
-		TextColor3 = C.dim,
-		TextSize = 12,
-		Size = UDim2.new(1, 0, 0, 32),
+local function unlockText(outfit)
+	if outfit.unlock == "default" then
+		return "Included"
+	elseif outfit.unlock == "scrip" then
+		return ("Earn it: %d Scrip"):format(outfit.scrip)
+	elseif outfit.unlock == "product" then
+		return ("Robux, or earn it with %d Scrip"):format(outfit.scrip or 0)
+	elseif outfit.unlock == "pack" then
+		return "Comes with the Deckhand Starter Pack"
+	elseif outfit.unlock == "supporter" then
+		return "Meridian Supporter pass"
+	end
+	return ""
+end
+
+local function drawWardrobe()
+	local owned = decode("Outfits")
+	local equipped = decode("EquippedOutfits")
+	local supporter = player:GetAttribute("Supporter") == true
+	wardrobeChar = wardrobeChar or player:GetAttribute("CharId") or Characters.Order[1]
+
+	local picker = Theme.make("Frame", { LayoutOrder = 1, Size = UDim2.new(1, -8, 0, 34), BackgroundTransparency = 1, Parent = body })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = picker
+	for i, charId in Characters.Order do
+		local b = Theme.button({ LayoutOrder = i, Text = string.upper(Characters.List[charId].name:match("^(%S+)")), Size = UDim2.new(0, 120, 1, 0), Parent = picker })
+		if charId == wardrobeChar then
+			b.BackgroundColor3 = C.lantern
+			b.TextColor3 = C.panel
+		end
+		b.Activated:Connect(function()
+			wardrobeChar = charId
+			lastSig = ""
+		end)
+	end
+
+	for i, id in Cosmetics.Order[wardrobeChar] or {} do
+		local outfit = Cosmetics.Outfits[id]
+		local has = outfit.unlock == "default" or owned[id] == true or (outfit.unlock == "supporter" and supporter)
+		local isOn = (equipped[wardrobeChar] or Cosmetics.defaultFor(wardrobeChar)) == id
+		local r, buttons = row(1 + i, outfit.name, unlockText(outfit), 64)
+		-- colour swatches
+		local sw = Theme.make("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -300, 0, 2), Size = UDim2.new(0, 100, 0, 16), BackgroundTransparency = 1, Parent = r })
+		Theme.list(Enum.FillDirection.Horizontal, 3).Parent = sw
+		for j, slot in { "top", "pants", "hat", "pack", "scarf" } do
+			local color = outfit.colors[slot]
+			if color then
+				Theme.make("Frame", { LayoutOrder = j, Size = UDim2.new(0, 16, 0, 16), BackgroundColor3 = color, BorderSizePixel = 0, Parent = sw })
+			end
+		end
+		if has then
+			button(buttons, isOn and "WEARING" or "WEAR", not isOn, function()
+				request("EquipOutfit", id)
+			end)
+		else
+			if outfit.unlock == "product" and outfit.product then
+				button(buttons, priceLabel(outfit.product), Commerce.Products[outfit.product].productId ~= 0, function()
+					Shop.prompt(outfit.product)
+				end, true)
+			end
+			if outfit.scrip and outfit.scrip > 0 then
+				local afford = (player:GetAttribute("Scrip") or 0) >= outfit.scrip
+				button(buttons, ("%d SCRIP"):format(outfit.scrip), afford, function()
+					request("BuyOutfit", id)
+				end)
+			elseif outfit.unlock == "pack" then
+				button(buttons, "STARTER PACK", not decode("OneTime").StarterPack, function()
+					currentTab = "Supplies"
+					lastSig = ""
+				end)
+			elseif outfit.unlock == "supporter" then
+				button(buttons, "SUPPORTER", true, function()
+					currentTab = "Supporter"
+					lastSig = ""
+				end)
+			end
+		end
+	end
+	Theme.label({ LayoutOrder = 50, Text = "Outfits are cosmetic only. Your look changes straight away aboard the Meridian.", TextColor3 = C.dim, TextSize = 12, Size = UDim2.new(1, -8, 0, 30), TextWrapped = true, Parent = body })
+end
+
+local function drawSupporter()
+	local pass = Commerce.Passes.Supporter
+	local has = player:GetAttribute("Supporter") == true
+	Theme.heading({ LayoutOrder = 1, Text = string.upper(pass.name), TextSize = 22, Size = UDim2.new(1, -8, 0, 28), Parent = body })
+	Theme.label({ LayoutOrder = 2, Text = pass.desc, TextSize = 14, Size = UDim2.new(1, -8, 0, 70), TextWrapped = true, Parent = body })
+	local holder = Theme.make("Frame", { LayoutOrder = 3, Size = UDim2.new(1, -8, 0, 40), BackgroundTransparency = 1, Parent = body })
+	if has then
+		Theme.label({ Text = "You're a Supporter. Thank you.", TextColor3 = C.ok, TextSize = 16, Size = UDim2.fromScale(1, 1), Parent = holder })
+	else
+		local b = button(holder, pass.passId ~= 0 and ("R$ " .. pass.price) or "NOT SET UP", pass.passId ~= 0, function()
+			promptPass("Supporter")
+		end, true)
+		b.Size = UDim2.new(0, 200, 1, 0)
+	end
+end
+
+local DRAW = { Supplies = drawSupplies, Wardrobe = drawWardrobe, Supporter = drawSupporter }
+
+local function redraw()
+	Theme.clear(body)
+	tokenText = nil
+	for name, b in tabButtons do
+		b.BackgroundColor3 = name == currentTab and C.lantern or C.panelHi
+		b.TextColor3 = name == currentTab and C.panel or C.text
+	end
+	DRAW[currentTab]()
+end
+
+function Shop.build(gui)
+	local panel
+	backdrop, panel = Theme.modal(gui, "Shop", UDim2.new(0.92, 0, 0.88, 0), Vector2.new(820, 640))
+	Theme.list(Enum.FillDirection.Vertical, 8).Parent = panel
+	Theme.heading({ LayoutOrder = 1, Text = "THE PURSER'S LEDGER", TextSize = 28, Size = UDim2.new(1, 0, 0, 32), Parent = panel })
+	Theme.label({ LayoutOrder = 2, Text = "\"Fair trade only. Nothing comes in a sealed box.\"  (Agnes Pell, Purser of the Meridian)", TextColor3 = C.dim, TextSize = 13, Size = UDim2.new(1, 0, 0, 20), Parent = panel })
+
+	local tabs = Theme.make("Frame", { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Parent = panel })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = tabs
+	for i, name in { "Supplies", "Wardrobe", "Supporter" } do
+		local b = Theme.button({ LayoutOrder = i, Text = string.upper(name), Size = UDim2.new(0, 150, 1, 0), Parent = tabs })
+		b.Activated:Connect(function()
+			currentTab = name
+			lastSig = ""
+		end)
+		tabButtons[name] = b
+	end
+	scripText = Theme.label({ LayoutOrder = 4, Text = "", TextSize = 13, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 18), Parent = panel })
+
+	body = Theme.make("ScrollingFrame", {
+		LayoutOrder = 5,
+		Size = UDim2.new(1, 0, 1, -170),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
 		Parent = panel,
 	})
-	local close = Theme.button({ LayoutOrder = 12, Text = "CLOSE", Size = UDim2.new(0, 140, 0, 36), Parent = panel })
+	Theme.list(Enum.FillDirection.Vertical, 6).Parent = body
+
+	local close = Theme.button({ LayoutOrder = 6, Text = "CLOSE", Size = UDim2.new(0, 140, 0, 36), Parent = panel })
 	close.Activated:Connect(Shop.close)
 end
 
@@ -16281,19 +16961,36 @@ function Shop.refresh()
 	if not backdrop or not backdrop.Visible then
 		return
 	end
-	local winR = Game.WinReward.resupply or 0
-	local dailySW = Game.DailyWinReward.secondWind or 0
-	tokenText.Text = ("You hold: %d Second Wind · %d Resupply\nFree: +%d Resupply for every successful crossing, +%d Second Wind for your first successful crossing each day.%s"):format(
-		player:GetAttribute("Tokens_secondWind") or 0,
-		player:GetAttribute("Tokens_resupply") or 0,
-		winR,
-		dailySW,
-		Game.RunAidsEnabled and "" or "\n(Run aids are switched off on this server.)"
-	)
+	-- redraw only when something the shop shows has changed
+	local sig = table.concat({
+		currentTab, tostring(wardrobeChar), tostring(player:GetAttribute("Outfits")), tostring(player:GetAttribute("EquippedOutfits")),
+		tostring(player:GetAttribute("OneTime")), tostring(player:GetAttribute("Supporter")), tostring(player:GetAttribute("Scrip")),
+	}, "|")
+	if sig ~= lastSig then
+		lastSig = sig
+		redraw()
+	end
+	scripText.Text = ("SCRIP %d%s"):format(player:GetAttribute("Scrip") or 0, player:GetAttribute("Supporter") and "   ·   SUPPORTER +10%" or "")
+	if tokenText then
+		local winR, winA = Game.WinReward.resupply or 0, Game.WinReward.ammo or 0
+		local dailySW = Game.DailyWinReward.secondWind or 0
+		tokenText.Text = ("You hold: %d Second Wind · %d Resupply · %d Ammo Cache   (use: R when downed · B · V)\nFree: +%d Resupply and +%d Ammo Cache for every successful crossing, +%d Second Wind for your first successful crossing each day.%s"):format(
+			player:GetAttribute("Tokens_secondWind") or 0,
+			player:GetAttribute("Tokens_resupply") or 0,
+			player:GetAttribute("Tokens_ammo") or 0,
+			winR,
+			winA,
+			dailySW,
+			Game.RunAidsEnabled and "" or "\n(Run aids are switched off on this server.)"
+		)
+	end
 end
 
-function Shop.open()
+function Shop.open(tab)
 	if backdrop then
+		currentTab = tab or currentTab
+		wardrobeChar = player:GetAttribute("CharId") or wardrobeChar
+		lastSig = ""
 		backdrop.Visible = true
 		State.setModal("shop", true)
 		Shop.refresh()
@@ -16309,7 +17006,7 @@ end
 
 return Shop
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
 -- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
 local Theme = {}
@@ -16487,7 +17184,7 @@ end
 
 return Theme
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The workbench: spend Salvage (found during the crossing) on weapon parts, satchel upgrades
 -- and your character's other perks. Upgrades last for this crossing.
 local HttpService = game:GetService("HttpService")
