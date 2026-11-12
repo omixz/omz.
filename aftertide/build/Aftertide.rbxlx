@@ -192,12 +192,12 @@ return BodyBuilder
 -- Model in ServerStorage > Assets, named exactly like the pack (e.g. "Crew").
 return {
 	Packs = {
-		Crew = 0,
-		Factions = 0,
-		Hushed = 0,
-		Weapons = 0,
-		Nature = 0,
-		Props = 0,
+		Crew = 76266761695416,
+		Factions = 91251214178661,
+		Hushed = 121889443135120,
+		Weapons = 93917808586387,
+		Nature = 73346481237318,
+		Props = 126141441239944,
 	},
 	-- If imported meshes face backwards, set this to 180.
 	YawFix = 0,
@@ -4967,65 +4967,65 @@ return {
 -- Shortcut: run tools/fill_sound_ids.py with the IDs Roblox gives you to fill this in.
 local IDS = {
 	-- weapons
-	Gun_revolver = "",
-	Gun_carbine = "",
-	Gun_rifle = "",
-	Gun_shotgun = "",
-	Gun_bow = "",
-	Reload = "",
-	DryFire = "",
-	Equip = "",
+	Gun_revolver = "rbxassetid://107203008261977",
+	Gun_carbine = "rbxassetid://106246782951640",
+	Gun_rifle = "rbxassetid://107413186530597",
+	Gun_shotgun = "rbxassetid://83853882538111",
+	Gun_bow = "rbxassetid://138144855055355",
+	Reload = "rbxassetid://127981477399191",
+	DryFire = "rbxassetid://119587358536236",
+	Equip = "rbxassetid://126546332747472",
 	-- impacts & world
-	ImpactWorld = "",
-	ImpactSalt = "",
-	BottleBreak = "",
-	Explosion = "",
-	FireLoop = "",
-	FogHiss = "",
-	Door = "",
-	Search = "",
-	Pickup = "",
+	ImpactWorld = "rbxassetid://79248946547928",
+	ImpactSalt = "rbxassetid://84763584372745",
+	BottleBreak = "rbxassetid://72011235975599",
+	Explosion = "rbxassetid://125903814325445",
+	FireLoop = "rbxassetid://127381433269535",
+	FogHiss = "rbxassetid://100453096251107",
+	Door = "rbxassetid://136549724119766",
+	Search = "rbxassetid://106759634937184",
+	Pickup = "rbxassetid://122887575301165",
 	-- body
-	Step = "",
-	StepWater = "",
-	Dodge = "",
-	Swing = "",
-	MeleeHit = "",
-	Heartbeat = "",
-	Hurt = "",
-	Bandage = "",
-	Throw = "",
+	Step = "rbxassetid://73812653613871",
+	StepWater = "rbxassetid://104706538460409",
+	Dodge = "rbxassetid://72502613219569",
+	Swing = "rbxassetid://139526386779157",
+	MeleeHit = "rbxassetid://76888463032588",
+	Heartbeat = "rbxassetid://99201312232281",
+	Hurt = "rbxassetid://84183406339641",
+	Bandage = "rbxassetid://71518393354878",
+	Throw = "rbxassetid://73449279120963",
 	-- the Hushed
-	Hushed_Breath = "",
-	Hushed_Growl = "",
-	Hushed_Attack = "",
-	Rusher_Shriek = "",
-	Seeker_Grind = "",
-	Tidewalker_Groan = "",
-	Hum = "",
-	Disperse = "",
+	Hushed_Breath = "rbxassetid://129411707716573",
+	Hushed_Growl = "rbxassetid://134511350713330",
+	Hushed_Attack = "rbxassetid://102182607715724",
+	Rusher_Shriek = "rbxassetid://95762607504069",
+	Seeker_Grind = "rbxassetid://129766260822197",
+	Tidewalker_Groan = "rbxassetid://92624708447179",
+	Hum = "rbxassetid://111452920845337",
+	Disperse = "rbxassetid://126029610283901",
 	-- factions
-	Radio_Callout = "",
-	Bell_Strike = "",
+	Radio_Callout = "rbxassetid://72819860728390",
+	Bell_Strike = "rbxassetid://75163935051143",
 	-- ambience & music
-	Amb_Wind = "",
-	Amb_Sea = "",
-	Amb_Drone = "",
-	Music_Tension = "",
-	Stinger_Spotted = "",
-	Stinger_Clear = "",
+	Amb_Wind = "rbxassetid://75615777859334",
+	Amb_Sea = "rbxassetid://140489121917944",
+	Amb_Drone = "rbxassetid://76696979578820",
+	Music_Tension = "rbxassetid://124082186264097",
+	Stinger_Spotted = "rbxassetid://120754538435575",
+	Stinger_Clear = "rbxassetid://121168486280613",
 	-- interface
-	Ui_Tick = "",
-	Ui_Confirm = "",
+	Ui_Tick = "rbxassetid://97844955766987",
+	Ui_Confirm = "rbxassetid://125630457998944",
 }
 
 -- Placeholders that ship inside the Roblox client, used until you upload the pack.
 local FALLBACK = {
-	Swing = "rbxasset://sounds/swordlunge.wav",
-	MeleeHit = "rbxasset://sounds/swordslash.wav",
-	Dodge = "rbxasset://sounds/swordlunge.wav",
-	BottleBreak = "rbxasset://sounds/impact_water.mp3",
-	StepWater = "rbxasset://sounds/impact_water.mp3",
+	Swing = "rbxassetid://139526386779157",
+	MeleeHit = "rbxassetid://76888463032588",
+	Dodge = "rbxassetid://72502613219569",
+	BottleBreak = "rbxassetid://72011235975599",
+	StepWater = "rbxassetid://104706538460409",
 }
 
 -- Older keys used around the code, mapped onto the pack.
@@ -7495,11 +7495,64 @@ local AssetService = {}
 local parts = {} -- [meshName] = MeshPart template
 local loaded = false
 
+-- Every mesh name the game asks for (from MeshMeta), longest first, so an importer that
+-- renames parts (adds "_Mesh", ".001", wraps them in a Model) still maps back.
+local known, knownList = {}, {}
+for _, entry in MeshMeta do
+	local groups = entry.type == "rig" and entry.segments or { entry }
+	for _, group in groups do
+		for _, layer in group.layers do
+			if not known[layer.part] then
+				known[layer.part] = true
+				table.insert(knownList, layer.part)
+			end
+		end
+	end
+end
+table.sort(knownList, function(a, b)
+	return #a > #b
+end)
+
+local function resolveName(meshPart)
+	for _, candidate in { meshPart.Name, meshPart.Parent and meshPart.Parent.Name or "" } do
+		if known[candidate] then
+			return candidate
+		end
+		local trimmed = candidate:gsub("%.%d+$", ""):gsub("_[Mm]esh$", ""):gsub("_[Pp]rimitive%d*$", "")
+		if known[trimmed] then
+			return trimmed
+		end
+	end
+	for _, name in knownList do
+		if meshPart.Name:find(name, 1, true) == 1 then
+			return name
+		end
+	end
+	return nil
+end
+
 local function index(container)
+	local found, unknown = 0, 0
 	for _, d in container:GetDescendants() do
 		if d:IsA("MeshPart") then
-			parts[d.Name] = d
+			local name = resolveName(d)
+			if name then
+				-- our colours/materials come from MeshMeta, so drop imported surface looks
+				for _, child in d:GetChildren() do
+					if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then
+						child:Destroy()
+					end
+				end
+				d.TextureID = ""
+				parts[name] = d
+				found += 1
+			else
+				unknown += 1
+			end
 		end
+	end
+	if unknown > 0 then
+		warn(("[AssetService] %s: %d meshes matched, %d unrecognised names (e.g. check the pack was imported unchanged)"):format(container.Name, found, unknown))
 	end
 end
 

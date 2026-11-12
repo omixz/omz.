@@ -14,11 +14,64 @@ local AssetService = {}
 local parts = {} -- [meshName] = MeshPart template
 local loaded = false
 
+-- Every mesh name the game asks for (from MeshMeta), longest first, so an importer that
+-- renames parts (adds "_Mesh", ".001", wraps them in a Model) still maps back.
+local known, knownList = {}, {}
+for _, entry in MeshMeta do
+	local groups = entry.type == "rig" and entry.segments or { entry }
+	for _, group in groups do
+		for _, layer in group.layers do
+			if not known[layer.part] then
+				known[layer.part] = true
+				table.insert(knownList, layer.part)
+			end
+		end
+	end
+end
+table.sort(knownList, function(a, b)
+	return #a > #b
+end)
+
+local function resolveName(meshPart)
+	for _, candidate in { meshPart.Name, meshPart.Parent and meshPart.Parent.Name or "" } do
+		if known[candidate] then
+			return candidate
+		end
+		local trimmed = candidate:gsub("%.%d+$", ""):gsub("_[Mm]esh$", ""):gsub("_[Pp]rimitive%d*$", "")
+		if known[trimmed] then
+			return trimmed
+		end
+	end
+	for _, name in knownList do
+		if meshPart.Name:find(name, 1, true) == 1 then
+			return name
+		end
+	end
+	return nil
+end
+
 local function index(container)
+	local found, unknown = 0, 0
 	for _, d in container:GetDescendants() do
 		if d:IsA("MeshPart") then
-			parts[d.Name] = d
+			local name = resolveName(d)
+			if name then
+				-- our colours/materials come from MeshMeta, so drop imported surface looks
+				for _, child in d:GetChildren() do
+					if child:IsA("SurfaceAppearance") or child:IsA("Decal") or child:IsA("Texture") then
+						child:Destroy()
+					end
+				end
+				d.TextureID = ""
+				parts[name] = d
+				found += 1
+			else
+				unknown += 1
+			end
 		end
+	end
+	if unknown > 0 then
+		warn(("[AssetService] %s: %d meshes matched, %d unrecognised names (e.g. check the pack was imported unchanged)"):format(container.Name, found, unknown))
 	end
 end
 
