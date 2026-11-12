@@ -27,7 +27,7 @@ local root
 local compass, compassStrip, compassTicks, compassMarkers, objectiveLine, locationLabel
 local cluster, segments, weaponName, magLabel, reserveLabel, pipHolder, pips, throwLabel, abilityLabel
 local strip, stripSlots
-local ticks, dot, hitmarker
+local ticks, dot, hitmarker, breathLabel
 local vignette
 local ring, ringLabel
 local toastHolder
@@ -156,6 +156,8 @@ function HUD.build(gui, onSecondWind, weaponController)
 	for _, rot in { 45, -45 } do
 		Theme.make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, 0, 0, 2), Rotation = rot, BackgroundColor3 = C.text, BorderSizePixel = 0, Parent = hitmarker })
 	end
+
+	breathLabel = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 34), Size = UDim2.new(0, 220, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.Head, TextSize = 11, TextColor3 = C.dim, Text = "", Parent = root })
 
 	indicatorLayer = Theme.make("Frame", { Name = "Indicators", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
 
@@ -456,6 +458,12 @@ function HUD.update(dt)
 	end
 	dot.Visible = show or (State.aiming and not State.uiOpen())
 	hitmarker.Visible = now < hitUntil
+	if show and State.aiming then
+		breathLabel.Text = State.breath == "hold" and "STEADY" or (State.breath == "spent" and "CATCHING BREATH" or "SHIFT  HOLD BREATH")
+		breathLabel.TextColor3 = State.breath == "hold" and C.salt or (State.breath == "spent" and C.danger or C.dim)
+	else
+		breathLabel.Text = ""
+	end
 
 	-- vignette: hits flash it, low health keeps it
 	hurtFlash = math.max(0, hurtFlash - dt * 1.6)

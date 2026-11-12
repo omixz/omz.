@@ -219,6 +219,7 @@ local function update(dt)
 	elseif breath.holding then
 		breath.holding = false
 	end
+	State.breath = breath.holding and "hold" or (os.clock() < breath.spentUntil and "spent" or "ready")
 	local rot = CFrame.fromEulerAnglesYXZ(
 		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
 		yaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
