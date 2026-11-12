@@ -30,7 +30,7 @@ def render(parts, path, size=(900, 900), yaw=25.0, pitch=10.0, bg=(28, 30, 32), 
             n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
             facing = n[:, 2] < 0  # camera looks down +Z towards -Z... we view from -Z
             depth = tri[:, :, 2].mean(1)
-            lit = np.clip((n @ (R @ light)), 0, 1) * 0.7 + 0.3
+            lit = np.clip((n @ (R @ light)), 0, 1) * 0.75 + np.clip(-(n @ (R @ light)), 0, 1) * 0.15 + 0.25
             for t, d, l, f in zip(tri, depth, lit, facing):
                 if f:
                     tris_all.append((d, t, l, rgb))
@@ -38,6 +38,6 @@ def render(parts, path, size=(900, 900), yaw=25.0, pitch=10.0, bg=(28, 30, 32), 
         scale = (H * 0.5) / extent
         for d, t, l, rgb in tris_all:
             pts = [(W * vi + W / 2 + p[0] * scale, H / 2 - p[1] * scale) for p in t]
-            col = tuple(int(min(255, c * 255 * l)) for c in rgb)
+            col = tuple(int(min(255, 255 * (c * l * 1.25) ** (1 / 2.2))) for c in rgb)
             draw.polygon(pts, fill=col)
     img.save(path)

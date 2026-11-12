@@ -37,7 +37,11 @@ class Pack:
             top, bottom = anchors.get(segname, (None, None))
             s = {"top": _r(J[top]) if top else None, "bottom": _r(J[bottom]) if bottom else None, "layers": {}}
             for layer, fn, material, color in layers:
-                v, n, f = mesh_budget(fn, lo, hi, fine.get(seg, cell))
+                if isinstance(fn, tuple):
+                    v, n, f = fn  # exact geometry (e.g. faceted crystals)
+                    f = np.asarray(f).reshape(-1, 3)
+                else:
+                    v, n, f = mesh_budget(fn, lo, hi, fine.get(seg, cell))
                 if len(f) == 0:
                     continue
                 pname = f"{kit}_{segname}_{layer}"

@@ -34,6 +34,13 @@ local ORDER = {
 	enemy = { "Torso", "Pelvis", "Head", "RightUpperArm", "LeftUpperArm", "RightLowerArm", "LeftLowerArm", "RightUpperLeg", "LeftUpperLeg", "RightLowerLeg", "LeftLowerLeg" },
 }
 
+local function material(name)
+	local ok, m = pcall(function()
+		return Enum.Material[name]
+	end)
+	return ok and m or Enum.Material.SmoothPlastic
+end
+
 local function v3(t)
 	return Vector3.new(t[1], t[2], t[3])
 end
@@ -85,7 +92,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix)
 				if mp then
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
 					mp.Size = v3(layer.size) * s
-					mp.Material = Enum.Material[layer.material] or Enum.Material.SmoothPlastic
+					mp.Material = material(layer.material)
 					mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
 					mp.CanCollide = false
@@ -129,7 +136,7 @@ function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
 		if mp then
 			mp.Name = layerName
 			mp.Size = v3(layer.size) * scale
-			mp.Material = Enum.Material[layer.material] or Enum.Material.SmoothPlastic
+			mp.Material = material(layer.material)
 			mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 			mp.Anchored = true
 			mp.CFrame = cframe * CFrame.new(v3(layer.center) * scale)
@@ -154,7 +161,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 			if mp then
 				mp.Name = "Mesh_" .. layerName
 				mp.Size = v3(layer.size)
-				mp.Material = Enum.Material[layer.material] or Enum.Material.SmoothPlastic
+				mp.Material = material(layer.material)
 				mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 				mp.Anchored = false
 				mp.CanCollide = false

@@ -26,6 +26,21 @@ python3 tools/build_assets.py Factions   # one pack
 
 Previews of every model: [`assets/previews/`](../assets/previews/).
 
+**The Hushed's look:** the Pall grows out of them as blocky, square-sectioned **salt
+crystals** (halite) bursting from one shoulder, the back, one side of the skull and one
+forearm, so every one has a lopsided silhouette. Crystals are exact faceted geometry
+(sharp edges, ~20 triangles each), not sculpted lumps. Skin is taut and veined with ribs
+showing; the Seeker's whole head is a crystal growth; the Tidewalker is a walking reef.
+
+**Uploaded:** all six packs and all 44 sounds are on Roblox (user 3426306776) and their IDs
+are filled into `AssetIds.luau` / `Sounds.luau`. After changing a sculpt, rebuild the pack
+and push it into the *same* asset (no ID changes):
+
+```
+python3 tools/build_assets.py Hushed
+python3 tools/upload_assets.py --user-id 3426306776 --update --packs Hushed
+```
+
 Each body is cut into the same 15 segments as a Roblox R15 rig. At runtime `MeshKit`
 measures the real joints of each character and scales/welds the segments on, so the
 original animation code drives realistic bodies. If a pack is missing, the game falls back

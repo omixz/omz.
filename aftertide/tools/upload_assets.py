@@ -79,6 +79,30 @@ def upload(path, asset_type, name, creator):
     return int(asset_id)
 
 
+def update(path, asset_id):
+    """Uploads a new version of an existing asset (same ID, so the game config doesn't change)."""
+    ext = os.path.splitext(path)[1].lower()
+    ctype = CONTENT_TYPES.get(ext) or "application/octet-stream"
+    body, mp = _multipart({"request": json.dumps({"assetId": str(asset_id)})}, "fileContent", os.path.basename(path), open(path, "rb").read(), ctype)
+    op = _call("PATCH", f"{API}/assets/{asset_id}", body, mp)
+    op_id = op.get("operationId") or op.get("path", "").split("/")[-1]
+    for _ in range(90):
+        if op.get("done"):
+            break
+        time.sleep(2)
+        op = _call("GET", f"{API}/operations/{op_id}")
+    if not op.get("done"):
+        raise RuntimeError("timed out updating " + path)
+    if op.get("error"):
+        raise RuntimeError(json.dumps(op["error"])[:400])
+    return (op.get("response") or {}).get("revisionId")
+
+
+def current_pack_ids():
+    src = open(os.path.join(ROOT, "src", "shared", "Config", "AssetIds.luau")).read()
+    return {k: int(v) for k, v in re.findall(r"\n\t\t(\w+) = (\d+)", src)}
+
+
 def set_pack_ids(ids):
     path = os.path.join(ROOT, "src", "shared", "Config", "AssetIds.luau")
     src = open(path).read()
@@ -102,9 +126,18 @@ def main():
     g.add_argument("--group-id")
     ap.add_argument("--only", choices=["models", "audio"])
     ap.add_argument("--packs", nargs="*", default=PACKS)
+    ap.add_argument("--update", action="store_true", help="re-upload packs into their existing asset IDs")
     args = ap.parse_args()
     creator = {"userId": str(args.user_id)} if args.user_id else {"groupId": str(args.group_id)}
 
+    if args.update:
+        existing = current_pack_ids()
+        for pack in args.packs:
+            if existing.get(pack):
+                print(f"updating {pack} ({existing[pack]}) ...", flush=True)
+                print("  revision", update(os.path.join(ROOT, "assets", pack + ".glb"), existing[pack]))
+        subprocess.run([sys.executable, os.path.join(HERE, "build_place.py")], check=True)
+        return
     if args.only in (None, "models"):
         ids = {}
         for pack in args.packs:

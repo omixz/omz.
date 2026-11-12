@@ -66,13 +66,13 @@ def build(only=None):
         for fid, (outfit, body) in FACTIONS.items():
             segs, J = human.build_segments(outfit, **body)
             segs = creature.human_to_enemy(segs)
-            p.add_rig("Faction_" + fid, segs, creature.enemy_bounds, creature.ENEMY_ANCHORS, J, cell=0.065, fine={"Head": 0.034})
+            p.add_rig("Faction_" + fid, segs, creature.enemy_bounds, creature.ENEMY_ANCHORS, J, cell=0.065, fine={"Head": 0.034, "RightLowerArm": 0.034, "LeftLowerArm": 0.034})
         packs["Factions"] = p
     if want("Hushed"):
         p = Pack("Hushed")
         for i, k in enumerate(HUSHED):
             segs, J = creature.build_segments(k, rng_seed=i + 1)
-            p.add_rig("Hushed_" + k, segs, creature.enemy_bounds, creature.ENEMY_ANCHORS, J, cell=0.062, fine={"Head": 0.035})
+            p.add_rig("Hushed_" + k, segs, creature.enemy_bounds, creature.ENEMY_ANCHORS, J, cell=0.062, fine={"Head": 0.035, "RightLowerArm": 0.034, "LeftLowerArm": 0.034})
         packs["Hushed"] = p
     all_props = props.assets()
     groups = {
@@ -96,11 +96,13 @@ def build(only=None):
             meta[kit] = entry
 
     # merge with existing metadata (when rebuilding only some packs)
+    # (kept in assets/ under version control: deleting it would drop the packs not rebuilt)
+    meta_json = os.path.join(OUT, "MeshMeta.json")
     existing = {}
-    if os.path.exists(META + ".json"):
-        existing = json.load(open(META + ".json"))
+    if os.path.exists(meta_json):
+        existing = json.load(open(meta_json))
     existing.update(meta)
-    json.dump(existing, open(META + ".json", "w"))
+    json.dump(existing, open(meta_json, "w"))
     write_lua(existing)
 
 
@@ -130,7 +132,6 @@ def write_lua(meta):
         f.write("-- Placement data for the sculpted meshes (segment anchors, layer centres/sizes,\n")
         f.write("-- materials, colours). MeshKit uses it to fit each mesh onto its skeleton.\n")
         f.write("return " + body + "\n")
-    os.remove(META + ".json") if False else None
 
 
 if __name__ == "__main__":
