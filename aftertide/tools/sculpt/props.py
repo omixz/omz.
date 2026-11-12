@@ -20,93 +20,160 @@ def rx(a):
 
 
 # ------------------------------------------------------------------ weapons
+# Designed in "sculpt units" with the grip at the origin and the barrel along -Z, then scaled
+# to real size in studs (a 1.75 m person is ~5.3 studs, so 1 stud ~ 0.33 m).
+# MUZZLES (in studs, after scaling) are exported to MeshMeta for muzzle flash and tracers.
+SCALE = {"revolver": 0.72, "rifle": 0.86, "carbine": 0.86, "shotgun": 0.86, "bow": 0.8}
+MUZZLES = {}
+
+
+def scaled(layers, k):
+    return [(n, (lambda f: (lambda P: f(P / k) * k))(fn) if callable(fn) else fn, m, c) for n, fn, m, c in layers]
+
+
 def revolver():
+    by = 0.33  # bore line height above the grip
+
+    frame_profile = S.smooth_poly([
+        (0.16, by + 0.06), (0.05, by + 0.13), (-0.42, by + 0.13), (-0.46, by + 0.06), (-0.46, by - 0.1),
+        (-0.36, by - 0.17), (-0.06, by - 0.17), (0.0, by - 0.24), (0.07, by - 0.2), (0.14, by - 0.12),
+    ], 2)
+    grip_profile = S.smooth_poly([
+        (0.15, by - 0.1), (0.2, -0.02), (0.25, -0.2), (0.2, -0.33), (0.08, -0.36), (0.02, -0.3),
+        (-0.02, -0.12), (-0.03, by - 0.2), (0.07, by - 0.16),
+    ], 2)
+
     def frame(P):
-        body = S.rbox(P, (0, 0.3, -0.22), (0.085, 0.15, 0.3), 0.035)
-        top = S.rbox(P, (0, 0.44, -0.6), (0.05, 0.035, 0.62), 0.02)
-        hammer = S.rbox(P, (0, 0.47, 0.06), (0.03, 0.06, 0.05), 0.02, rx(0.4))
-        guard = S.torus(P, (0, 0.12, -0.18), 0.1, 0.018, axis="x")
-        guard = np.maximum(guard, P[:, 1] - 0.14)
-        trigger = S.rbox(P, (0, 0.13, -0.15), (0.015, 0.06, 0.02), 0.01, rx(0.3))
-        return S.smooth_union(0.015, body, top, hammer, guard, trigger)
+        body = S.extrude_zy(P, frame_profile, 0.075, 0.02)
+        window = S.rbox(P, (0, by, -0.22), (0.2, 0.15, 0.17), 0.03)  # cylinder window
+        body = S.subtract(body, window, 0.01)
+        hammer = S.smooth_union(0.01, S.rbox(P, (0, by + 0.14, 0.12), (0.025, 0.06, 0.05), 0.02, rx(0.6)), S.rbox(P, (0, by + 0.2, 0.17), (0.03, 0.02, 0.04), 0.015, rx(0.2)))
+        guard = np.maximum(S.torus(P, (0, by - 0.24, -0.1), 0.09, 0.016, axis="x"), P[:, 1] - (by - 0.2))
+        trigger = S.rbox(P, (0, by - 0.25, -0.08), (0.014, 0.055, 0.02), 0.01, rx(0.35))
+        rear_sight = S.rbox(P, (0, by + 0.15, 0.02), (0.035, 0.012, 0.04), 0.008)
+        return S.smooth_union(0.012, body, hammer, guard, trigger, rear_sight)
 
     def cyl(P):
-        c = S.cylinder(P, (0, 0.3, -0.05), (0, 0.3, -0.38), 0.15, 0.02)
-        flutes = S.union(*[S.cylinder(P, (0.15 * np.cos(a), 0.3 + 0.15 * np.sin(a), 0.0), (0.15 * np.cos(a), 0.3 + 0.15 * np.sin(a), -0.43), 0.035) for a in np.linspace(0, 2 * np.pi, 7)[:-1]])
-        return S.subtract(c, flutes, 0.01)
+        c = S.cylinder(P, (0, by, -0.065), (0, by, -0.38), 0.135, 0.02)
+        flutes = S.union(*[S.cylinder(P, (0.15 * np.cos(a), by + 0.15 * np.sin(a), 0.0), (0.15 * np.cos(a), by + 0.15 * np.sin(a), -0.33), 0.04) for a in np.linspace(0, 2 * np.pi, 7)[:-1] + 0.26])
+        chambers = S.union(*[S.cylinder(P, (0.075 * np.cos(a), by + 0.075 * np.sin(a), -0.33), (0.075 * np.cos(a), by + 0.075 * np.sin(a), -0.45), 0.028) for a in np.linspace(0, 2 * np.pi, 7)[:-1]])
+        return S.subtract(S.subtract(c, flutes, 0.01), chambers)
 
     def barrel(P):
-        b = S.cylinder(P, (0, 0.36, -0.38), (0, 0.36, -1.25), 0.06, 0.01)
-        bore = S.cylinder(P, (0, 0.36, -1.0), (0, 0.36, -1.3), 0.025)
-        sight = S.rbox(P, (0, 0.43, -1.18), (0.012, 0.03, 0.03), 0.008)
-        ejector = S.cylinder(P, (0, 0.27, -0.4), (0, 0.27, -0.9), 0.03, 0.008)
-        return S.union(S.subtract(b, bore), sight, ejector)
+        b = S.cylinder(P, (0, by, -0.42), (0, by, -1.02), 0.052, 0.008)
+        rib = S.rbox(P, (0, by + 0.05, -0.72), (0.022, 0.025, 0.3), 0.01)
+        shroud = S.rbox(P, (0, by - 0.07, -0.68), (0.035, 0.045, 0.26), 0.025)  # ejector-rod housing
+        sight = S.rbox(P, (0, by + 0.095, -0.97), (0.01, 0.035, 0.035), 0.006)
+        bore = S.cylinder(P, (0, by, -0.8), (0, by, -1.1), 0.022)
+        return S.subtract(S.smooth_union(0.012, b, rib, shroud, sight), bore)
 
     def grip(P):
-        g = S.rbox(P, (0, 0.0, 0.06), (0.1, 0.27, 0.15), 0.07, rx(-0.22))
-        return g + np.abs(S.perlin(P, 30)) * 0.004
-    return 0.02, [("Frame", frame, "Metal", METAL), ("Cylinder", cyl, "Metal", STEEL), ("Barrel", barrel, "Metal", METAL), ("Grip", grip, "Wood", DARKWOOD)]
+        g = S.extrude_zy(P, grip_profile, lambda z: 0.072 + 0.01 * np.clip(-z, 0, 1), 0.035)
+        checker = (np.sin(P[:, 1] * 140 + P[:, 2] * 140) * np.sin(P[:, 1] * 140 - P[:, 2] * 140)) * 0.003
+        medallion = S.cylinder(P, (-0.09, -0.1, 0.1), (0.09, -0.1, 0.1), 0.03)
+        return S.union(g + checker * (np.abs(P[:, 0]) > 0.05), np.maximum(medallion, -(np.abs(P[:, 0]) - 0.07)))
+
+    MUZZLES["revolver"] = [0, by * SCALE["revolver"], -1.02 * SCALE["revolver"]]
+    layers = [("Frame", frame, "Metal", METAL), ("Cylinder", cyl, "Metal", STEEL), ("Barrel", barrel, "Metal", METAL), ("Grip", grip, "Wood", DARKWOOD)]
+    return 0.016 * SCALE["revolver"], scaled(layers, SCALE["revolver"])
 
 
 def long_gun(kind):
-    L = {"rifle": 2.85, "carbine": 2.2, "shotgun": 2.3}[kind]
-    by = {"rifle": 0.18, "carbine": 0.2, "shotgun": 0.22}[kind]
-    br = {"rifle": 0.05, "carbine": 0.055, "shotgun": 0.075}[kind]
+    L = {"rifle": 3.0, "carbine": 2.35, "shotgun": 2.5}[kind]
+    by = {"rifle": 0.2, "carbine": 0.2, "shotgun": 0.22}[kind]  # bore height
+    br = {"rifle": 0.042, "carbine": 0.05, "shotgun": 0.07}[kind]
+    k = SCALE[kind]
+
+    # side profile of the stock: tang, comb, heel, butt, toe, belly, pistol grip
+    if kind == "shotgun":
+        stock_profile = [(0.14, by + 0.06), (0.5, by + 0.03), (1.12, by - 0.01), (1.16, by - 0.04), (1.18, -0.22), (1.12, -0.24), (0.6, -0.09), (0.3, -0.03), (0.24, -0.05), (0.12, -0.02), (0.1, by - 0.08)]
+    else:
+        stock_profile = [(0.14, by + 0.06), (0.42, by + 0.08), (0.98, by + 0.06), (1.14, by + 0.03), (1.17, -0.2), (1.1, -0.22), (0.62, -0.06), (0.36, -0.04), (0.29, -0.2), (0.15, -0.21), (0.08, -0.06), (0.08, by - 0.08)]
+    stock_profile = S.smooth_poly(stock_profile, 2)
+    stock_w = lambda z: np.interp(z, [0.0, 0.35, 0.8, 1.2], [0.058, 0.064, 0.082, 0.088])
 
     def stock(P):
-        butt = S.rbox(P, (0, -0.06, 0.78), (0.1, 0.22, 0.34), 0.06, rx(0.18))
-        wrist = S.rbox(P, (0, 0.06, 0.32), (0.075, 0.1, 0.22), 0.05, rx(0.25))
-        comb = S.rbox(P, (0, 0.12, 0.7), (0.085, 0.06, 0.3), 0.04)
-        pad = S.rbox(P, (0, -0.05, 1.12), (0.105, 0.23, 0.03), 0.02, rx(0.18))
-        d = S.smooth_union(0.06, butt, wrist, comb)
-        return d + np.abs(S.perlin(P, 9)) * 0.003, pad
+        d = S.extrude_zy(P, stock_profile, stock_w, 0.04)
+        grain = S.perlin(P * [1, 1, 0.15], 30) * 0.002
+        return d + grain
+
+    def pad(P):
+        top = by + 0.02 if kind == "shotgun" else by + 0.03
+        return S.rbox(P, (0, (top - 0.22) / 2, 1.185), (0.085, (top + 0.22) / 2, 0.022), 0.015)
+
+    rec_profile = {
+        "rifle": [(0.16, by + 0.08), (-0.6, by + 0.08), (-0.62, by - 0.06), (-0.2, by - 0.1), (0.16, by - 0.08)],
+        "carbine": [(0.16, by + 0.07), (0.02, by + 0.11), (-0.5, by + 0.11), (-0.52, by - 0.12), (-0.05, by - 0.13), (0.16, by - 0.09)],
+        "shotgun": [(0.16, by + 0.04), (0.0, by + 0.13), (-0.62, by + 0.13), (-0.64, by - 0.14), (0.16, by - 0.12)],
+    }[kind]
 
     def receiver(P):
-        r = S.rbox(P, (0, by, -0.18), (0.075, 0.1, 0.36), 0.03)
-        guard = np.maximum(S.torus(P, (0, by - 0.16, 0.0), 0.1, 0.018, axis="x"), P[:, 1] - (by - 0.12))
-        trig = S.rbox(P, (0, by - 0.15, 0.03), (0.012, 0.05, 0.018), 0.008, rx(0.3))
+        r = S.extrude_zy(P, S.smooth_poly(rec_profile, 1), 0.062 if kind != "shotgun" else 0.072, 0.02)
+        port = S.rbox(P, (0.07, by + 0.04, -0.25), (0.03, 0.035, 0.12), 0.01)  # ejection port (right side)
+        r = S.subtract(r, port, 0.005)
+        guard = np.maximum(S.torus(P, (0, by - 0.2, -0.02), 0.09, 0.016, axis="x"), P[:, 1] - (by - 0.14))
+        trig = S.rbox(P, (0, by - 0.2, 0.0), (0.012, 0.05, 0.018), 0.008, rx(0.3))
         d = S.smooth_union(0.01, r, guard, trig)
         if kind == "rifle":
-            bolt = S.union(S.cylinder(P, (0, by + 0.07, 0.05), (0, by + 0.07, -0.25), 0.035), S.capsule(P, (0, by + 0.07, 0.02), (0.15, by + 0.0, 0.05), 0.02), S.sphere(P, (0.16, by - 0.01, 0.05), 0.035))
+            bolt = S.union(S.cylinder(P, (0, by + 0.07, 0.12), (0, by + 0.07, -0.3), 0.036), S.capsule(P, (0.03, by + 0.07, 0.06), (0.16, by - 0.02, 0.1), 0.018), S.sphere(P, (0.17, by - 0.035, 0.1), 0.036))
             d = S.union(d, bolt)
         if kind == "carbine":
-            lever = np.maximum(S.torus(P, (0, by - 0.22, 0.12), 0.1, 0.02, axis="x"), -(P[:, 1] - (by - 0.36)))
-            d = S.union(d, lever, S.rbox(P, (0, by - 0.12, 0.02), (0.015, 0.1, 0.02), 0.01))
+            loop = np.maximum(S.torus(P, (0, by - 0.27, 0.16), 0.1, 0.02, axis="x"), -(P[:, 1] - (by - 0.42)))
+            lever = S.capsule(P, (0, by - 0.13, -0.02), (0, by - 0.28, 0.07), 0.02)
+            hammer = S.rbox(P, (0, by + 0.12, 0.13), (0.02, 0.05, 0.03), 0.01, rx(0.5))
+            gate = S.rbox(P, (0.065, by - 0.04, -0.25), (0.006, 0.04, 0.08), 0.004)
+            d = S.union(d, loop, lever, hammer, gate)
+        if kind == "shotgun":
+            d = S.union(d, S.rbox(P, (0, by - 0.13, -0.3), (0.035, 0.012, 0.16), 0.006))  # loading gate
         return d
 
     def barrel(P):
-        b = S.cylinder(P, (0, by + 0.04, -0.4), (0, by + 0.02, -L), br, 0.01)
-        bore = S.cylinder(P, (0, by + 0.02, -L + 0.2), (0, by + 0.02, -L - 0.1), br * 0.55)
-        sight = S.rbox(P, (0, by + 0.04 + br + 0.02, -L + 0.08), (0.012, 0.03, 0.03), 0.008)
-        d = S.union(S.subtract(b, bore), sight)
+        b = S.cylinder(P, (0, by, -0.55), (0, by, -L), br, 0.008)
+        taper = S.cylinder(P, (0, by, -0.55), (0, by, -0.95), br * 1.25, 0.01)
+        bore = S.cylinder(P, (0, by, -L + 0.25), (0, by, -L - 0.1), br * 0.55)
+        front = S.smooth_union(0.01, S.rbox(P, (0, by + br + 0.03, -L + 0.07), (0.01, 0.03, 0.03), 0.006), S.cylinder(P, (0, by, -L + 0.12), (0, by, -L + 0.02), br * 1.15))
+        d = S.smooth_union(0.02, b, taper, front)
+        if kind != "shotgun":
+            rear = S.rbox(P, (0, by + br + 0.035, -0.95), (0.03, 0.025, 0.02), 0.006)
+            notch = S.rbox(P, (0, by + br + 0.055, -0.95), (0.008, 0.02, 0.05))
+            d = S.union(d, S.subtract(rear, notch))
+        else:
+            d = S.union(d, S.cylinder(P, (0, by + br + 0.012, -L + 0.06), (0, by + br + 0.012, -L + 0.05), 0.012))  # bead
         if kind in ("carbine", "shotgun"):
-            d = S.union(d, S.cylinder(P, (0, by - br - 0.04, -0.5), (0, by - br - 0.04, -L + 0.15), br * 0.75, 0.01))
-        return d
+            tube = S.cylinder(P, (0, by - br - 0.045, -0.6), (0, by - br - 0.045, -L + 0.12), 0.042 if kind == "carbine" else 0.05, 0.01)
+            d = S.union(d, tube)
+        if kind == "carbine":
+            for z in (-1.15, -L + 0.2):  # barrel bands
+                d = S.union(d, S.cylinder(P, (0, by - 0.04, z + 0.03), (0, by - 0.04, z - 0.03), 0.105, 0.01) - 0.0)
+        return S.subtract(d, bore)
 
     def forend(P):
         if kind == "shotgun":
-            f = S.cylinder(P, (0, by - 0.07, -0.85), (0, by - 0.07, -1.4), 0.1, 0.03)
-            return f + np.maximum(np.sin(P[:, 2] * 70), 0) * 0.01
-        z0, z1 = -0.45, -(L * 0.62)
-        return S.rbox(P, (0, by - 0.04, (z0 + z1) / 2), (0.07, 0.07, abs(z1 - z0) / 2), 0.05)
+            f = S.cylinder(P, (0, by - br - 0.045, -0.95), (0, by - br - 0.045, -1.55), 0.09, 0.03)
+            grooves = np.maximum(np.sin(P[:, 2] * 60), 0) ** 3 * 0.012
+            return f + grooves
+        z0, z1 = -0.6, (-1.95 if kind == "rifle" else -1.1)
+        prof = S.smooth_poly([(z0, by + 0.03), (z1 + 0.06, by + 0.03), (z1, by - 0.03), (z1 + 0.04, by - 0.13), (z0, by - 0.13)], 1)
+        return S.extrude_zy(P, prof, 0.058, 0.03) + S.perlin(P * [1, 1, 0.15], 30) * 0.002
 
     def scope(P):
-        tube = S.cylinder(P, (0, by + 0.26, 0.15), (0, by + 0.26, -0.65), 0.05, 0.01)
-        bells = S.union(S.cylinder(P, (0, by + 0.26, 0.12), (0, by + 0.26, 0.28), 0.07, 0.015), S.cylinder(P, (0, by + 0.26, -0.55), (0, by + 0.26, -0.75), 0.085, 0.015))
-        turret = S.cylinder(P, (0, by + 0.26, -0.22), (0, by + 0.37, -0.22), 0.035)
-        mounts = S.union(S.rbox(P, (0, by + 0.17, 0.05), (0.04, 0.05, 0.03), 0.01), S.rbox(P, (0, by + 0.17, -0.45), (0.04, 0.05, 0.03), 0.01))
-        return S.union(tube, bells, turret, mounts)
+        tube = S.cylinder(P, (0, by + 0.25, 0.12), (0, by + 0.25, -0.62), 0.045, 0.01)
+        bells = S.union(S.cylinder(P, (0, by + 0.25, 0.1), (0, by + 0.25, 0.25), 0.062, 0.015), S.cylinder(P, (0, by + 0.25, -0.52), (0, by + 0.25, -0.74), 0.08, 0.015))
+        turrets = S.union(S.cylinder(P, (0, by + 0.25, -0.22), (0, by + 0.34, -0.22), 0.032), S.cylinder(P, (0, by + 0.25, -0.22), (0.09, by + 0.25, -0.22), 0.032))
+        rings = S.union(*[S.smooth_union(0.01, S.cylinder(P, (0, by + 0.25, z + 0.025), (0, by + 0.25, z - 0.025), 0.06), S.rbox(P, (0, by + 0.15, z), (0.035, 0.06, 0.025), 0.01)) for z in (0.0, -0.45)])
+        return S.union(tube, bells, turrets, rings)
 
     layers = [
-        ("Stock", lambda P: stock(P)[0], "Wood", WOOD if kind != "shotgun" else DARKWOOD),
-        ("Pad", lambda P: stock(P)[1], "Rubber", RUBBER),
+        ("Stock", stock, "Wood", WOOD if kind != "shotgun" else DARKWOOD),
+        ("Pad", pad, "Rubber", RUBBER),
         ("Receiver", receiver, "Metal", METAL),
         ("Barrel", barrel, "Metal", METAL),
         ("Forend", forend, "Wood", WOOD if kind != "shotgun" else DARKWOOD),
     ]
     if kind == "rifle":
         layers.append(("Scope", scope, "Metal", (0.1, 0.1, 0.11)))
-    return 0.026, layers
+    MUZZLES[kind] = [0, by * k, -L * k]
+    return 0.02 * k, scaled(layers, k)
 
 
 def bow():
@@ -139,13 +206,15 @@ def bow():
 
     def string(P):
         a, b = curve(1)[-1], curve(-1)[-1]
-        return S.capsule(P, a, b, 0.012)
+        return S.capsule(P, a, b, 0.02)
 
     def arrow(P):
         shaft = S.capsule(P, (0, 0.1, 0.25), (0, 0.1, -0.85), 0.018)
         head = S.round_cone(P, (0, 0.1, -0.85), (0, 0.1, -1.0), 0.035, 0.004)
         return S.union(shaft, head)
-    return 0.024, [("Limbs", limbs, "Wood", WOOD), ("Riser", riser, "Wood", DARKWOOD), ("Grip", grip, "Leather", (0.2, 0.14, 0.1)), ("String", string, "Fabric", (0.85, 0.82, 0.74)), ("Arrow", arrow, "Wood", (0.7, 0.62, 0.5))]
+    MUZZLES["bow"] = [0, 0.1 * SCALE["bow"], -1.0 * SCALE["bow"]]
+    layers = [("Limbs", limbs, "Wood", WOOD), ("Riser", riser, "Wood", DARKWOOD), ("Grip", grip, "Leather", (0.2, 0.14, 0.1)), ("String", string, "Fabric", (0.85, 0.82, 0.74)), ("Arrow", arrow, "Wood", (0.7, 0.62, 0.5))]
+    return 0.014 * SCALE["bow"], scaled(layers, SCALE["bow"])
 
 
 def flashlight():

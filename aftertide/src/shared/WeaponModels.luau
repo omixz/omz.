@@ -95,7 +95,8 @@ function WeaponModels.build(weaponId, getPart, meta, skipLayers)
 		if MeshKit.attachToGrip(meta, getPart, grip, skipLayers) then
 			local muzzle = Instance.new("Attachment")
 			muzzle.Name = "Muzzle"
-			muzzle.Position = spec.muzzle
+			local m = meta.muzzle
+			muzzle.Position = m and Vector3.new(m[1], m[2], m[3]) or spec.muzzle -- the sculpted barrel tip
 			muzzle.Parent = grip
 			return model
 		end

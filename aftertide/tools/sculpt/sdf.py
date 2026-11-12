@@ -206,3 +206,47 @@ def knit(P, axis_dir, freq=26.0, amp=0.004):
     a = np.asarray(axis_dir, float)
     a = a / np.linalg.norm(a)
     return np.abs(np.sin(np.arctan2(P[:, 2], P[:, 0]) * freq)) * amp
+
+
+# ------------------------------------------------------------------ profiles
+def poly2d(px, py, verts):
+    """Signed distance to a closed 2D polygon (vectorised; negative inside)."""
+    v = np.asarray(verts, float)
+    d = (px - v[0, 0]) ** 2 + (py - v[0, 1]) ** 2
+    s = np.ones_like(px)
+    n = len(v)
+    for i in range(n):
+        j = (i - 1) % n
+        ex, ey = v[j, 0] - v[i, 0], v[j, 1] - v[i, 1]
+        wx, wy = px - v[i, 0], py - v[i, 1]
+        t = np.clip((wx * ex + wy * ey) / (ex * ex + ey * ey), 0, 1)
+        bx, by = wx - ex * t, wy - ey * t
+        d = np.minimum(d, bx * bx + by * by)
+        c1 = py >= v[i, 1]
+        c2 = py < v[j, 1]
+        c3 = ex * wy > ey * wx
+        flip = (c1 & c2 & c3) | (~c1 & ~c2 & ~c3)
+        s = np.where(flip, -s, s)
+    return s * np.sqrt(d)
+
+
+def smooth_poly(points, iterations=2):
+    """Chaikin corner cutting: turns a coarse outline into a smooth curve."""
+    p = np.asarray(points, float)
+    for _ in range(iterations):
+        q = 0.75 * p + 0.25 * np.roll(p, -1, 0)
+        r = 0.25 * p + 0.75 * np.roll(p, -1, 0)
+        p = np.empty((len(p) * 2, 2))
+        p[0::2], p[1::2] = q, r
+    return p
+
+
+def extrude_zy(P, profile, half_width, r=0.0):
+    """A side profile (points as (z, y)) extruded across X, with rounded edges.
+    half_width may be a number or a function of z (e.g. a stock that widens to the butt)."""
+    d2 = poly2d(P[:, 2], P[:, 1], profile)
+    hw = half_width(P[:, 2]) if callable(half_width) else half_width
+    qx = d2 + r
+    qy = np.abs(P[:, 0]) - hw + r
+    outside = np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qy, 0) ** 2)
+    return outside + np.minimum(np.maximum(qx, qy), 0) - r
