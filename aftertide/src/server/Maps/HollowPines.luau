@@ -133,7 +133,7 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
-	MapKit.floodWall(parent, baseHeight, { height = 30, color = Color3.fromRGB(110, 108, 100) })
+	MapKit.floodWall(parent, baseHeight, { height = 16, color = Color3.fromRGB(110, 108, 100) })
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end

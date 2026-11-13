@@ -2144,9 +2144,9 @@ return {
 						part = "Crew_mara_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.7765, 0.6275, 0.5098 },
-						center = { -0.0, 5.34, -0.0267 },
-						size = { 0.7676, 1.2375, 0.8978 },
-						tris = 8064,
+						center = { -0.0, 5.3513, -0.0016 },
+						size = { 0.7676, 1.2149, 0.8477 },
+						tris = 7760,
 					},
 					Eyes = {
 						part = "Crew_mara_Head_Eyes",
@@ -2160,33 +2160,41 @@ return {
 						part = "Crew_mara_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.2, 0.14, 0.1 },
-						center = { 0.0023, 5.5531, -0.3534 },
-						size = { 0.2452, 0.0173, 0.0399 },
-						tris = 32,
+						center = { 0.0024, 5.552, -0.3665 },
+						size = { 0.2415, 0.0063, 0.006 },
+						tris = 24,
+					},
+					Brows = {
+						part = "Crew_mara_Head_Brows",
+						material = "Fabric",
+						color = { 0.2275, 0.1569, 0.1176 },
+						center = { 0.0027, 5.6215, -0.3627 },
+						size = { 0.3621, 0.0354, 0.021 },
+						tris = 80,
 					},
 					Mask = {
 						part = "Crew_mara_Head_Mask",
 						material = "Fabric",
 						color = { 0.4706, 0.4314, 0.3686 },
-						center = { 0.0003, 5.0924, 0.0225 },
-						size = { 0.7279, 0.808, 0.8512 },
-						tris = 5888,
+						center = { -0.001, 5.1045, -0.1927 },
+						size = { 0.7022, 0.7542, 0.4107 },
+						tris = 3508,
 					},
 					Hat = {
 						part = "Crew_mara_Head_Hat",
 						material = "Fabric",
 						color = { 0.2745, 0.2196, 0.1882 },
-						center = { -0.0007, 5.7851, 0.0391 },
-						size = { 0.7556, 0.4515, 0.8696 },
-						tris = 4872,
+						center = { -0.0006, 5.824, 0.0389 },
+						size = { 0.7514, 0.4126, 0.867 },
+						tris = 4560,
 					},
 					Hair = {
 						part = "Crew_mara_Head_Hair",
 						material = "Fabric",
 						color = { 0.2275, 0.1569, 0.1176 },
-						center = { -0.0, 5.5751, 0.148 },
-						size = { 0.71, 0.5182, 0.6247 },
-						tris = 4312,
+						center = { -0.0, 5.5078, 0.1569 },
+						size = { 0.7102, 0.6909, 0.5882 },
+						tris = 5296,
 					},
 				},
 			},
@@ -2480,9 +2488,9 @@ return {
 						part = "Crew_tobias_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.5882, 0.4235, 0.3216 },
-						center = { -0.0, 5.4824, -0.0268 },
-						size = { 0.7677, 1.2839, 0.8976 },
-						tris = 8464,
+						center = { -0.0, 5.4959, -0.0018 },
+						size = { 0.7676, 1.2568, 0.8477 },
+						tris = 8024,
 					},
 					Eyes = {
 						part = "Crew_tobias_Head_Eyes",
@@ -2496,17 +2504,25 @@ return {
 						part = "Crew_tobias_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.2, 0.14, 0.1 },
-						center = { 0.0025, 5.7029, -0.3671 },
-						size = { 0.2456, 0.0169, 0.0124 },
+						center = { 0.0027, 5.7083, -0.3677 },
+						size = { 0.2426, 0.0133, 0.0072 },
 						tris = 24,
+					},
+					Brows = {
+						part = "Crew_tobias_Head_Brows",
+						material = "Fabric",
+						color = { 0.1176, 0.0941, 0.0784 },
+						center = { 0.0021, 5.8011, -0.3734 },
+						size = { 0.3586, 0.016, 0.0428 },
+						tris = 84,
 					},
 					Mask = {
 						part = "Crew_tobias_Head_Mask",
 						material = "Fabric",
 						color = { 0.3373, 0.3216, 0.2902 },
-						center = { -0.001, 5.2361, 0.0239 },
-						size = { 0.7268, 0.8553, 0.8532 },
-						tris = 6472,
+						center = { -0.0001, 5.2489, -0.1919 },
+						size = { 0.705, 0.7993, 0.4113 },
+						tris = 3752,
 					},
 					Hat = {
 						part = "Crew_tobias_Head_Hat",
@@ -2832,9 +2848,9 @@ return {
 						part = "Crew_ines_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.4314, 0.298, 0.2275 },
-						center = { -0.0, 5.1787, -0.0262 },
-						size = { 0.7672, 1.2289, 0.8967 },
-						tris = 8048,
+						center = { -0.0, 5.1908, -0.0018 },
+						size = { 0.7672, 1.2046, 0.8478 },
+						tris = 7776,
 					},
 					Eyes = {
 						part = "Crew_ines_Head_Eyes",
@@ -2844,21 +2860,21 @@ return {
 						size = { 0.3411, 0.091, 0.0911 },
 						tris = 172,
 					},
-					Iris = {
-						part = "Crew_ines_Head_Iris",
-						material = "SmoothPlastic",
-						color = { 0.1569, 0.102, 0.0706 },
-						center = { 0.0022, 5.394, -0.3668 },
-						size = { 0.2423, 0.0096, 0.0093 },
-						tris = 24,
+					Brows = {
+						part = "Crew_ines_Head_Brows",
+						material = "Fabric",
+						color = { 0.102, 0.0784, 0.0706 },
+						center = { 0.001, 5.454, -0.3628 },
+						size = { 0.3802, 0.0318, 0.0316 },
+						tris = 72,
 					},
 					Mask = {
 						part = "Crew_ines_Head_Mask",
 						material = "Fabric",
 						color = { 0.7843, 0.7686, 0.7294 },
-						center = { 0.0017, 4.9299, 0.022 },
-						size = { 0.7299, 0.8005, 0.8507 },
-						tris = 5992,
+						center = { 0.0017, 4.9415, -0.1929 },
+						size = { 0.6977, 0.7486, 0.4108 },
+						tris = 3436,
 					},
 					Hair = {
 						part = "Crew_ines_Head_Hair",
@@ -3152,9 +3168,9 @@ return {
 						part = "Crew_sefa_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.5255, 0.3686, 0.2588 },
-						center = { -0.0, 5.3308, -0.0267 },
-						size = { 0.7676, 1.2558, 0.8978 },
-						tris = 8348,
+						center = { -0.0, 5.3435, -0.0016 },
+						size = { 0.7676, 1.2305, 0.8477 },
+						tris = 7972,
 					},
 					Eyes = {
 						part = "Crew_sefa_Head_Eyes",
@@ -3168,17 +3184,25 @@ return {
 						part = "Crew_sefa_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.2, 0.14, 0.1 },
-						center = { 0.0023, 5.5531, -0.3534 },
-						size = { 0.2452, 0.0173, 0.0399 },
-						tris = 32,
+						center = { 0.0024, 5.552, -0.3665 },
+						size = { 0.2415, 0.0063, 0.006 },
+						tris = 24,
+					},
+					Brows = {
+						part = "Crew_sefa_Head_Brows",
+						material = "Fabric",
+						color = { 0.0941, 0.0784, 0.0706 },
+						center = { 0.0027, 5.6215, -0.3627 },
+						size = { 0.3621, 0.0354, 0.021 },
+						tris = 80,
 					},
 					Mask = {
 						part = "Crew_sefa_Head_Mask",
 						material = "Fabric",
 						color = { 0.251, 0.3059, 0.3294 },
-						center = { 0.0004, 5.0833, 0.0225 },
-						size = { 0.7283, 0.8262, 0.8512 },
-						tris = 6212,
+						center = { -0.0009, 5.0956, -0.1927 },
+						size = { 0.7062, 0.772, 0.4107 },
+						tris = 3664,
 					},
 					Hood = {
 						part = "Crew_sefa_Head_Hood",
@@ -3472,9 +3496,9 @@ return {
 						part = "Faction_WatchRifleman_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.6588, 0.502, 0.3922 },
-						center = { 0.0001, 5.3243, -0.0264 },
-						size = { 0.7676, 1.2695, 0.8975 },
-						tris = 6604,
+						center = { 0.0001, 5.3377, -0.0008 },
+						size = { 0.7678, 1.2426, 0.8461 },
+						tris = 6212,
 					},
 					Eyes = {
 						part = "Faction_WatchRifleman_Head_Eyes",
@@ -3484,13 +3508,13 @@ return {
 						size = { 0.3313, 0.0901, 0.0901 },
 						tris = 140,
 					},
-					Iris = {
-						part = "Faction_WatchRifleman_Head_Iris",
-						material = "SmoothPlastic",
-						color = { 0.2, 0.14, 0.1 },
-						center = { -0.1288, 5.5335, -0.3383 },
-						size = { 0.0026, 0.0039, 0.0034 },
-						tris = 12,
+					Brows = {
+						part = "Faction_WatchRifleman_Head_Brows",
+						material = "Fabric",
+						color = { 0.1569, 0.1176, 0.0941 },
+						center = { -0.0002, 5.6271, -0.3735 },
+						size = { 0.3076, 0.0319, 0.0264 },
+						tris = 56,
 					},
 					Helmet = {
 						part = "Faction_WatchRifleman_Head_Helmet",
@@ -3760,9 +3784,9 @@ return {
 						part = "Faction_WatchScout_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.4706, 0.3373, 0.251 },
-						center = { 0.0001, 5.3371, -0.0264 },
-						size = { 0.7678, 1.244, 0.8972 },
-						tris = 6312,
+						center = { 0.0001, 5.3488, -0.0008 },
+						size = { 0.7678, 1.2204, 0.8461 },
+						tris = 6048,
 					},
 					Eyes = {
 						part = "Faction_WatchScout_Head_Eyes",
@@ -3772,21 +3796,21 @@ return {
 						size = { 0.3313, 0.0901, 0.0901 },
 						tris = 140,
 					},
-					Iris = {
-						part = "Faction_WatchScout_Head_Iris",
-						material = "SmoothPlastic",
-						color = { 0.2, 0.14, 0.1 },
-						center = { -0.1288, 5.5335, -0.3383 },
-						size = { 0.0026, 0.0039, 0.0034 },
-						tris = 12,
+					Brows = {
+						part = "Faction_WatchScout_Head_Brows",
+						material = "Fabric",
+						color = { 0.0941, 0.0784, 0.0706 },
+						center = { -0.0002, 5.6271, -0.3735 },
+						size = { 0.3076, 0.0319, 0.0264 },
+						tris = 56,
 					},
 					Mask = {
 						part = "Faction_WatchScout_Head_Mask",
 						material = "Fabric",
 						color = { 0.2353, 0.251, 0.2588 },
-						center = { -0.0003, 5.0898, 0.0221 },
-						size = { 0.7209, 0.8133, 0.8508 },
-						tris = 4592,
+						center = { 0.0015, 5.1023, -0.1928 },
+						size = { 0.7015, 0.7589, 0.4107 },
+						tris = 2704,
 					},
 					Hat = {
 						part = "Faction_WatchScout_Head_Hat",
@@ -4056,9 +4080,9 @@ return {
 						part = "Faction_TideboundArcher_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.7294, 0.5882, 0.4706 },
-						center = { 0.0001, 5.3398, -0.0264 },
-						size = { 0.7678, 1.2385, 0.8972 },
-						tris = 6284,
+						center = { 0.0001, 5.3512, -0.0008 },
+						size = { 0.7678, 1.2157, 0.8461 },
+						tris = 5984,
 					},
 					Eyes = {
 						part = "Faction_TideboundArcher_Head_Eyes",
@@ -4068,13 +4092,13 @@ return {
 						size = { 0.3313, 0.0901, 0.0901 },
 						tris = 140,
 					},
-					Iris = {
-						part = "Faction_TideboundArcher_Head_Iris",
-						material = "SmoothPlastic",
-						color = { 0.2, 0.14, 0.1 },
-						center = { -0.1288, 5.5335, -0.3383 },
-						size = { 0.0026, 0.0039, 0.0034 },
-						tris = 12,
+					Brows = {
+						part = "Faction_TideboundArcher_Head_Brows",
+						material = "Fabric",
+						color = { 0.3137, 0.2353, 0.1725 },
+						center = { -0.0002, 5.6271, -0.3735 },
+						size = { 0.3076, 0.0319, 0.0264 },
+						tris = 56,
 					},
 					Hood = {
 						part = "Faction_TideboundArcher_Head_Hood",
@@ -4088,9 +4112,9 @@ return {
 						part = "Faction_TideboundArcher_Head_Paint",
 						material = "SmoothPlastic",
 						color = { 0.2745, 0.2824, 0.2902 },
-						center = { -0.0071, 5.5464, -0.3711 },
-						size = { 0.4891, 0.0864, 0.2046 },
-						tris = 432,
+						center = { -0.0048, 5.5464, -0.3434 },
+						size = { 0.4843, 0.0864, 0.1491 },
+						tris = 388,
 					},
 				},
 			},
@@ -4320,9 +4344,9 @@ return {
 						part = "Faction_TideboundHook_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.549, 0.4078, 0.3137 },
-						center = { 0.0001, 5.3215, -0.0264 },
-						size = { 0.7676, 1.275, 0.8975 },
-						tris = 6604,
+						center = { 0.0001, 5.3354, -0.0008 },
+						size = { 0.7678, 1.2474, 0.8461 },
+						tris = 6244,
 					},
 					Eyes = {
 						part = "Faction_TideboundHook_Head_Eyes",
@@ -4332,13 +4356,13 @@ return {
 						size = { 0.3313, 0.0901, 0.0901 },
 						tris = 140,
 					},
-					Iris = {
-						part = "Faction_TideboundHook_Head_Iris",
-						material = "SmoothPlastic",
-						color = { 0.2, 0.14, 0.1 },
-						center = { -0.1288, 5.5335, -0.3383 },
-						size = { 0.0026, 0.0039, 0.0034 },
-						tris = 12,
+					Brows = {
+						part = "Faction_TideboundHook_Head_Brows",
+						material = "Fabric",
+						color = { 0.1176, 0.0941, 0.0784 },
+						center = { -0.0002, 5.6271, -0.3735 },
+						size = { 0.3076, 0.0319, 0.0264 },
+						tris = 56,
 					},
 					Hood = {
 						part = "Faction_TideboundHook_Head_Hood",
@@ -4352,9 +4376,9 @@ return {
 						part = "Faction_TideboundHook_Head_Paint",
 						material = "SmoothPlastic",
 						color = { 0.2353, 0.2431, 0.251 },
-						center = { -0.0071, 5.5464, -0.3711 },
-						size = { 0.4894, 0.0864, 0.2046 },
-						tris = 432,
+						center = { -0.0048, 5.5464, -0.3434 },
+						size = { 0.4843, 0.0864, 0.1491 },
+						tris = 388,
 					},
 				},
 			},
@@ -6407,7 +6431,8 @@ end
 
 -- Where each weapon sits relative to its parent part.
 WeaponModels.HandOffset = CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
-WeaponModels.BackOffset = CFrame.new(0, 0, 0.62) * CFrame.Angles(0, 0, math.rad(35)) * CFrame.Angles(math.rad(90), 0, 0)
+-- slung diagonally across the back, behind the pack (barrel up over the left shoulder)
+WeaponModels.BackOffset = CFrame.new(0.1, 0.15, 1.02) * CFrame.Angles(0, 0, math.rad(38)) * CFrame.Angles(math.rad(90), 0, 0) * CFrame.new(0, 0, -0.5)
 WeaponModels.HipOffset = CFrame.new(0.95, -0.2, 0) * CFrame.Angles(math.rad(-90), 0, 0)
 
 return WeaponModels
@@ -6481,7 +6506,7 @@ local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("coast")
-	MapKit.floodWall(parent, nil, { height = 30 })
+	MapKit.floodWall(parent, nil, { height = 16 })
 	-- terrain base: concrete yard, asphalt lanes, grass verges, mud by the water
 	MapKit.slab(-118, -118, 118, 118, M.Concrete, 0)
 	MapKit.slab(-12, 14, 118, 30, M.Asphalt, 0.02)
@@ -6804,7 +6829,7 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
-	MapKit.floodWall(parent, baseHeight, { height = 30, color = Color3.fromRGB(110, 108, 100) })
+	MapKit.floodWall(parent, baseHeight, { height = 16, color = Color3.fromRGB(110, 108, 100) })
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end
@@ -6856,7 +6881,7 @@ local PHARMACY = { 62, 66, 106, 100 }
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("suburb")
-	MapKit.floodWall(parent, nil, { height = 32, color = Color3.fromRGB(124, 120, 112) })
+	MapKit.floodWall(parent, nil, { height = 16, color = Color3.fromRGB(124, 120, 112) })
 	MapKit.barricade(parent, rng, 13)
 	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
 	MapKit.slab(-120, -9, 120, 9, M.Asphalt, 0.05)
@@ -7204,7 +7229,7 @@ function MapKit.ground(x, z, include)
 	local origin = Vector3.new(x, 300, z)
 	local surfaces = {}
 	local terrainY = nil
-	for _ = 1, 10 do
+	for _ = 1, 48 do -- buildings stack many surfaces (roof, ceiling, shelves, lamps) above the floor
 		local hit = Workspace:Raycast(origin, Vector3.new(0, -600, 0), groundParams)
 		if not hit then
 			break
@@ -7440,7 +7465,7 @@ end
 -- walkway cap and a few work lights. groundFn(x, z) gives the land height (hills).
 function MapKit.floodWall(parent, groundFn, opts)
 	opts = opts or {}
-	local H = opts.height or 34
+	local H = opts.height or 16
 	local E = 120
 	local concrete = opts.color or Color3.fromRGB(118, 116, 110)
 	local stain = Color3.fromRGB(86, 84, 78)
@@ -8479,9 +8504,26 @@ function AntiCheatService.start()
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			local session = Services.CharacterService.getSession(player)
 			if root and session then
+				-- safety net: fell through the world or got pushed outside the walls (physics can
+				-- squeeze a character through thin geometry): put them back where they last stood
+				local t0 = track[player]
+				local p = root.Position
+				local onMap = math.abs(p.X) < 130 and math.abs(p.Z) < 130
+				local onFerry = math.abs(p.X) < 90 and math.abs(p.Z - 700) < 90
+				local lost = p.Y < -30 or not (onMap or onFerry)
+				if lost and t0 and t0.lastSafe then
+					char:PivotTo(t0.lastSafe)
+					root.AssemblyLinearVelocity = Vector3.zero
+					Services.CharacterService.setGrace(player, 1)
+					t0.pos, t0.t = t0.lastSafe.Position, now
+				end
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				if t0 and not lost and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+					t0.lastSafe = root.CFrame + Vector3.new(0, 0.5, 0)
+				end
 				local t = track[player]
 				if not t or t.char ~= char or now < session.graceUntil then
-					track[player] = { char = char, pos = root.Position, t = now, strikes = 0, lastGood = root.CFrame }
+					track[player] = { char = char, pos = root.Position, t = now, strikes = 0, lastGood = root.CFrame, lastSafe = t and t.char == char and t.lastSafe or root.CFrame }
 				else
 					local dt = now - t.t
 					local moved = Vector3.new(root.Position.X - t.pos.X, 0, root.Position.Z - t.pos.Z).Magnitude
@@ -8752,21 +8794,25 @@ function AssetService.part(name)
 	return template and template:Clone() or nil
 end
 
--- True when every layer of a kit (from MeshMeta) is loaded.
+-- True when a kit (from MeshMeta) is loaded well enough to use: nearly every layer present.
+-- A detail layer that's missing (e.g. an older revision of the pack still being served while
+-- the new one is reviewed) is simply skipped by MeshKit instead of failing the whole body.
 function AssetService.hasKit(kit)
 	local entry = MeshMeta[kit]
 	if not entry then
 		return false
 	end
 	local groups = entry.type == "rig" and entry.segments or { entry }
+	local total, present = 0, 0
 	for _, group in groups do
 		for _, layer in group.layers do
-			if not parts[layer.part] then
-				return false
+			total += 1
+			if parts[layer.part] then
+				present += 1
 			end
 		end
 	end
-	return true
+	return total > 0 and present / total >= 0.85
 end
 
 function AssetService.meta(kit)
@@ -8907,6 +8953,29 @@ function CharacterService.setGrace(player, seconds)
 	end
 end
 
+-- Removes Roblox's animation system from a rig so procedural Motor6D.Transform writes stick.
+function CharacterService.stripAnimator(model)
+	local animate = model:FindFirstChild("Animate")
+	if animate then
+		animate:Destroy()
+	end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, child in humanoid:GetChildren() do
+			if child:IsA("Animator") then
+				child:Destroy()
+			end
+		end
+		humanoid.ChildAdded:Connect(function(child)
+			if child:IsA("Animator") then
+				task.defer(function()
+					child:Destroy()
+				end)
+			end
+		end)
+	end
+end
+
 -- The crew member's definition with their equipped outfit's colours (for the part-built body).
 function CharacterService.dressedDef(player, charId)
 	local base = Characters.List[charId]
@@ -9006,8 +9075,10 @@ local function setupCharacter(player, char, session, isCustomRig)
 	if not isCustomRig then
 		-- Replace the Roblox look and motion: sculpted, clothed body + our own animation
 		-- (client PlayerAnimator) instead of the default Animate script.
-		-- Roblox's Animate script stays as a safety net: PlayerAnimator overrides every joint
-		-- each frame, and if it ever fails you still get a walk/run instead of a frozen slide.
+		-- Our animation is procedural (client PlayerAnimator writes every Motor6D.Transform).
+		-- While an Animator exists Roblox overwrites those writes every frame, so remove the
+		-- default Animate script AND the Animator, and keep the Animator from coming back.
+		CharacterService.stripAnimator(char)
 		local kit = "Crew_" .. session.charId
 		local ok, err
 		if Services.AssetService.hasKit(kit) then
@@ -9018,6 +9089,7 @@ local function setupCharacter(player, char, session, isCustomRig)
 			local okFit, hip = pcall(MeshKit.conformSkeleton, char, meta, "r15", CREW_SCALE)
 			if okFit and hip then
 				humanoid.HipHeight = hip
+				char:SetAttribute("BaseHipHeight", hip)
 			elseif not okFit then
 				warn("[CharacterService] skeleton fit failed: " .. tostring(hip))
 			end
@@ -9046,6 +9118,9 @@ local function setupCharacter(player, char, session, isCustomRig)
 	char:SetAttribute("AbilityReadyAt", 0)
 	char:SetAttribute("CharId", session.charId)
 	char:SetAttribute("Supporter", player:GetAttribute("Supporter") == true)
+	if char:GetAttribute("BaseHipHeight") == nil then
+		char:SetAttribute("BaseHipHeight", humanoid.HipHeight)
+	end
 	humanoid.DisplayName = (player:GetAttribute("Supporter") and "◆ " or "") .. player.DisplayName
 	return root
 end
@@ -9290,7 +9365,7 @@ function CharacterService.damage(player, amount, fromPosition)
 		local away = Geometry.flat(root.Position - fromPosition)
 		if away.Magnitude > 0.01 then
 			CharacterService.setGrace(player, 1.5)
-			Net.notify(player, "Knockback", { velocity = away.Unit * 38 + Vector3.new(0, 14, 0) })
+			Net.notify(player, "Knockback", { velocity = away.Unit * 24 + Vector3.new(0, 8, 0) })
 		end
 	end
 	Net.notify(player, "Hurt", { amount = amount })
@@ -10206,6 +10281,7 @@ function EnemyService.spawn(typeName, position, opts)
 		Services.CharacterService.setFlashlight(model, true)
 	end
 	model:SetAttribute("Human", cfg.human == true)
+	Services.CharacterService.stripAnimator(model) -- EnemyAnimator drives the joints
 	model.Parent = folder
 	pcall(function()
 		root:SetNetworkOwner(nil)
@@ -11186,6 +11262,28 @@ function LootService.dropPickup(parent, position, itemId, amount)
 	return p
 end
 
+-- Puts a point on whatever is really beneath it (floor, terrain, a step), so nothing floats
+-- or sinks however the spot was authored. Ignores encounter objects and characters.
+local settleParams = RaycastParams.new()
+settleParams.FilterType = Enum.RaycastFilterType.Exclude
+local function settle(position, parent)
+	local ignore = { parent }
+	for _, p in game:GetService("Players"):GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
+	end
+	local enemies = workspace:FindFirstChild("Enemies")
+	if enemies then
+		table.insert(ignore, enemies)
+	end
+	settleParams.FilterDescendantsInstances = ignore
+	settleParams.IgnoreWater = true
+	local hit = workspace:Raycast(position + Vector3.new(0, 3, 0), Vector3.new(0, -14, 0), settleParams)
+	return hit and Vector3.new(position.X, hit.Position.Y, position.Z) or position
+end
+LootService.settle = settle
+
 -- Container models: { body, moving part, open transform }
 local BUILDERS = {}
 
@@ -11219,7 +11317,7 @@ local function container(parent, spot, rng, pall)
 	if not def or not builder then
 		return
 	end
-	local cf = CFrame.new(spot.pos) * CFrame.Angles(0, math.rad(spot.yaw or 0), 0)
+	local cf = CFrame.new(settle(spot.pos, parent)) * CFrame.Angles(0, math.rad(spot.yaw or 0), 0)
 	local body, moving, openOffset = builder(parent, cf)
 	body.Name = spot.type
 	local prompt = Instance.new("ProximityPrompt")
@@ -11271,7 +11369,7 @@ function LootService.populate(parent, rng, pall, containerSpots, looseSpots)
 		local entry = LootService.roll("loose", 1, rng, 1)[1]
 		if entry then
 			local jitter = Vector3.new(rng:NextNumber(-1.5, 1.5), 0, rng:NextNumber(-1.5, 1.5))
-			LootService.dropPickup(parent, spots[i] + jitter, entry[1], entry[2])
+			LootService.dropPickup(parent, settle(spots[i] + jitter, parent), entry[1], entry[2])
 		end
 	end
 end
@@ -11833,7 +11931,7 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 	if encounterType == "Salvage" then
 		local picks = shuffled(MapService.SupplyCandidates, rng)
 		for i = 1, math.min(Encounters.Types.Salvage.crates, #picks) do
-			local pos = picks[i]
+			local pos = Services.LootService.settle(picks[i], encounterFolder)
 			local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
 			block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })
 			local glint = Instance.new("PointLight")
@@ -11850,7 +11948,7 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 
 	-- the signal lantern (Lantern Watch / finale)
 	if encounterType == "LanternWatch" then
-		local base = MapService.LanternPos
+		local base = Services.LootService.settle(MapService.LanternPos, encounterFolder)
 		block(encounterFolder, Vector3.new(3, 1, 3), base + Vector3.new(0, 0.5, 0), C.metal, Enum.Material.Metal)
 		block(encounterFolder, Vector3.new(0.5, 6, 0.5), base + Vector3.new(0, 4, 0), C.metal, Enum.Material.Metal)
 		lantern = block(encounterFolder, Vector3.new(1.6, 2, 1.6), base + Vector3.new(0, 8, 0), C.warm, Enum.Material.Neon, { Name = "SignalLantern" })
@@ -13964,6 +14062,8 @@ local function canAct()
 	return State.character ~= nil and not State.uiOpen() and not State.downed
 end
 
+local bindUnsafe
+
 local touchLayout = {
 	Fire = { title = "Fire", pos = UDim2.new(1, -95, 1, -230) },
 	Aim = { title = "Aim", pos = UDim2.new(1, -170, 1, -230) },
@@ -13980,6 +14080,17 @@ local touchLayout = {
 }
 
 local function bind(name, handler, ...)
+	local inputs = { ... }
+	local ok, err = pcall(function()
+		bindUnsafe(name, handler, table.unpack(inputs))
+	end)
+	if not ok then
+		-- one bad binding must never stop the ones after it (satchel, sprint, F1, settings...)
+		warn("[ActionController] could not bind " .. name .. ": " .. tostring(err))
+	end
+end
+
+bindUnsafe = function(name, handler, ...)
 	local touch = touchLayout[name] ~= nil
 	-- above Roblox's own scripts (default camera input grabs right-click, the player list
 	-- grabs Tab), otherwise aiming and the satchel never receive their keys
@@ -14146,11 +14257,7 @@ function ActionController.start()
 			Movement.toggleCrouch()
 		end
 	end, Enum.KeyCode.C, Enum.KeyCode.LeftControl, Enum.KeyCode.ButtonB)
-	bind("Prone", function(state)
-		if state == Begin and State.character then
-			Movement.setProne(not State.prone)
-		end
-	end)
+
 
 	bind("Sprint", function(state, input)
 		if not State.character then
@@ -14985,6 +15092,14 @@ local function setup(model)
 		return nil
 	end
 	rig.label = marker(model, head)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, child in humanoid:GetChildren() do
+			if child:IsA("Animator") then
+				child:Destroy() -- it would overwrite the procedural joints every frame
+			end
+		end
+	end
 	return rig
 end
 
@@ -15586,16 +15701,22 @@ function MovementController.dodge()
 	Net.event("Action"):FireServer("Dodge", dir)
 	Sfx.ui("Dodge", 0.6)
 
+	-- never dash into (and through) a wall: shorten the dodge to the space available
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { State.character }
+	local room = Workspace:Raycast(root.Position, dir * 9, params)
+	local roomScale = room and math.clamp((room.Distance - 1.5) / 9, 0, 1) or 1
 	local attachment = root:FindFirstChild("RootAttachment")
-	if attachment then
+	if attachment and roomScale > 0.1 then
 		local lv = Instance.new("LinearVelocity")
 		lv.Attachment0 = attachment
-		lv.MaxForce = 1e6
+		lv.MaxForce = 4e4
 		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
 		lv.PrimaryTangentAxis = Vector3.new(1, 0, 0)
 		lv.SecondaryTangentAxis = Vector3.new(0, 0, 1)
 		lv.RelativeTo = Enum.ActuatorRelativeTo.World
-		local speed = dive and 36 or 30
+		local speed = (dive and 36 or 30) * roomScale
 		lv.PlaneVelocity = Vector2.new(dir.X * speed, dir.Z * speed)
 		lv.Parent = root
 		task.delay(dive and 0.38 or 0.22, function()
@@ -15774,13 +15895,24 @@ local function setup(char)
 	if not rig.root or not rig.humanoid then
 		return nil
 	end
-	-- stop anything the default Animate script may have started before it was removed
-	local animator = rig.humanoid:FindFirstChildOfClass("Animator")
-	if animator then
-		for _, track in animator:GetPlayingAnimationTracks() do
-			track:Stop(0)
+	-- an Animator overwrites Motor6D.Transform every frame: make sure none survives here
+	-- (the server removes it too; this covers one created locally before that replicated)
+	local function kill(child)
+		if child:IsA("Animator") then
+			pcall(function()
+				for _, track in child:GetPlayingAnimationTracks() do
+					track:Stop(0)
+				end
+			end)
+			task.defer(function()
+				pcall(child.Destroy, child)
+			end)
 		end
 	end
+	for _, child in rig.humanoid:GetChildren() do
+		kill(child)
+	end
+	rig.humanoid.ChildAdded:Connect(kill)
 	return rig
 end
 
@@ -16207,8 +16339,11 @@ local function animate(char, rig, dt, serverNow, isLocal)
 
 	-- local player's hips physically lower when crouched
 	if isLocal and rig.humanoid then
-		rig.baseHip = rig.baseHip or rig.humanoid.HipHeight
-		rig.humanoid.HipHeight = rig.baseHip * (1 - (1 - Movement.CrouchHipMult) * math.min(c, 1))
+		local base = char:GetAttribute("BaseHipHeight")
+		if base then
+			rig.baseHip = base
+			rig.humanoid.HipHeight = base * (1 - (1 - Movement.CrouchHipMult) * math.min(c, 1))
+		end
 	end
 end
 
@@ -16559,17 +16694,42 @@ function UIController.start()
 	local function request(kind, a, b)
 		Controllers.ActionController.request(kind, a, b)
 	end
-	HUD.build(gui, function()
-		send("SecondWind")
-	end, Controllers.WeaponController)
-	CharacterSelect.build(gui)
-	Satchel.build(gui, send)
-	Shop.build(gui)
-	Results.build(gui)
-	Chart.build(gui, request)
-	Workbench.build(gui, request)
-	Repairs.build(gui, request)
-	Settings.build(gui, request)
+	-- each panel builds on its own: one failing must not leave the rest (satchel, shop...) unbuilt
+	local function build(name, fn)
+		local ok, err = pcall(fn)
+		if not ok then
+			warn(("[UI] %s failed to build: %s"):format(name, tostring(err)))
+		end
+	end
+	build("HUD", function()
+		HUD.build(gui, function()
+			send("SecondWind")
+		end, Controllers.WeaponController)
+	end)
+	build("CharacterSelect", function()
+		CharacterSelect.build(gui)
+	end)
+	build("Satchel", function()
+		Satchel.build(gui, send)
+	end)
+	build("Shop", function()
+		Shop.build(gui)
+	end)
+	build("Results", function()
+		Results.build(gui)
+	end)
+	build("Chart", function()
+		Chart.build(gui, request)
+	end)
+	build("Workbench", function()
+		Workbench.build(gui, request)
+	end)
+	build("Repairs", function()
+		Repairs.build(gui, request)
+	end)
+	build("Settings", function()
+		Settings.build(gui, request)
+	end)
 
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
 		data = data or {}
@@ -16625,10 +16785,18 @@ function UIController.start()
 		end
 	end)
 
+	local reported = {}
+	local function safe(name, fn, ...)
+		local ok, err = pcall(fn, ...)
+		if not ok and not reported[name] then
+			reported[name] = true
+			warn(("[UI] %s: %s"):format(name, tostring(err)))
+		end
+	end
 	RunService.RenderStepped:Connect(function(dt)
-		HUD.update(dt)
-		Satchel.refresh()
-		Shop.refresh()
+		safe("HUD", HUD.update, dt)
+		safe("Satchel", Satchel.refresh)
+		safe("Shop", Shop.refresh)
 	end)
 end
 

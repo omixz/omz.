@@ -41,6 +41,8 @@ local function canAct()
 	return State.character ~= nil and not State.uiOpen() and not State.downed
 end
 
+local bindUnsafe
+
 local touchLayout = {
 	Fire = { title = "Fire", pos = UDim2.new(1, -95, 1, -230) },
 	Aim = { title = "Aim", pos = UDim2.new(1, -170, 1, -230) },
@@ -57,6 +59,17 @@ local touchLayout = {
 }
 
 local function bind(name, handler, ...)
+	local inputs = { ... }
+	local ok, err = pcall(function()
+		bindUnsafe(name, handler, table.unpack(inputs))
+	end)
+	if not ok then
+		-- one bad binding must never stop the ones after it (satchel, sprint, F1, settings...)
+		warn("[ActionController] could not bind " .. name .. ": " .. tostring(err))
+	end
+end
+
+bindUnsafe = function(name, handler, ...)
 	local touch = touchLayout[name] ~= nil
 	-- above Roblox's own scripts (default camera input grabs right-click, the player list
 	-- grabs Tab), otherwise aiming and the satchel never receive their keys
@@ -223,11 +236,7 @@ function ActionController.start()
 			Movement.toggleCrouch()
 		end
 	end, Enum.KeyCode.C, Enum.KeyCode.LeftControl, Enum.KeyCode.ButtonB)
-	bind("Prone", function(state)
-		if state == Begin and State.character then
-			Movement.setProne(not State.prone)
-		end
-	end)
+
 
 	bind("Sprint", function(state, input)
 		if not State.character then

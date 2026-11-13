@@ -76,17 +76,42 @@ function UIController.start()
 	local function request(kind, a, b)
 		Controllers.ActionController.request(kind, a, b)
 	end
-	HUD.build(gui, function()
-		send("SecondWind")
-	end, Controllers.WeaponController)
-	CharacterSelect.build(gui)
-	Satchel.build(gui, send)
-	Shop.build(gui)
-	Results.build(gui)
-	Chart.build(gui, request)
-	Workbench.build(gui, request)
-	Repairs.build(gui, request)
-	Settings.build(gui, request)
+	-- each panel builds on its own: one failing must not leave the rest (satchel, shop...) unbuilt
+	local function build(name, fn)
+		local ok, err = pcall(fn)
+		if not ok then
+			warn(("[UI] %s failed to build: %s"):format(name, tostring(err)))
+		end
+	end
+	build("HUD", function()
+		HUD.build(gui, function()
+			send("SecondWind")
+		end, Controllers.WeaponController)
+	end)
+	build("CharacterSelect", function()
+		CharacterSelect.build(gui)
+	end)
+	build("Satchel", function()
+		Satchel.build(gui, send)
+	end)
+	build("Shop", function()
+		Shop.build(gui)
+	end)
+	build("Results", function()
+		Results.build(gui)
+	end)
+	build("Chart", function()
+		Chart.build(gui, request)
+	end)
+	build("Workbench", function()
+		Workbench.build(gui, request)
+	end)
+	build("Repairs", function()
+		Repairs.build(gui, request)
+	end)
+	build("Settings", function()
+		Settings.build(gui, request)
+	end)
 
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
 		data = data or {}
@@ -142,10 +167,18 @@ function UIController.start()
 		end
 	end)
 
+	local reported = {}
+	local function safe(name, fn, ...)
+		local ok, err = pcall(fn, ...)
+		if not ok and not reported[name] then
+			reported[name] = true
+			warn(("[UI] %s: %s"):format(name, tostring(err)))
+		end
+	end
 	RunService.RenderStepped:Connect(function(dt)
-		HUD.update(dt)
-		Satchel.refresh()
-		Shop.refresh()
+		safe("HUD", HUD.update, dt)
+		safe("Satchel", Satchel.refresh)
+		safe("Shop", Shop.refresh)
 	end)
 end
 

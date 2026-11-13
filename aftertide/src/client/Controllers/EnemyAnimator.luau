@@ -93,6 +93,14 @@ local function setup(model)
 		return nil
 	end
 	rig.label = marker(model, head)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, child in humanoid:GetChildren() do
+			if child:IsA("Animator") then
+				child:Destroy() -- it would overwrite the procedural joints every frame
+			end
+		end
+	end
 	return rig
 end
 

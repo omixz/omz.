@@ -17,7 +17,7 @@ local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("coast")
-	MapKit.floodWall(parent, nil, { height = 30 })
+	MapKit.floodWall(parent, nil, { height = 16 })
 	-- terrain base: concrete yard, asphalt lanes, grass verges, mud by the water
 	MapKit.slab(-118, -118, 118, 118, M.Concrete, 0)
 	MapKit.slab(-12, 14, 118, 30, M.Asphalt, 0.02)

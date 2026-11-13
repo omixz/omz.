@@ -16,7 +16,7 @@ local PHARMACY = { 62, 66, 106, 100 }
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("suburb")
-	MapKit.floodWall(parent, nil, { height = 32, color = Color3.fromRGB(124, 120, 112) })
+	MapKit.floodWall(parent, nil, { height = 16, color = Color3.fromRGB(124, 120, 112) })
 	MapKit.barricade(parent, rng, 13)
 	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
 	MapKit.slab(-120, -9, 120, 9, M.Asphalt, 0.05)

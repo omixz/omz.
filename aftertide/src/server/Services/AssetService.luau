@@ -243,21 +243,25 @@ function AssetService.part(name)
 	return template and template:Clone() or nil
 end
 
--- True when every layer of a kit (from MeshMeta) is loaded.
+-- True when a kit (from MeshMeta) is loaded well enough to use: nearly every layer present.
+-- A detail layer that's missing (e.g. an older revision of the pack still being served while
+-- the new one is reviewed) is simply skipped by MeshKit instead of failing the whole body.
 function AssetService.hasKit(kit)
 	local entry = MeshMeta[kit]
 	if not entry then
 		return false
 	end
 	local groups = entry.type == "rig" and entry.segments or { entry }
+	local total, present = 0, 0
 	for _, group in groups do
 		for _, layer in group.layers do
-			if not parts[layer.part] then
-				return false
+			total += 1
+			if parts[layer.part] then
+				present += 1
 			end
 		end
 	end
-	return true
+	return total > 0 and present / total >= 0.85
 end
 
 function AssetService.meta(kit)

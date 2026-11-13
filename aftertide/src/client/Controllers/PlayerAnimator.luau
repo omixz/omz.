@@ -60,13 +60,24 @@ local function setup(char)
 	if not rig.root or not rig.humanoid then
 		return nil
 	end
-	-- stop anything the default Animate script may have started before it was removed
-	local animator = rig.humanoid:FindFirstChildOfClass("Animator")
-	if animator then
-		for _, track in animator:GetPlayingAnimationTracks() do
-			track:Stop(0)
+	-- an Animator overwrites Motor6D.Transform every frame: make sure none survives here
+	-- (the server removes it too; this covers one created locally before that replicated)
+	local function kill(child)
+		if child:IsA("Animator") then
+			pcall(function()
+				for _, track in child:GetPlayingAnimationTracks() do
+					track:Stop(0)
+				end
+			end)
+			task.defer(function()
+				pcall(child.Destroy, child)
+			end)
 		end
 	end
+	for _, child in rig.humanoid:GetChildren() do
+		kill(child)
+	end
+	rig.humanoid.ChildAdded:Connect(kill)
 	return rig
 end
 
@@ -493,8 +504,11 @@ local function animate(char, rig, dt, serverNow, isLocal)
 
 	-- local player's hips physically lower when crouched
 	if isLocal and rig.humanoid then
-		rig.baseHip = rig.baseHip or rig.humanoid.HipHeight
-		rig.humanoid.HipHeight = rig.baseHip * (1 - (1 - Movement.CrouchHipMult) * math.min(c, 1))
+		local base = char:GetAttribute("BaseHipHeight")
+		if base then
+			rig.baseHip = base
+			rig.humanoid.HipHeight = base * (1 - (1 - Movement.CrouchHipMult) * math.min(c, 1))
+		end
 	end
 end
 

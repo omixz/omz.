@@ -549,7 +549,7 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 	if encounterType == "Salvage" then
 		local picks = shuffled(MapService.SupplyCandidates, rng)
 		for i = 1, math.min(Encounters.Types.Salvage.crates, #picks) do
-			local pos = picks[i]
+			local pos = Services.LootService.settle(picks[i], encounterFolder)
 			local crate = block(encounterFolder, Vector3.new(3, 2.4, 2.2), pos + Vector3.new(0, 1.2, 0), C.supply, Enum.Material.WoodPlanks, { Name = "SupplyCrate" })
 			block(crate, Vector3.new(3.05, 0.35, 2.25), pos + Vector3.new(0, 1.7, 0), C.bone, Enum.Material.SmoothPlastic, { CanCollide = false, CanQuery = false })
 			local glint = Instance.new("PointLight")
@@ -566,7 +566,7 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 
 	-- the signal lantern (Lantern Watch / finale)
 	if encounterType == "LanternWatch" then
-		local base = MapService.LanternPos
+		local base = Services.LootService.settle(MapService.LanternPos, encounterFolder)
 		block(encounterFolder, Vector3.new(3, 1, 3), base + Vector3.new(0, 0.5, 0), C.metal, Enum.Material.Metal)
 		block(encounterFolder, Vector3.new(0.5, 6, 0.5), base + Vector3.new(0, 4, 0), C.metal, Enum.Material.Metal)
 		lantern = block(encounterFolder, Vector3.new(1.6, 2, 1.6), base + Vector3.new(0, 8, 0), C.warm, Enum.Material.Neon, { Name = "SignalLantern" })

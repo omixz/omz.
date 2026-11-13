@@ -622,6 +622,7 @@ function EnemyService.spawn(typeName, position, opts)
 		Services.CharacterService.setFlashlight(model, true)
 	end
 	model:SetAttribute("Human", cfg.human == true)
+	Services.CharacterService.stripAnimator(model) -- EnemyAnimator drives the joints
 	model.Parent = folder
 	pcall(function()
 		root:SetNetworkOwner(nil)

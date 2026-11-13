@@ -225,7 +225,7 @@ function MapKit.ground(x, z, include)
 	local origin = Vector3.new(x, 300, z)
 	local surfaces = {}
 	local terrainY = nil
-	for _ = 1, 10 do
+	for _ = 1, 48 do -- buildings stack many surfaces (roof, ceiling, shelves, lamps) above the floor
 		local hit = Workspace:Raycast(origin, Vector3.new(0, -600, 0), groundParams)
 		if not hit then
 			break
@@ -461,7 +461,7 @@ end
 -- walkway cap and a few work lights. groundFn(x, z) gives the land height (hills).
 function MapKit.floodWall(parent, groundFn, opts)
 	opts = opts or {}
-	local H = opts.height or 34
+	local H = opts.height or 16
 	local E = 120
 	local concrete = opts.color or Color3.fromRGB(118, 116, 110)
 	local stain = Color3.fromRGB(86, 84, 78)

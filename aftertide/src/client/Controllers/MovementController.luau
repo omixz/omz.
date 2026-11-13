@@ -106,16 +106,22 @@ function MovementController.dodge()
 	Net.event("Action"):FireServer("Dodge", dir)
 	Sfx.ui("Dodge", 0.6)
 
+	-- never dash into (and through) a wall: shorten the dodge to the space available
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { State.character }
+	local room = Workspace:Raycast(root.Position, dir * 9, params)
+	local roomScale = room and math.clamp((room.Distance - 1.5) / 9, 0, 1) or 1
 	local attachment = root:FindFirstChild("RootAttachment")
-	if attachment then
+	if attachment and roomScale > 0.1 then
 		local lv = Instance.new("LinearVelocity")
 		lv.Attachment0 = attachment
-		lv.MaxForce = 1e6
+		lv.MaxForce = 4e4
 		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
 		lv.PrimaryTangentAxis = Vector3.new(1, 0, 0)
 		lv.SecondaryTangentAxis = Vector3.new(0, 0, 1)
 		lv.RelativeTo = Enum.ActuatorRelativeTo.World
-		local speed = dive and 36 or 30
+		local speed = (dive and 36 or 30) * roomScale
 		lv.PlaneVelocity = Vector2.new(dir.X * speed, dir.Z * speed)
 		lv.Parent = root
 		task.delay(dive and 0.38 or 0.22, function()

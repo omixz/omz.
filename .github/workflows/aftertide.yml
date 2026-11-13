@@ -16,6 +16,8 @@ jobs:
           python-version: "3.12"
       - name: Static checks
         run: python3 aftertide/tools/check_luau.py
+      - name: No undefined names (a nil name silently stops a Roblox script)
+        run: python3 aftertide/tools/check_scopes.py
       - name: Place file is up to date with src/
         run: |
           python3 aftertide/tools/build_place.py

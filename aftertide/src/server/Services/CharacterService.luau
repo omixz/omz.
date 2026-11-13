@@ -126,6 +126,29 @@ function CharacterService.setGrace(player, seconds)
 	end
 end
 
+-- Removes Roblox's animation system from a rig so procedural Motor6D.Transform writes stick.
+function CharacterService.stripAnimator(model)
+	local animate = model:FindFirstChild("Animate")
+	if animate then
+		animate:Destroy()
+	end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, child in humanoid:GetChildren() do
+			if child:IsA("Animator") then
+				child:Destroy()
+			end
+		end
+		humanoid.ChildAdded:Connect(function(child)
+			if child:IsA("Animator") then
+				task.defer(function()
+					child:Destroy()
+				end)
+			end
+		end)
+	end
+end
+
 -- The crew member's definition with their equipped outfit's colours (for the part-built body).
 function CharacterService.dressedDef(player, charId)
 	local base = Characters.List[charId]
@@ -225,8 +248,10 @@ local function setupCharacter(player, char, session, isCustomRig)
 	if not isCustomRig then
 		-- Replace the Roblox look and motion: sculpted, clothed body + our own animation
 		-- (client PlayerAnimator) instead of the default Animate script.
-		-- Roblox's Animate script stays as a safety net: PlayerAnimator overrides every joint
-		-- each frame, and if it ever fails you still get a walk/run instead of a frozen slide.
+		-- Our animation is procedural (client PlayerAnimator writes every Motor6D.Transform).
+		-- While an Animator exists Roblox overwrites those writes every frame, so remove the
+		-- default Animate script AND the Animator, and keep the Animator from coming back.
+		CharacterService.stripAnimator(char)
 		local kit = "Crew_" .. session.charId
 		local ok, err
 		if Services.AssetService.hasKit(kit) then
@@ -237,6 +262,7 @@ local function setupCharacter(player, char, session, isCustomRig)
 			local okFit, hip = pcall(MeshKit.conformSkeleton, char, meta, "r15", CREW_SCALE)
 			if okFit and hip then
 				humanoid.HipHeight = hip
+				char:SetAttribute("BaseHipHeight", hip)
 			elseif not okFit then
 				warn("[CharacterService] skeleton fit failed: " .. tostring(hip))
 			end
@@ -265,6 +291,9 @@ local function setupCharacter(player, char, session, isCustomRig)
 	char:SetAttribute("AbilityReadyAt", 0)
 	char:SetAttribute("CharId", session.charId)
 	char:SetAttribute("Supporter", player:GetAttribute("Supporter") == true)
+	if char:GetAttribute("BaseHipHeight") == nil then
+		char:SetAttribute("BaseHipHeight", humanoid.HipHeight)
+	end
 	humanoid.DisplayName = (player:GetAttribute("Supporter") and "◆ " or "") .. player.DisplayName
 	return root
 end
@@ -509,7 +538,7 @@ function CharacterService.damage(player, amount, fromPosition)
 		local away = Geometry.flat(root.Position - fromPosition)
 		if away.Magnitude > 0.01 then
 			CharacterService.setGrace(player, 1.5)
-			Net.notify(player, "Knockback", { velocity = away.Unit * 38 + Vector3.new(0, 14, 0) })
+			Net.notify(player, "Knockback", { velocity = away.Unit * 24 + Vector3.new(0, 8, 0) })
 		end
 	end
 	Net.notify(player, "Hurt", { amount = amount })

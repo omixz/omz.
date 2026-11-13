@@ -100,6 +100,28 @@ function LootService.dropPickup(parent, position, itemId, amount)
 	return p
 end
 
+-- Puts a point on whatever is really beneath it (floor, terrain, a step), so nothing floats
+-- or sinks however the spot was authored. Ignores encounter objects and characters.
+local settleParams = RaycastParams.new()
+settleParams.FilterType = Enum.RaycastFilterType.Exclude
+local function settle(position, parent)
+	local ignore = { parent }
+	for _, p in game:GetService("Players"):GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
+	end
+	local enemies = workspace:FindFirstChild("Enemies")
+	if enemies then
+		table.insert(ignore, enemies)
+	end
+	settleParams.FilterDescendantsInstances = ignore
+	settleParams.IgnoreWater = true
+	local hit = workspace:Raycast(position + Vector3.new(0, 3, 0), Vector3.new(0, -14, 0), settleParams)
+	return hit and Vector3.new(position.X, hit.Position.Y, position.Z) or position
+end
+LootService.settle = settle
+
 -- Container models: { body, moving part, open transform }
 local BUILDERS = {}
 
@@ -133,7 +155,7 @@ local function container(parent, spot, rng, pall)
 	if not def or not builder then
 		return
 	end
-	local cf = CFrame.new(spot.pos) * CFrame.Angles(0, math.rad(spot.yaw or 0), 0)
+	local cf = CFrame.new(settle(spot.pos, parent)) * CFrame.Angles(0, math.rad(spot.yaw or 0), 0)
 	local body, moving, openOffset = builder(parent, cf)
 	body.Name = spot.type
 	local prompt = Instance.new("ProximityPrompt")
@@ -185,7 +207,7 @@ function LootService.populate(parent, rng, pall, containerSpots, looseSpots)
 		local entry = LootService.roll("loose", 1, rng, 1)[1]
 		if entry then
 			local jitter = Vector3.new(rng:NextNumber(-1.5, 1.5), 0, rng:NextNumber(-1.5, 1.5))
-			LootService.dropPickup(parent, spots[i] + jitter, entry[1], entry[2])
+			LootService.dropPickup(parent, settle(spots[i] + jitter, parent), entry[1], entry[2])
 		end
 	end
 end
