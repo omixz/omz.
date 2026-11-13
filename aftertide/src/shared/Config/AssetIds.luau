@@ -14,8 +14,8 @@ return {
 		Nature = 73346481237318,
 		Props = 126141441239944,
 	},
-	-- Roblox's importer treats +Z as the front of a glTF file (the glTF standard); our sculpts
-	-- face -Z (Roblox's front), so every imported mesh comes in turned around. 180 fixes it.
-	-- If models ever look backwards after re-importing in Studio by hand, set this to 0.
-	YawFix = 180,
+	-- Only used if AssetService can't work out the importer's transform (it normally does,
+	-- and corrects every piece itself; see "[AssetService] ... importer turned the scene" in
+	-- Output). If models then look backwards, set this to 180.
+	YawFix = 0,
 }

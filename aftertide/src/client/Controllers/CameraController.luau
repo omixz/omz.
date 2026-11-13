@@ -168,6 +168,9 @@ local function update(dt)
 		height, offset, fov = 0.9, Vector3.new(1.4 * s, 1.3, 6.5), 64
 	elseif takedown then
 		height, offset, fov = 1.8, Vector3.new(2.3 * s, 0.1, 4.0), 56
+	elseif State.prone then
+		local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
+		height, offset, fov = 0.2, Vector3.new(1.4 * s, 0.6, State.aiming and 2.6 or 4.4), weaponFov or 62
 	elseif State.aiming then
 		local weaponFov = Controllers and Controllers.WeaponController.aimFov()
 		local scoped = weaponFov and weaponFov < 40

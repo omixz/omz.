@@ -41,6 +41,19 @@ local function material(name)
 	return ok and m or Enum.Material.SmoothPlastic
 end
 
+-- How to orient and size an imported piece: the importer correction solved by AssetService
+-- (FitRot / FitScale attributes) when present, otherwise our own size and the YawFix turn.
+local function fit(mp, layerSize, scale, fallbackRot)
+	local rot = mp:GetAttribute("FitRot")
+	local k = mp:GetAttribute("FitScale")
+	if typeof(rot) == "CFrame" and type(k) == "number" then
+		mp.Size = mp.Size * (k * scale)
+		return rot
+	end
+	mp.Size = layerSize * scale
+	return fallbackRot
+end
+
 local function v3(t)
 	return Vector3.new(t[1], t[2], t[3])
 end
@@ -253,7 +266,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 				local mp = getPart(layer.part)
 				if mp then
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
-					mp.Size = v3(layer.size) * s
+					local rot = fit(mp, v3(layer.size), s, yaw)
 					mp.Material = material(layer.material)
 					mp.Color = (colorOverrides and colorOverrides[layerName]) or Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
@@ -263,11 +276,11 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 					mp.Massless = true
 					mp.CastShadow = true
 					local offset = A + (v3(layer.center) - top) * s
-					mp.CFrame = bone.CFrame * CFrame.new(offset) * yaw
+					mp.CFrame = bone.CFrame * CFrame.new(offset) * rot
 					local weld = Instance.new("Weld")
 					weld.Part0 = bone
 					weld.Part1 = mp
-					weld.C0 = CFrame.new(offset) * yaw
+					weld.C0 = CFrame.new(offset) * rot
 					weld.Parent = mp
 					mp.Parent = model
 				end
@@ -303,11 +316,11 @@ function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
 		local mp = getPart(layer.part)
 		if mp then
 			mp.Name = layerName
-			mp.Size = v3(layer.size) * scale
+			local rot = fit(mp, v3(layer.size), scale, MeshKit.yaw)
 			mp.Material = material(layer.material)
 			mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 			mp.Anchored = true
-			mp.CFrame = cframe * CFrame.new(v3(layer.center) * scale) * MeshKit.yaw
+			mp.CFrame = cframe * CFrame.new(v3(layer.center) * scale) * rot
 			mp.Parent = model
 			any = true
 		end
@@ -328,7 +341,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 			local mp = getPart(layer.part)
 			if mp then
 				mp.Name = "Mesh_" .. layerName
-				mp.Size = v3(layer.size)
+				local rot = fit(mp, v3(layer.size), 1, MeshKit.yaw)
 				mp.Material = material(layer.material)
 				mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 				mp.Anchored = false
@@ -336,7 +349,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 				mp.CanQuery = false
 				mp.CanTouch = false
 				mp.Massless = true
-				mp.CFrame = grip.CFrame * CFrame.new(v3(layer.center)) * MeshKit.yaw
+				mp.CFrame = grip.CFrame * CFrame.new(v3(layer.center)) * rot
 				local weld = Instance.new("WeldConstraint")
 				weld.Part0 = grip
 				weld.Part1 = mp

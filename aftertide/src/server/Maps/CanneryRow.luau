@@ -9,7 +9,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 212, 216, 218 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
 }
 
 local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors, offices)
@@ -17,6 +17,7 @@ local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("coast")
+	MapKit.floodWall(parent, nil, { height = 30 })
 	-- terrain base: concrete yard, asphalt lanes, grass verges, mud by the water
 	MapKit.slab(-118, -118, 118, 118, M.Concrete, 0)
 	MapKit.slab(-12, 14, 118, 30, M.Asphalt, 0.02)

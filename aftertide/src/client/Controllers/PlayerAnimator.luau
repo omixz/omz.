@@ -184,12 +184,20 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 		local holster = slot == "long" and WeaponModels.BackOffset or (torso.CFrame:ToObjectSpace((char:FindFirstChild("LowerTorso") or torso).CFrame) * WeaponModels.HipOffset)
 		pose = holster:Lerp(pose, drawK * drawK * (3 - 2 * drawK))
 	end
-	weld.Part0 = torso
+	local anchor = torso
+	if (rig.prone or 0) > 0.5 then
+		-- prone: the gun rests out in front of you, just off the ground
+		local hrp = rig.root
+		local standH = (rig.baseHip or rig.humanoid.HipHeight) + hrp.Size.Y / 2
+		anchor = hrp
+		pose = CFrame.new(slot == "long" and 0.35 or 0.2, -(standH - 0.95), slot == "long" and -1.9 or -2.3) * CFrame.Angles(pitch * 0.4, 0, 0)
+	end
+	weld.Part0 = anchor
 	weld.C0 = pose
 	weld.C1 = CFrame.new()
 	rig.posedWeld = weld
 	-- hands onto the gun
-	local gripWorld = torso.CFrame * pose
+	local gripWorld = anchor.CFrame * pose
 	local rightTarget = gripWorld.Position
 	local support = grip:FindFirstChild("Support")
 	local leftTarget = support and (gripWorld * support.CFrame).Position or nil
@@ -224,7 +232,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	local fwd, side = -localVel.Z, localVel.X
 
 	local downed = char:GetAttribute("Downed") == true or char:GetAttribute("Out") == true
-	local crouched = isLocal and State.crouched or char:GetAttribute("Stance") == "Crouch"
+	local crouched = (isLocal and State.crouched or char:GetAttribute("Stance") == "Crouch") and not (isLocal and State.prone)
 	local equipped = char:GetAttribute("Equipped")
 	local armed = equipped ~= nil and equipped ~= "" and not downed
 	local slot = char:GetAttribute("EquippedSlot") or "none"
@@ -421,7 +429,27 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		lEl, rEl = 1.2, 0.8
 	end
 
-	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3
+	-- prone: flat on the belly, head up, crawling on elbows and knees
+	local prone = (isLocal and State.prone or char:GetAttribute("Stance") == "Prone") and not downed
+	rig.prone = approach(rig.prone or 0, prone and 1 or 0, 7, dt)
+	local pk = rig.prone
+	if pk > 0.01 then
+		local crawl = math.sin(p) * 0.35 * moving
+		local standH = (rig.baseHip or rig.humanoid.HipHeight) + root.Size.Y / 2
+		local function mix(x, y)
+			return x + (y - x) * pk
+		end
+		rootX = mix(rootX, -1.45)
+		rootOffset = rootOffset:Lerp(Vector3.new(0, -(standH - 0.7), 0), pk)
+		waistLean = mix(waistLean, 0.12)
+		lHip, rHip = mix(lHip, -0.05 + crawl), mix(rHip, -0.05 - crawl)
+		lKnee, rKnee = mix(lKnee, -0.15 - math.max(0, crawl) * 1.5), mix(rKnee, -0.15 - math.max(0, -crawl) * 1.5)
+		lSh, rSh = mix(lSh, 1.55 + crawl), mix(rSh, 1.55 - crawl)
+		lEl, rEl = mix(lEl, 1.3), mix(rEl, 1.3)
+		lShZ, rShZ = mix(lShZ, -0.35), mix(rShZ, 0.35)
+	end
+
+	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3 + 1.15 * pk
 	J.root.Transform = CFrame.new(rootOffset) * ang(rootX, rootY + shift, rootZ)
 	J.waist.Transform = ang(waistLean, -twist + rootY * -0.3, shift * 0.5)
 	J.neck.Transform = ang(neckPitch, twist * 0.5, 0)

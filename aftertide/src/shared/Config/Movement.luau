@@ -3,6 +3,7 @@
 return {
 	Speeds = {
 		Crouch = 6.5,
+		Prone = 3.2,
 		Walk = 9,
 		Jog = 14,
 		Sprint = 20,
@@ -11,6 +12,7 @@ return {
 	},
 	Noise = {
 		Crouch = 3,
+		Prone = 1.5,
 		Walk = 9,
 		Jog = 16,
 		Sprint = 30,

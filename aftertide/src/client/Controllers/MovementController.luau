@@ -24,7 +24,7 @@ local lastLookSent, lastLookAt = 0, 0
 local dodgeReadyAt = 0
 
 local function send()
-	local stance = State.crouched and "Crouch" or "Stand"
+	local stance = State.prone and "Prone" or (State.crouched and "Crouch" or "Stand")
 	local key = stance .. tostring(State.sprinting) .. tostring(State.aiming)
 	if key ~= lastSent then
 		lastSent = key
@@ -32,8 +32,26 @@ local function send()
 	end
 end
 
+function MovementController.setProne(on)
+	if State.downed then
+		return
+	end
+	State.prone = on
+	if on then
+		State.crouched = false
+		State.sprinting = false
+	end
+	send()
+end
+
 function MovementController.toggleCrouch()
 	if State.downed then
+		return
+	end
+	if State.prone then -- tap from prone: up to a crouch
+		State.prone = false
+		State.crouched = true
+		send()
 		return
 	end
 	State.crouched = not State.crouched
@@ -51,6 +69,7 @@ function MovementController.setSprint(on, toggled)
 	State.sprintToggled = on and toggled == true
 	if on then
 		State.crouched = false
+		State.prone = false
 	end
 	send()
 end
@@ -70,7 +89,7 @@ end
 -- Quick sidestep in the move direction (backstep if standing still); a dive when sprinting.
 function MovementController.dodge()
 	local root, humanoid = State.root, State.humanoid
-	if not root or not humanoid or State.downed or State.uiOpen() then
+	if not root or not humanoid or State.downed or State.uiOpen() or State.prone then
 		return
 	end
 	local now = os.clock()
@@ -136,7 +155,7 @@ local function step(dt)
 	local wasDowned = State.downed
 	State.downed = char:GetAttribute("Downed") == true or char:GetAttribute("Out") == true
 	if State.downed and not wasDowned then
-		State.aiming, State.sprinting, State.crouched = false, false, false
+		State.aiming, State.sprinting, State.crouched, State.prone = false, false, false, false
 		send()
 	end
 
@@ -150,6 +169,8 @@ local function step(dt)
 		target = S.Downed
 	elseif busy then
 		target = 1.5
+	elseif State.prone then
+		target = State.aiming and S.Prone * 0.5 or S.Prone
 	elseif State.aiming then
 		target = State.crouched and S.Crouch * 0.8 or S.Aim
 	elseif State.crouched then

@@ -9,7 +9,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 220, 226, 228 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
 }
 
 local function creekX(z)
@@ -133,7 +133,7 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
-	MapKit.ridge(g, 7)
+	MapKit.floodWall(parent, baseHeight, { height = 30, color = Color3.fromRGB(110, 108, 100) })
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end

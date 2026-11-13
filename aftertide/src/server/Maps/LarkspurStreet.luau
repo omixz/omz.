@@ -8,7 +8,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "LarkspurStreet",
 	name = "Larkspur Street",
-	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
+	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 236, 210, 176 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
 }
 
 local PHARMACY = { 62, 66, 106, 100 }
@@ -16,6 +16,7 @@ local PHARMACY = { 62, 66, 106, 100 }
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("suburb")
+	MapKit.floodWall(parent, nil, { height = 32, color = Color3.fromRGB(124, 120, 112) })
 	MapKit.barricade(parent, rng, 13)
 	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
 	MapKit.slab(-120, -9, 120, 9, M.Asphalt, 0.05)

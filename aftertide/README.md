@@ -16,10 +16,10 @@ Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 2. **File → Open from File…** → [`build/Aftertide.rbxlx`](build/Aftertide.rbxlx).
 3. Press **Play**. Pick a crew member and a perk, then hold **E** at the tide chart.
 
-**Controls:** WASD move · Shift sprint · C crouch · Space dodge (dive while sprinting) ·
+**Controls:** WASD move · Shift sprint · C crouch (hold C: prone) · Space dodge (dive while sprinting) ·
 RMB aim (Shift while aiming = hold breath) · LMB fire · R reload · 1/2/3 long gun / sidearm /
 holster · F Quieting / melee · G throw, Z next throwable · Q ability · H heal · T flashlight ·
-V Ammo Cache · B Resupply · Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
+V Ammo Cache · B Resupply · I / Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
 
 **Before publishing:** play a full crossing in Studio (with *Game Settings > Security >
 Enable Studio Access to API Services* on to test saving), then follow doc 3 to create the

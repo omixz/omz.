@@ -4,7 +4,7 @@
 --   Keyboard/mouse                     Gamepad
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
 --   (Shift / L3 while aiming: hold breath to steady your aim)
---   C / Ctrl crouch                    B crouch
+--   C / Ctrl crouch (hold: prone)      B crouch (hold: prone)
 --   RMB aim, LMB fire                  L2 aim, R2 fire
 --   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
 --   R reload (Second Wind if downed)   X: Quieting/shove near a Hushed, else reload
@@ -12,7 +12,7 @@
 --   G throw, Z next throwable          R1 throw, D-pad down next throwable
 --   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
 --   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
---   X swap shoulder, Tab satchel       R3 shoulder, View/Back satchel
+--   X swap shoulder, Tab / I satchel   R3 shoulder, View/Back satchel
 --   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
@@ -58,9 +58,11 @@ local touchLayout = {
 
 local function bind(name, handler, ...)
 	local touch = touchLayout[name] ~= nil
-	ContextActionService:BindAction(name, function(_, inputState, input)
+	-- above Roblox's own scripts (default camera input grabs right-click, the player list
+	-- grabs Tab), otherwise aiming and the satchel never receive their keys
+	ContextActionService:BindActionAtPriority(name, function(_, inputState, input)
 		return handler(inputState, input) or Sink
-	end, touch, ...)
+	end, touch, Enum.ContextActionPriority.High.Value + 100, ...)
 	if touch then
 		ContextActionService:SetTitle(name, touchLayout[name].title)
 		ContextActionService:SetPosition(name, touchLayout[name].pos)
@@ -194,11 +196,38 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.T, Enum.KeyCode.DPadLeft)
 
-	bind("Crouch", function(state)
-		if state == Begin and State.character then
+	-- tap: crouch / stand (or up from prone);  hold: go prone
+	local crouchPressedAt, crouchPress = 0, 0
+	bind("Crouch", function(state, input)
+		if not State.character then
+			return
+		end
+		if isTouch(input) then
+			if state == Begin then
+				Movement.toggleCrouch()
+			end
+			return
+		end
+		if state == Begin then
+			crouchPressedAt = os.clock()
+			crouchPress += 1
+			local press = crouchPress
+			task.delay(0.42, function()
+				if press == crouchPress and crouchPressedAt > 0 and not State.prone then
+					crouchPressedAt = 0
+					Movement.setProne(true)
+				end
+			end)
+		elseif state == End and crouchPressedAt > 0 then
+			crouchPressedAt = 0
 			Movement.toggleCrouch()
 		end
 	end, Enum.KeyCode.C, Enum.KeyCode.LeftControl, Enum.KeyCode.ButtonB)
+	bind("Prone", function(state)
+		if state == Begin and State.character then
+			Movement.setProne(not State.prone)
+		end
+	end)
 
 	bind("Sprint", function(state, input)
 		if not State.character then
@@ -230,7 +259,7 @@ function ActionController.start()
 		if state == Begin and State.character then
 			Controllers.UIController.toggleSatchel()
 		end
-	end, Enum.KeyCode.Tab, Enum.KeyCode.ButtonSelect)
+	end, Enum.KeyCode.Tab, Enum.KeyCode.I, Enum.KeyCode.ButtonSelect)
 
 	bind("Resupply", function(state)
 		if state == Begin and canAct() then

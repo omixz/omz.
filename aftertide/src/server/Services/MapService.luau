@@ -281,8 +281,8 @@ local function setupLighting()
 	atmosphere.Offset = 0.3
 	atmosphere.Color = Color3.fromRGB(196, 202, 204)
 	atmosphere.Decay = Color3.fromRGB(118, 126, 128)
-	atmosphere.Glare = 0.25
-	atmosphere.Haze = 1.4
+	atmosphere.Glare = 0
+	atmosphere.Haze = 0.3
 	atmosphere.Parent = Lighting
 
 	colorCorrection = Instance.new("ColorCorrectionEffect")
@@ -362,7 +362,7 @@ local function setupSky()
 	clouds.Parent = Workspace.Terrain
 end
 
-local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 226, 184, 150 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])
@@ -380,10 +380,14 @@ local function applyPreset(L, modifier)
 	Lighting.OutdoorAmbient = Color3.fromRGB(math.min(255, o[1] + boost), math.min(255, o[2] + boost), math.min(255, o[3] + boost))
 	Lighting.ColorShift_Top = rgb(L.shift)
 	if atmosphere then
-		local density = L.fog + ((modifier.fogDensity or 0.34) - 0.34)
-		TweenService:Create(atmosphere, TweenInfo.new(3), { Density = math.clamp(density, 0.12, 0.7) }):Play()
-		atmosphere.Haze = L.haze
-		atmosphere.Color = rgb(L.fogColor)
+		-- light haze only: heavy Haze paints over the skybox and gives the stock Roblox look
+		local density = L.fog * 0.8 + ((modifier.fogDensity or 0.34) - 0.34)
+		TweenService:Create(atmosphere, TweenInfo.new(3), { Density = math.clamp(density, 0.12, 0.6) }):Play()
+		atmosphere.Haze = math.min(L.haze, 2) * 0.25
+		atmosphere.Glare = 0
+		atmosphere.Offset = 0.15
+		atmosphere.Color = night and Color3.fromRGB(40, 46, 58) or rgb(L.fogColor)
+		atmosphere.Decay = night and Color3.fromRGB(20, 24, 32) or rgb(L.fogColor):Lerp(Color3.new(0.3, 0.32, 0.36), 0.5)
 	end
 	applySky(night and "night" or (L.sky or "ferry"))
 	-- weather: volumetric clouds and wind (moves grass, clouds and particles)

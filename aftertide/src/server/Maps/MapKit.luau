@@ -438,26 +438,82 @@ end
 
 -- World edge ------------------------------------------------------------------------------------
 
--- Land (or sea) beyond the playable area, so the horizon is never a void.
--- style: "coast" (sea to the west), "suburb", "forest"
+-- The sea beyond the flood walls: every map is a pocket of land held behind them.
+-- style "forest" adds distant wooded islands and headlands rising out of the water.
 function MapKit.outskirts(style)
 	local M = Enum.Material
-	local mat = style == "forest" and M.Grass or (style == "suburb" and M.Grass or M.Concrete)
-	local R, E = 420, 120
+	local R, E = 460, 123
 	for _, r in { { -R, -R, R, -E }, { -R, E, R, R }, { -R, -E, -E, E }, { E, -E, R, E } } do
-		MapKit.slab(r[1], r[2], r[3], r[4], mat, style == "forest" and 6 or 0, 16)
+		MapKit.clearAbove(r[1], r[2], r[3], r[4], -10)
+		MapKit.slab(r[1], r[2], r[3], r[4], M.Sand, -10, 8)
+		MapKit.water(r[1], r[2], r[3], r[4], 0.4, 10.4)
 	end
-	if style == "coast" then
-		-- the open sea past the harbour wall to the west
-		MapKit.clearAbove(-R, -R, -E, R, -6)
-		MapKit.slab(-R, -R, -E, R, M.Sand, -6, 10)
-		MapKit.water(-R, -R, -E, R, 0.3, 6.3)
-	elseif style == "forest" then
-		-- rolling hills climbing away from the valley
-		for i = 1, 26 do
-			local a = i / 26 * math.pi * 2
-			local d = 190 + (i % 3) * 40
-			terrain:FillBall(Vector3.new(math.cos(a) * d, -20, math.sin(a) * d), 70 + (i % 4) * 15, M.Grass)
+	if style == "forest" or style == "suburb" then
+		for i = 1, 18 do
+			local a = i / 18 * math.pi * 2 + 0.3
+			local d = 230 + (i % 3) * 55
+			terrain:FillBall(Vector3.new(math.cos(a) * d, -26, math.sin(a) * d), 48 + (i % 4) * 14, style == "forest" and M.Grass or M.Rock)
+		end
+	end
+end
+
+-- Tall concrete flood walls around the whole map, standing in the sea, with buttresses, a
+-- walkway cap and a few work lights. groundFn(x, z) gives the land height (hills).
+function MapKit.floodWall(parent, groundFn, opts)
+	opts = opts or {}
+	local H = opts.height or 34
+	local E = 120
+	local concrete = opts.color or Color3.fromRGB(118, 116, 110)
+	local stain = Color3.fromRGB(86, 84, 78)
+	local M = Enum.Material
+	local seg = 12
+	for edge = 1, 4 do
+		local i = 0
+		for t = -E - seg / 2, E + seg / 2, seg do
+			i += 1
+			local x, z, along
+			if edge == 1 then
+				x, z, along = t, E + 2, "x"
+			elseif edge == 2 then
+				x, z, along = t, -E - 2, "x"
+			elseif edge == 3 then
+				x, z, along = E + 2, t, "z"
+			else
+				x, z, along = -E - 2, t, "z"
+			end
+			local inX, inZ = x * 0.94, z * 0.94 -- sample the land just inside, not the sea
+			local g = groundFn and groundFn(inX, inZ) or 0
+			local base = math.min(g, 0) - 12
+			local top = g + H
+			local size = along == "x" and Vector3.new(seg + 0.4, top - base, 4) or Vector3.new(4, top - base, seg + 0.4)
+			block(parent, size, Vector3.new(x, (top + base) / 2, z), i % 3 == 0 and stain or concrete, M.Concrete)
+			-- walkway cap
+			local cap = along == "x" and Vector3.new(seg + 0.4, 1, 6) or Vector3.new(6, 1, seg + 0.4)
+			block(parent, cap, Vector3.new(x, top + 0.5, z), Color3.fromRGB(96, 94, 90), M.Concrete)
+			-- buttresses on the land side
+			if i % 2 == 0 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local bsize = along == "x" and Vector3.new(2.4, top - g + 2, 3) or Vector3.new(3, top - g + 2, 2.4)
+				block(parent, bsize, Vector3.new(x, g + (top - g) / 2 - 1, z) + inward, concrete, M.Concrete)
+			end
+			-- rust streaks below drainage pipes
+			if i % 4 == 1 then
+				local face = along == "x" and Vector3.new(0, 0, -math.sign(z) * 2.05) or Vector3.new(-math.sign(x) * 2.05, 0, 0)
+				local ssize = along == "x" and Vector3.new(1.2, H * 0.6, 0.1) or Vector3.new(0.1, H * 0.6, 1.2)
+				block(parent, ssize, Vector3.new(x, top - H * 0.32, z) + face, Color3.fromRGB(110, 72, 48), M.SmoothPlastic, { Transparency = 0.45, CanCollide = false, CanQuery = false })
+			end
+			-- a work light every few segments
+			if i % 6 == 3 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local lamp = block(parent, Vector3.new(1, 0.6, 1), Vector3.new(x, top - 1, z) + inward, Color3.fromRGB(255, 214, 160), M.Neon, { CanCollide = false })
+				local light = Instance.new("SpotLight")
+				light.Face = Enum.NormalId.Bottom
+				light.Range = 40
+				light.Angle = 70
+				light.Brightness = 1.6
+				light.Color = Color3.fromRGB(255, 214, 160)
+				light.Parent = lamp
+			end
 		end
 	end
 end

@@ -7,6 +7,7 @@ local State = {
 	baseHipHeight = 2,
 
 	crouched = false,
+	prone = false,
 	sprinting = false,
 	aiming = false,
 	downed = false,

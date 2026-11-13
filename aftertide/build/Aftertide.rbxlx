@@ -199,10 +199,10 @@ return {
 		Nature = 73346481237318,
 		Props = 126141441239944,
 	},
-	-- Roblox's importer treats +Z as the front of a glTF file (the glTF standard); our sculpts
-	-- face -Z (Roblox's front), so every imported mesh comes in turned around. 180 fixes it.
-	-- If models ever look backwards after re-importing in Studio by hand, set this to 0.
-	YawFix = 180,
+	-- Only used if AssetService can't work out the importer's transform (it normally does,
+	-- and corrects every piece itself; see "[AssetService] ... importer turned the scene" in
+	-- Output). If models then look backwards, set this to 180.
+	YawFix = 0,
 }
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">Characters</string><ProtectedString name="Source"><![CDATA[--!nonstrict
@@ -5212,6 +5212,7 @@ return {
 return {
 	Speeds = {
 		Crouch = 6.5,
+		Prone = 3.2,
 		Walk = 9,
 		Jog = 14,
 		Sprint = 20,
@@ -5220,6 +5221,7 @@ return {
 	},
 	Noise = {
 		Crouch = 3,
+		Prone = 1.5,
 		Walk = 9,
 		Jog = 16,
 		Sprint = 30,
@@ -5530,6 +5532,19 @@ local function material(name)
 	return ok and m or Enum.Material.SmoothPlastic
 end
 
+-- How to orient and size an imported piece: the importer correction solved by AssetService
+-- (FitRot / FitScale attributes) when present, otherwise our own size and the YawFix turn.
+local function fit(mp, layerSize, scale, fallbackRot)
+	local rot = mp:GetAttribute("FitRot")
+	local k = mp:GetAttribute("FitScale")
+	if typeof(rot) == "CFrame" and type(k) == "number" then
+		mp.Size = mp.Size * (k * scale)
+		return rot
+	end
+	mp.Size = layerSize * scale
+	return fallbackRot
+end
+
 local function v3(t)
 	return Vector3.new(t[1], t[2], t[3])
 end
@@ -5742,7 +5757,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 				local mp = getPart(layer.part)
 				if mp then
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
-					mp.Size = v3(layer.size) * s
+					local rot = fit(mp, v3(layer.size), s, yaw)
 					mp.Material = material(layer.material)
 					mp.Color = (colorOverrides and colorOverrides[layerName]) or Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
@@ -5752,11 +5767,11 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 					mp.Massless = true
 					mp.CastShadow = true
 					local offset = A + (v3(layer.center) - top) * s
-					mp.CFrame = bone.CFrame * CFrame.new(offset) * yaw
+					mp.CFrame = bone.CFrame * CFrame.new(offset) * rot
 					local weld = Instance.new("Weld")
 					weld.Part0 = bone
 					weld.Part1 = mp
-					weld.C0 = CFrame.new(offset) * yaw
+					weld.C0 = CFrame.new(offset) * rot
 					weld.Parent = mp
 					mp.Parent = model
 				end
@@ -5792,11 +5807,11 @@ function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
 		local mp = getPart(layer.part)
 		if mp then
 			mp.Name = layerName
-			mp.Size = v3(layer.size) * scale
+			local rot = fit(mp, v3(layer.size), scale, MeshKit.yaw)
 			mp.Material = material(layer.material)
 			mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 			mp.Anchored = true
-			mp.CFrame = cframe * CFrame.new(v3(layer.center) * scale) * MeshKit.yaw
+			mp.CFrame = cframe * CFrame.new(v3(layer.center) * scale) * rot
 			mp.Parent = model
 			any = true
 		end
@@ -5817,7 +5832,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 			local mp = getPart(layer.part)
 			if mp then
 				mp.Name = "Mesh_" .. layerName
-				mp.Size = v3(layer.size)
+				local rot = fit(mp, v3(layer.size), 1, MeshKit.yaw)
 				mp.Material = material(layer.material)
 				mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 				mp.Anchored = false
@@ -5825,7 +5840,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 				mp.CanQuery = false
 				mp.CanTouch = false
 				mp.Massless = true
-				mp.CFrame = grip.CFrame * CFrame.new(v3(layer.center)) * MeshKit.yaw
+				mp.CFrame = grip.CFrame * CFrame.new(v3(layer.center)) * rot
 				local weld = Instance.new("WeldConstraint")
 				weld.Part0 = grip
 				weld.Part1 = mp
@@ -6458,7 +6473,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 212, 216, 218 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
 }
 
 local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors, offices)
@@ -6466,6 +6481,7 @@ local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("coast")
+	MapKit.floodWall(parent, nil, { height = 30 })
 	-- terrain base: concrete yard, asphalt lanes, grass verges, mud by the water
 	MapKit.slab(-118, -118, 118, 118, M.Concrete, 0)
 	MapKit.slab(-12, 14, 118, 30, M.Asphalt, 0.02)
@@ -6664,7 +6680,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 220, 226, 228 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
 }
 
 local function creekX(z)
@@ -6788,7 +6804,7 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
-	MapKit.ridge(g, 7)
+	MapKit.floodWall(parent, baseHeight, { height = 30, color = Color3.fromRGB(110, 108, 100) })
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end
@@ -6832,7 +6848,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "LarkspurStreet",
 	name = "Larkspur Street",
-	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
+	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 236, 210, 176 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
 }
 
 local PHARMACY = { 62, 66, 106, 100 }
@@ -6840,6 +6856,7 @@ local PHARMACY = { 62, 66, 106, 100 }
 function Map.build(parent, rng)
 	local M = Enum.Material
 	MapKit.outskirts("suburb")
+	MapKit.floodWall(parent, nil, { height = 32, color = Color3.fromRGB(124, 120, 112) })
 	MapKit.barricade(parent, rng, 13)
 	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
 	MapKit.slab(-120, -9, 120, 9, M.Asphalt, 0.05)
@@ -7400,26 +7417,82 @@ end
 
 -- World edge ------------------------------------------------------------------------------------
 
--- Land (or sea) beyond the playable area, so the horizon is never a void.
--- style: "coast" (sea to the west), "suburb", "forest"
+-- The sea beyond the flood walls: every map is a pocket of land held behind them.
+-- style "forest" adds distant wooded islands and headlands rising out of the water.
 function MapKit.outskirts(style)
 	local M = Enum.Material
-	local mat = style == "forest" and M.Grass or (style == "suburb" and M.Grass or M.Concrete)
-	local R, E = 420, 120
+	local R, E = 460, 123
 	for _, r in { { -R, -R, R, -E }, { -R, E, R, R }, { -R, -E, -E, E }, { E, -E, R, E } } do
-		MapKit.slab(r[1], r[2], r[3], r[4], mat, style == "forest" and 6 or 0, 16)
+		MapKit.clearAbove(r[1], r[2], r[3], r[4], -10)
+		MapKit.slab(r[1], r[2], r[3], r[4], M.Sand, -10, 8)
+		MapKit.water(r[1], r[2], r[3], r[4], 0.4, 10.4)
 	end
-	if style == "coast" then
-		-- the open sea past the harbour wall to the west
-		MapKit.clearAbove(-R, -R, -E, R, -6)
-		MapKit.slab(-R, -R, -E, R, M.Sand, -6, 10)
-		MapKit.water(-R, -R, -E, R, 0.3, 6.3)
-	elseif style == "forest" then
-		-- rolling hills climbing away from the valley
-		for i = 1, 26 do
-			local a = i / 26 * math.pi * 2
-			local d = 190 + (i % 3) * 40
-			terrain:FillBall(Vector3.new(math.cos(a) * d, -20, math.sin(a) * d), 70 + (i % 4) * 15, M.Grass)
+	if style == "forest" or style == "suburb" then
+		for i = 1, 18 do
+			local a = i / 18 * math.pi * 2 + 0.3
+			local d = 230 + (i % 3) * 55
+			terrain:FillBall(Vector3.new(math.cos(a) * d, -26, math.sin(a) * d), 48 + (i % 4) * 14, style == "forest" and M.Grass or M.Rock)
+		end
+	end
+end
+
+-- Tall concrete flood walls around the whole map, standing in the sea, with buttresses, a
+-- walkway cap and a few work lights. groundFn(x, z) gives the land height (hills).
+function MapKit.floodWall(parent, groundFn, opts)
+	opts = opts or {}
+	local H = opts.height or 34
+	local E = 120
+	local concrete = opts.color or Color3.fromRGB(118, 116, 110)
+	local stain = Color3.fromRGB(86, 84, 78)
+	local M = Enum.Material
+	local seg = 12
+	for edge = 1, 4 do
+		local i = 0
+		for t = -E - seg / 2, E + seg / 2, seg do
+			i += 1
+			local x, z, along
+			if edge == 1 then
+				x, z, along = t, E + 2, "x"
+			elseif edge == 2 then
+				x, z, along = t, -E - 2, "x"
+			elseif edge == 3 then
+				x, z, along = E + 2, t, "z"
+			else
+				x, z, along = -E - 2, t, "z"
+			end
+			local inX, inZ = x * 0.94, z * 0.94 -- sample the land just inside, not the sea
+			local g = groundFn and groundFn(inX, inZ) or 0
+			local base = math.min(g, 0) - 12
+			local top = g + H
+			local size = along == "x" and Vector3.new(seg + 0.4, top - base, 4) or Vector3.new(4, top - base, seg + 0.4)
+			block(parent, size, Vector3.new(x, (top + base) / 2, z), i % 3 == 0 and stain or concrete, M.Concrete)
+			-- walkway cap
+			local cap = along == "x" and Vector3.new(seg + 0.4, 1, 6) or Vector3.new(6, 1, seg + 0.4)
+			block(parent, cap, Vector3.new(x, top + 0.5, z), Color3.fromRGB(96, 94, 90), M.Concrete)
+			-- buttresses on the land side
+			if i % 2 == 0 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local bsize = along == "x" and Vector3.new(2.4, top - g + 2, 3) or Vector3.new(3, top - g + 2, 2.4)
+				block(parent, bsize, Vector3.new(x, g + (top - g) / 2 - 1, z) + inward, concrete, M.Concrete)
+			end
+			-- rust streaks below drainage pipes
+			if i % 4 == 1 then
+				local face = along == "x" and Vector3.new(0, 0, -math.sign(z) * 2.05) or Vector3.new(-math.sign(x) * 2.05, 0, 0)
+				local ssize = along == "x" and Vector3.new(1.2, H * 0.6, 0.1) or Vector3.new(0.1, H * 0.6, 1.2)
+				block(parent, ssize, Vector3.new(x, top - H * 0.32, z) + face, Color3.fromRGB(110, 72, 48), M.SmoothPlastic, { Transparency = 0.45, CanCollide = false, CanQuery = false })
+			end
+			-- a work light every few segments
+			if i % 6 == 3 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local lamp = block(parent, Vector3.new(1, 0.6, 1), Vector3.new(x, top - 1, z) + inward, Color3.fromRGB(255, 214, 160), M.Neon, { CanCollide = false })
+				local light = Instance.new("SpotLight")
+				light.Face = Enum.NormalId.Bottom
+				light.Range = 40
+				light.Angle = 70
+				light.Brightness = 1.6
+				light.Color = Color3.fromRGB(255, 214, 160)
+				light.Parent = lamp
+			end
 		end
 	end
 end
@@ -8454,6 +8527,8 @@ local loaded = false
 -- Every mesh name the game asks for (from MeshMeta), longest first, so an importer that
 -- renames parts (adds "_Mesh", ".001", wraps them in a Model) still maps back.
 local known, knownList = {}, {}
+local canonCentre = {} -- [meshName] = Vector3 (where the piece sits in sculpt space)
+local canonSize = {} -- [meshName] = Vector3 (its bounding box in sculpt space)
 for _, entry in MeshMeta do
 	local groups = entry.type == "rig" and entry.segments or { entry }
 	for _, group in groups do
@@ -8461,6 +8536,8 @@ for _, entry in MeshMeta do
 			if not known[layer.part] then
 				known[layer.part] = true
 				table.insert(knownList, layer.part)
+				canonCentre[layer.part] = Vector3.new(layer.center[1], layer.center[2], layer.center[3])
+				canonSize[layer.part] = Vector3.new(layer.size[1], layer.size[2], layer.size[3])
 			end
 		end
 	end
@@ -8487,8 +8564,115 @@ local function resolveName(meshPart)
 	return nil
 end
 
+-- The 24 axis-aligned rotations (every way an importer can turn a scene).
+local ROTATIONS = {}
+do
+	local seen = {}
+	for _, rx in { 0, 90, 180, 270 } do
+		for _, ry in { 0, 90, 180, 270 } do
+			for _, rz in { 0, 90, 180, 270 } do
+				local cf = CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+				local key = ("%d%d%d%d%d%d"):format(
+					math.round(cf.RightVector.X), math.round(cf.RightVector.Y), math.round(cf.RightVector.Z),
+					math.round(cf.UpVector.X), math.round(cf.UpVector.Y), math.round(cf.UpVector.Z)
+				)
+				if not seen[key] then
+					seen[key] = true
+					table.insert(ROTATIONS, cf)
+				end
+			end
+		end
+	end
+end
+
+-- Roblox's importer may turn and scale the whole scene (glTF conventions vs Roblox's). We know
+-- where every piece sits in sculpt space (MeshMeta) and where it landed in the imported
+-- model, so we solve that transform (best of the 24 rotations, least-squares scale) and
+-- store, on each template, the rotation and scale that undo it for that piece. MeshKit uses
+-- them, so pieces come out the right way round and the right shape whatever the importer did.
+local function solveImport(name, templates)
+	local A, B = {}, {}
+	for meshName, part in templates do
+		local c = canonCentre[meshName]
+		if c then
+			table.insert(A, c)
+			table.insert(B, part.Position)
+		end
+	end
+	if #A < 3 then
+		return
+	end
+	local ca, cb = Vector3.zero, Vector3.zero
+	for i = 1, #A do
+		ca += A[i]
+		cb += B[i]
+	end
+	ca /= #A
+	cb /= #B
+	local best, bestK, bestErr = nil, 1, math.huge
+	for _, G in ROTATIONS do
+		local num, den = 0, 0
+		for i = 1, #A do
+			local a = G:VectorToWorldSpace(A[i] - ca)
+			num += a:Dot(B[i] - cb)
+			den += a:Dot(a)
+		end
+		local k = den > 1e-9 and num / den or 0
+		if k > 0 then
+			local err, norm = 0, 0
+			for i = 1, #A do
+				local b = B[i] - cb
+				local d = b - G:VectorToWorldSpace(A[i] - ca) * k
+				err += d:Dot(d)
+				norm += b:Dot(b)
+			end
+			err /= math.max(norm, 1e-9)
+			if err < bestErr then
+				best, bestK, bestErr = G, k, err
+			end
+		end
+	end
+	if not best or bestErr > 0.02 then
+		-- positions didn't survive the import: match each piece's box shape instead (recovers
+		-- which axis is which; a 180 degree flip can't be told apart from shape alone)
+		local fixed = 0
+		for meshName, part in templates do
+			local want = canonSize[meshName]
+			if want and want.Magnitude > 1e-6 then
+				local bestG, bestE, bestScale = nil, math.huge, 1
+				for _, G in ROTATIONS do
+					local r = G:VectorToWorldSpace(want)
+					r = Vector3.new(math.abs(r.X), math.abs(r.Y), math.abs(r.Z))
+					local k = part.Size.Magnitude / r.Magnitude
+					local d = part.Size / k - r
+					local e = d.Magnitude / r.Magnitude
+					if e < bestE - 1e-4 then
+						bestG, bestE, bestScale = G, e, k
+					end
+				end
+				if bestG then
+					part:SetAttribute("FitRot", bestG:Inverse())
+					part:SetAttribute("FitScale", 1 / bestScale)
+					fixed += 1
+				end
+			end
+		end
+		warn(("[AssetService] %s: positions didn't survive import (fit error %.3f); matched %d pieces by shape"):format(name, bestErr, fixed))
+		return
+	end
+	local inv = best:Inverse()
+	for _, part in templates do
+		part:SetAttribute("FitRot", inv * part.CFrame.Rotation)
+		part:SetAttribute("FitScale", 1 / bestK)
+	end
+	local rx, ry, rz = best:ToEulerAnglesXYZ()
+	print(("[AssetService] %s: importer turned the scene (%d, %d, %d) deg, scale %.3f, fit error %.4f, %d pieces"):format(
+		name, math.round(math.deg(rx)), math.round(math.deg(ry)), math.round(math.deg(rz)), bestK, bestErr, #A))
+end
+
 local function index(container)
 	local found, unknown = 0, 0
+	local templates = {}
 	for _, d in container:GetDescendants() do
 		if d:IsA("MeshPart") then
 			local name = resolveName(d)
@@ -8510,6 +8694,7 @@ local function index(container)
 				end
 				d.TextureID = ""
 				parts[name] = d
+				templates[name] = d
 				found += 1
 			else
 				unknown += 1
@@ -8519,6 +8704,7 @@ local function index(container)
 	if unknown > 0 then
 		warn(("[AssetService] %s: %d meshes matched, %d unrecognised names (e.g. check the pack was imported unchanged)"):format(container.Name, found, unknown))
 	end
+	solveImport(container.Name, templates)
 end
 
 function AssetService.load()
@@ -9133,7 +9319,7 @@ function CharacterService.start()
 
 	-- Stance/sprint/aim replicate as character attributes (used by AI, noise and other clients).
 	Net.onServer("SetMoveState", 15, function(player, stance, sprinting, aiming)
-		if stance ~= "Stand" and stance ~= "Crouch" then
+		if stance ~= "Stand" and stance ~= "Crouch" and stance ~= "Prone" then
 			return
 		end
 		local char = player.Character
@@ -11379,8 +11565,8 @@ local function setupLighting()
 	atmosphere.Offset = 0.3
 	atmosphere.Color = Color3.fromRGB(196, 202, 204)
 	atmosphere.Decay = Color3.fromRGB(118, 126, 128)
-	atmosphere.Glare = 0.25
-	atmosphere.Haze = 1.4
+	atmosphere.Glare = 0
+	atmosphere.Haze = 0.3
 	atmosphere.Parent = Lighting
 
 	colorCorrection = Instance.new("ColorCorrectionEffect")
@@ -11460,7 +11646,7 @@ local function setupSky()
 	clouds.Parent = Workspace.Terrain
 end
 
-local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 226, 184, 150 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])
@@ -11478,10 +11664,14 @@ local function applyPreset(L, modifier)
 	Lighting.OutdoorAmbient = Color3.fromRGB(math.min(255, o[1] + boost), math.min(255, o[2] + boost), math.min(255, o[3] + boost))
 	Lighting.ColorShift_Top = rgb(L.shift)
 	if atmosphere then
-		local density = L.fog + ((modifier.fogDensity or 0.34) - 0.34)
-		TweenService:Create(atmosphere, TweenInfo.new(3), { Density = math.clamp(density, 0.12, 0.7) }):Play()
-		atmosphere.Haze = L.haze
-		atmosphere.Color = rgb(L.fogColor)
+		-- light haze only: heavy Haze paints over the skybox and gives the stock Roblox look
+		local density = L.fog * 0.8 + ((modifier.fogDensity or 0.34) - 0.34)
+		TweenService:Create(atmosphere, TweenInfo.new(3), { Density = math.clamp(density, 0.12, 0.6) }):Play()
+		atmosphere.Haze = math.min(L.haze, 2) * 0.25
+		atmosphere.Glare = 0
+		atmosphere.Offset = 0.15
+		atmosphere.Color = night and Color3.fromRGB(40, 46, 58) or rgb(L.fogColor)
+		atmosphere.Decay = night and Color3.fromRGB(20, 24, 32) or rgb(L.fogColor):Lerp(Color3.new(0.3, 0.32, 0.36), 0.5)
 	end
 	applySky(night and "night" or (L.sky or "ferry"))
 	-- weather: volumetric clouds and wind (moves grass, clouds and particles)
@@ -12661,7 +12851,7 @@ function PerceptionService.sightFactor(enemy, info)
 		-- blind (Seekers): only "feel" someone moving right next to them
 		local close = (root.Position - enemy.root.Position).Magnitude
 		local moving = Geometry.flat(root.AssemblyLinearVelocity).Magnitude > 1
-		if close < cfg.closeRange and moving and char:GetAttribute("Stance") ~= "Crouch" then
+		if close < cfg.closeRange and moving and char:GetAttribute("Stance") == "Stand" then
 			return 3
 		end
 		return 0
@@ -12694,11 +12884,14 @@ function PerceptionService.sightFactor(enemy, info)
 	end
 
 	local f = 1 - (dist / range) * 0.75
-	if char:GetAttribute("Stance") == "Crouch" then
+	local stance = char:GetAttribute("Stance")
+	if stance == "Crouch" then
 		f *= 0.55
+	elseif stance == "Prone" then
+		f *= 0.3
 	end
 	if Geometry.inTagged(root.Position, "TallGrass") then
-		f *= 0.35
+		f *= stance == "Prone" and 0.1 or 0.35 -- flat in the grass you're almost invisible
 	end
 	if lit then
 		f *= 1.8
@@ -12737,7 +12930,9 @@ local function footstepRadius(info, now)
 		return 0
 	end
 	local radius
-	if char:GetAttribute("Stance") == "Crouch" then
+	if char:GetAttribute("Stance") == "Prone" then
+		radius = Movement.Noise.Prone * mods.crouchNoiseMult
+	elseif char:GetAttribute("Stance") == "Crouch" then
 		radius = Movement.Noise.Crouch * mods.crouchNoiseMult
 	elseif speed < 10.5 then
 		radius = Movement.Noise.Walk
@@ -13732,7 +13927,7 @@ return WorkbenchService
 --   Keyboard/mouse                     Gamepad
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
 --   (Shift / L3 while aiming: hold breath to steady your aim)
---   C / Ctrl crouch                    B crouch
+--   C / Ctrl crouch (hold: prone)      B crouch (hold: prone)
 --   RMB aim, LMB fire                  L2 aim, R2 fire
 --   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
 --   R reload (Second Wind if downed)   X: Quieting/shove near a Hushed, else reload
@@ -13740,7 +13935,7 @@ return WorkbenchService
 --   G throw, Z next throwable          R1 throw, D-pad down next throwable
 --   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
 --   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
---   X swap shoulder, Tab satchel       R3 shoulder, View/Back satchel
+--   X swap shoulder, Tab / I satchel   R3 shoulder, View/Back satchel
 --   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
@@ -13786,9 +13981,11 @@ local touchLayout = {
 
 local function bind(name, handler, ...)
 	local touch = touchLayout[name] ~= nil
-	ContextActionService:BindAction(name, function(_, inputState, input)
+	-- above Roblox's own scripts (default camera input grabs right-click, the player list
+	-- grabs Tab), otherwise aiming and the satchel never receive their keys
+	ContextActionService:BindActionAtPriority(name, function(_, inputState, input)
 		return handler(inputState, input) or Sink
-	end, touch, ...)
+	end, touch, Enum.ContextActionPriority.High.Value + 100, ...)
 	if touch then
 		ContextActionService:SetTitle(name, touchLayout[name].title)
 		ContextActionService:SetPosition(name, touchLayout[name].pos)
@@ -13922,11 +14119,38 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.T, Enum.KeyCode.DPadLeft)
 
-	bind("Crouch", function(state)
-		if state == Begin and State.character then
+	-- tap: crouch / stand (or up from prone);  hold: go prone
+	local crouchPressedAt, crouchPress = 0, 0
+	bind("Crouch", function(state, input)
+		if not State.character then
+			return
+		end
+		if isTouch(input) then
+			if state == Begin then
+				Movement.toggleCrouch()
+			end
+			return
+		end
+		if state == Begin then
+			crouchPressedAt = os.clock()
+			crouchPress += 1
+			local press = crouchPress
+			task.delay(0.42, function()
+				if press == crouchPress and crouchPressedAt > 0 and not State.prone then
+					crouchPressedAt = 0
+					Movement.setProne(true)
+				end
+			end)
+		elseif state == End and crouchPressedAt > 0 then
+			crouchPressedAt = 0
 			Movement.toggleCrouch()
 		end
 	end, Enum.KeyCode.C, Enum.KeyCode.LeftControl, Enum.KeyCode.ButtonB)
+	bind("Prone", function(state)
+		if state == Begin and State.character then
+			Movement.setProne(not State.prone)
+		end
+	end)
 
 	bind("Sprint", function(state, input)
 		if not State.character then
@@ -13958,7 +14182,7 @@ function ActionController.start()
 		if state == Begin and State.character then
 			Controllers.UIController.toggleSatchel()
 		end
-	end, Enum.KeyCode.Tab, Enum.KeyCode.ButtonSelect)
+	end, Enum.KeyCode.Tab, Enum.KeyCode.I, Enum.KeyCode.ButtonSelect)
 
 	bind("Resupply", function(state)
 		if state == Begin and canAct() then
@@ -14241,6 +14465,9 @@ local function update(dt)
 		height, offset, fov = 0.9, Vector3.new(1.4 * s, 1.3, 6.5), 64
 	elseif takedown then
 		height, offset, fov = 1.8, Vector3.new(2.3 * s, 0.1, 4.0), 56
+	elseif State.prone then
+		local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
+		height, offset, fov = 0.2, Vector3.new(1.4 * s, 0.6, State.aiming and 2.6 or 4.4), weaponFov or 62
 	elseif State.aiming then
 		local weaponFov = Controllers and Controllers.WeaponController.aimFov()
 		local scoped = weaponFov and weaponFov < 40
@@ -15277,7 +15504,7 @@ local lastLookSent, lastLookAt = 0, 0
 local dodgeReadyAt = 0
 
 local function send()
-	local stance = State.crouched and "Crouch" or "Stand"
+	local stance = State.prone and "Prone" or (State.crouched and "Crouch" or "Stand")
 	local key = stance .. tostring(State.sprinting) .. tostring(State.aiming)
 	if key ~= lastSent then
 		lastSent = key
@@ -15285,8 +15512,26 @@ local function send()
 	end
 end
 
+function MovementController.setProne(on)
+	if State.downed then
+		return
+	end
+	State.prone = on
+	if on then
+		State.crouched = false
+		State.sprinting = false
+	end
+	send()
+end
+
 function MovementController.toggleCrouch()
 	if State.downed then
+		return
+	end
+	if State.prone then -- tap from prone: up to a crouch
+		State.prone = false
+		State.crouched = true
+		send()
 		return
 	end
 	State.crouched = not State.crouched
@@ -15304,6 +15549,7 @@ function MovementController.setSprint(on, toggled)
 	State.sprintToggled = on and toggled == true
 	if on then
 		State.crouched = false
+		State.prone = false
 	end
 	send()
 end
@@ -15323,7 +15569,7 @@ end
 -- Quick sidestep in the move direction (backstep if standing still); a dive when sprinting.
 function MovementController.dodge()
 	local root, humanoid = State.root, State.humanoid
-	if not root or not humanoid or State.downed or State.uiOpen() then
+	if not root or not humanoid or State.downed or State.uiOpen() or State.prone then
 		return
 	end
 	local now = os.clock()
@@ -15389,7 +15635,7 @@ local function step(dt)
 	local wasDowned = State.downed
 	State.downed = char:GetAttribute("Downed") == true or char:GetAttribute("Out") == true
 	if State.downed and not wasDowned then
-		State.aiming, State.sprinting, State.crouched = false, false, false
+		State.aiming, State.sprinting, State.crouched, State.prone = false, false, false, false
 		send()
 	end
 
@@ -15403,6 +15649,8 @@ local function step(dt)
 		target = S.Downed
 	elseif busy then
 		target = 1.5
+	elseif State.prone then
+		target = State.aiming and S.Prone * 0.5 or S.Prone
 	elseif State.aiming then
 		target = State.crouched and S.Crouch * 0.8 or S.Aim
 	elseif State.crouched then
@@ -15650,12 +15898,20 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 		local holster = slot == "long" and WeaponModels.BackOffset or (torso.CFrame:ToObjectSpace((char:FindFirstChild("LowerTorso") or torso).CFrame) * WeaponModels.HipOffset)
 		pose = holster:Lerp(pose, drawK * drawK * (3 - 2 * drawK))
 	end
-	weld.Part0 = torso
+	local anchor = torso
+	if (rig.prone or 0) > 0.5 then
+		-- prone: the gun rests out in front of you, just off the ground
+		local hrp = rig.root
+		local standH = (rig.baseHip or rig.humanoid.HipHeight) + hrp.Size.Y / 2
+		anchor = hrp
+		pose = CFrame.new(slot == "long" and 0.35 or 0.2, -(standH - 0.95), slot == "long" and -1.9 or -2.3) * CFrame.Angles(pitch * 0.4, 0, 0)
+	end
+	weld.Part0 = anchor
 	weld.C0 = pose
 	weld.C1 = CFrame.new()
 	rig.posedWeld = weld
 	-- hands onto the gun
-	local gripWorld = torso.CFrame * pose
+	local gripWorld = anchor.CFrame * pose
 	local rightTarget = gripWorld.Position
 	local support = grip:FindFirstChild("Support")
 	local leftTarget = support and (gripWorld * support.CFrame).Position or nil
@@ -15690,7 +15946,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	local fwd, side = -localVel.Z, localVel.X
 
 	local downed = char:GetAttribute("Downed") == true or char:GetAttribute("Out") == true
-	local crouched = isLocal and State.crouched or char:GetAttribute("Stance") == "Crouch"
+	local crouched = (isLocal and State.crouched or char:GetAttribute("Stance") == "Crouch") and not (isLocal and State.prone)
 	local equipped = char:GetAttribute("Equipped")
 	local armed = equipped ~= nil and equipped ~= "" and not downed
 	local slot = char:GetAttribute("EquippedSlot") or "none"
@@ -15887,7 +16143,27 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		lEl, rEl = 1.2, 0.8
 	end
 
-	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3
+	-- prone: flat on the belly, head up, crawling on elbows and knees
+	local prone = (isLocal and State.prone or char:GetAttribute("Stance") == "Prone") and not downed
+	rig.prone = approach(rig.prone or 0, prone and 1 or 0, 7, dt)
+	local pk = rig.prone
+	if pk > 0.01 then
+		local crawl = math.sin(p) * 0.35 * moving
+		local standH = (rig.baseHip or rig.humanoid.HipHeight) + root.Size.Y / 2
+		local function mix(x, y)
+			return x + (y - x) * pk
+		end
+		rootX = mix(rootX, -1.45)
+		rootOffset = rootOffset:Lerp(Vector3.new(0, -(standH - 0.7), 0), pk)
+		waistLean = mix(waistLean, 0.12)
+		lHip, rHip = mix(lHip, -0.05 + crawl), mix(rHip, -0.05 - crawl)
+		lKnee, rKnee = mix(lKnee, -0.15 - math.max(0, crawl) * 1.5), mix(rKnee, -0.15 - math.max(0, -crawl) * 1.5)
+		lSh, rSh = mix(lSh, 1.55 + crawl), mix(rSh, 1.55 - crawl)
+		lEl, rEl = mix(lEl, 1.3), mix(rEl, 1.3)
+		lShZ, rShZ = mix(lShZ, -0.35), mix(rShZ, 0.35)
+	end
+
+	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3 + 1.15 * pk
 	J.root.Transform = CFrame.new(rootOffset) * ang(rootX, rootY + shift, rootZ)
 	J.waist.Transform = ang(waistLean, -twist + rootY * -0.3, shift * 0.5)
 	J.neck.Transform = ang(neckPitch, twist * 0.5, 0)
@@ -16724,6 +17000,7 @@ local State = {
 	baseHipHeight = 2,
 
 	crouched = false,
+	prone = false,
 	sprinting = false,
 	aiming = false,
 	downed = false,
@@ -17030,7 +17307,7 @@ local controlsPanel, controlsHint
 local CONTROLS = {
 	{ "MOVE", "WASD", "Left stick" },
 	{ "SPRINT", "Shift (hold)", "L3" },
-	{ "CROUCH", "C / Ctrl", "B" },
+	{ "CROUCH · PRONE", "C tap · C hold", "B tap · B hold" },
 	{ "DODGE · DIVE", "Space (dive while sprinting)", "L1" },
 	{ "AIM", "Right mouse", "L2" },
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
@@ -17043,7 +17320,7 @@ local CONTROLS = {
 	{ "HEAL", "H", "D-pad up" },
 	{ "FLASHLIGHT", "T", "D-pad left" },
 	{ "AMMO CACHE · RESUPPLY", "V · B", "" },
-	{ "SATCHEL", "Tab", "View / Back" },
+	{ "SATCHEL", "I or Tab", "View / Back" },
 	{ "SWAP SHOULDER", "X", "R3" },
 	{ "SETTINGS · CONTROLS", "P · F1", "" },
 	{ "INTERACT", "E (hold)", "A" },

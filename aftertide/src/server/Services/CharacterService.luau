@@ -538,7 +538,7 @@ function CharacterService.start()
 
 	-- Stance/sprint/aim replicate as character attributes (used by AI, noise and other clients).
 	Net.onServer("SetMoveState", 15, function(player, stance, sprinting, aiming)
-		if stance ~= "Stand" and stance ~= "Crouch" then
+		if stance ~= "Stand" and stance ~= "Crouch" and stance ~= "Prone" then
 			return
 		end
 		local char = player.Character

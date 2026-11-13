@@ -39,7 +39,7 @@ local controlsPanel, controlsHint
 local CONTROLS = {
 	{ "MOVE", "WASD", "Left stick" },
 	{ "SPRINT", "Shift (hold)", "L3" },
-	{ "CROUCH", "C / Ctrl", "B" },
+	{ "CROUCH · PRONE", "C tap · C hold", "B tap · B hold" },
 	{ "DODGE · DIVE", "Space (dive while sprinting)", "L1" },
 	{ "AIM", "Right mouse", "L2" },
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
@@ -52,7 +52,7 @@ local CONTROLS = {
 	{ "HEAL", "H", "D-pad up" },
 	{ "FLASHLIGHT", "T", "D-pad left" },
 	{ "AMMO CACHE · RESUPPLY", "V · B", "" },
-	{ "SATCHEL", "Tab", "View / Back" },
+	{ "SATCHEL", "I or Tab", "View / Back" },
 	{ "SWAP SHOULDER", "X", "R3" },
 	{ "SETTINGS · CONTROLS", "P · F1", "" },
 	{ "INTERACT", "E (hold)", "A" },

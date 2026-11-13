@@ -71,7 +71,7 @@ function PerceptionService.sightFactor(enemy, info)
 		-- blind (Seekers): only "feel" someone moving right next to them
 		local close = (root.Position - enemy.root.Position).Magnitude
 		local moving = Geometry.flat(root.AssemblyLinearVelocity).Magnitude > 1
-		if close < cfg.closeRange and moving and char:GetAttribute("Stance") ~= "Crouch" then
+		if close < cfg.closeRange and moving and char:GetAttribute("Stance") == "Stand" then
 			return 3
 		end
 		return 0
@@ -104,11 +104,14 @@ function PerceptionService.sightFactor(enemy, info)
 	end
 
 	local f = 1 - (dist / range) * 0.75
-	if char:GetAttribute("Stance") == "Crouch" then
+	local stance = char:GetAttribute("Stance")
+	if stance == "Crouch" then
 		f *= 0.55
+	elseif stance == "Prone" then
+		f *= 0.3
 	end
 	if Geometry.inTagged(root.Position, "TallGrass") then
-		f *= 0.35
+		f *= stance == "Prone" and 0.1 or 0.35 -- flat in the grass you're almost invisible
 	end
 	if lit then
 		f *= 1.8
@@ -147,7 +150,9 @@ local function footstepRadius(info, now)
 		return 0
 	end
 	local radius
-	if char:GetAttribute("Stance") == "Crouch" then
+	if char:GetAttribute("Stance") == "Prone" then
+		radius = Movement.Noise.Prone * mods.crouchNoiseMult
+	elseif char:GetAttribute("Stance") == "Crouch" then
 		radius = Movement.Noise.Crouch * mods.crouchNoiseMult
 	elseif speed < 10.5 then
 		radius = Movement.Noise.Walk
