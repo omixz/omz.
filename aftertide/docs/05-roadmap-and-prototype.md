@@ -134,7 +134,7 @@ Code lives in `aftertide/src`. Open `aftertide/build/Aftertide.rbxlx` in Studio 
 | Graphics presets: Cinematic / Balanced / Performance, aim-focus depth of field | Built |
 | Custom realistic rigs and animation hooks | Built (needs your rig models, doc 7) |
 | **3D models:** sculpted crew, Harbour Watch & Tidebound factions, 5 Hushed (salt-crystal growths), 5 guns at real scale, nature & props, with fabric/leather/skin/salt surface maps; uploaded to Roblox | Built (doc 9) |
-| **Maps:** Cannery Row, Larkspur Street, Hollow Pines; tall & short grass, clouds, wind, per-map light | Built |
+| **Maps:** Cannery Row, Larkspur Street, Hollow Pines; tall & short grass, custom skies, clouds, wind, per-map light, real borders, a multi-room building on each | Built |
 | **Gunplay v2:** hit zones (head/torso/arm/leg) with directional reactions, limping, ragdolls for human enemies, recoil patterns, aim-in time, hold breath, shell-by-shell shotgun, left-hand IK on the gun | Built |
 | **Factions:** human AI with rifles/bows/hooks, flashlights, radio/bell callouts | Built |
 | **Audio:** 44 original sounds, uploaded | Built (doc 8) |

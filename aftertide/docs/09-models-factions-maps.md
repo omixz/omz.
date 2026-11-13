@@ -105,5 +105,21 @@ close to spot you) and **short grass** scattered across verges and clearings. Ni
 modifiers (e.g. *Nightfall*) darken the map; every crew member carries a **flashlight**
 (F) and Watch patrols carry their own, which you can see coming.
 
+**Skies:** each map (and the ferry, and night routes) has its own painted skybox from
+`tools/make_skies.py`: dusk over the Meridian, overcast over the cannery, clear golden light
+on Larkspur Street, mist over Hollow Pines. The four side faces are one image that tiles
+around the horizon, so it is seamless however Roblox orders the faces. Volumetric clouds and
+wind sit on top. IDs live in `Config/Skies.luau`.
+
+**Edges and interiors:** past every border there is land or sea (no void), and the border
+itself is a real barrier: the cannery's harbour wall, Larkspur's plank and tin barricades
+with wrecks across the road, Hollow Pines' rock ridge. Each map has a multi-room building
+(`MapKit.building`): the harbour office, the pharmacy, the ranger station. Rooms, doors,
+windows, some dead lights (bring a flashlight), shelves, desks, containers and loot.
+
+**Fitting:** the game rebuilds each character's skeleton to the sculpt's own proportions
+(`MeshKit.conformSkeleton`), so meshes fit their bones exactly, and turns every imported mesh
+180 degrees (`YawFix`), because Roblox's glTF importer treats +Z as the front.
+
 Terrain grass: in Studio select **Workspace → Terrain** and tick **Decoration** if the
 grass blades don't show.
