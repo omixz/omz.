@@ -1,0 +1,728 @@
+--!nonstrict
+-- Shared building blocks for the encounter maps: parts, volumes, walls, lights, terrain,
+-- grass, props (sculpted meshes when loaded, part fallbacks otherwise) and houses.
+local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local MeshKit = require(Shared.MeshKit)
+
+local MapKit = {}
+local Assets -- AssetService, set by MapService
+
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+
+MapKit.C = {
+	ground = Color3.fromRGB(70, 72, 70),
+	wall = Color3.fromRGB(96, 94, 88),
+	wallDark = Color3.fromRGB(70, 70, 68),
+	roof = Color3.fromRGB(74, 70, 64),
+	metal = Color3.fromRGB(46, 48, 50),
+	crate = Color3.fromRGB(92, 72, 52),
+	machine = Color3.fromRGB(70, 78, 80),
+	bone = Color3.fromRGB(226, 220, 206),
+	water = Color3.fromRGB(52, 70, 74),
+	reed = Color3.fromRGB(110, 112, 76),
+	warm = Color3.fromRGB(255, 196, 130),
+	containers = { Color3.fromRGB(120, 58, 44), Color3.fromRGB(44, 86, 88), Color3.fromRGB(58, 68, 90), Color3.fromRGB(140, 112, 56) },
+}
+local C = MapKit.C
+
+function MapKit.setAssets(assetService)
+	Assets = assetService
+end
+
+function MapKit.block(parent, size, position, color, material, props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = typeof(position) == "CFrame" and position or CFrame.new(position)
+	p.Color = color
+	p.Material = material or Enum.Material.Concrete
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	if props then
+		for key, value in props do
+			p[key] = value
+		end
+	end
+	p.Parent = parent
+	return p
+end
+local block = MapKit.block
+
+function MapKit.wedge(parent, size, cframe, color, material)
+	local w = Instance.new("WedgePart")
+	w.Anchored = true
+	w.Size = size
+	w.CFrame = cframe
+	w.Color = color
+	w.Material = material
+	w.Parent = parent
+	return w
+end
+
+function MapKit.volume(parent, size, position, tag)
+	local p = block(parent, size, position, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, {
+		Name = tag,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	CollectionService:AddTag(p, tag)
+	return p
+end
+
+local function splitGaps(a, b, gaps)
+	local segments, cursor = {}, a
+	table.sort(gaps, function(x, y)
+		return x[1] < y[1]
+	end)
+	for _, gap in gaps do
+		if gap[1] > cursor then
+			table.insert(segments, { cursor, gap[1] })
+		end
+		cursor = math.max(cursor, gap[2])
+	end
+	if b > cursor then
+		table.insert(segments, { cursor, b })
+	end
+	return segments
+end
+
+-- Wall along X at depth z (y0 = base height), door gaps {{x1,x2}} with lintels.
+function MapKit.wallX(parent, z, x1, x2, height, gaps, color, material, y0)
+	y0 = y0 or 0
+	for _, s in splitGaps(x1, x2, gaps or {}) do
+		block(parent, Vector3.new(s[2] - s[1], height, 1.2), Vector3.new((s[1] + s[2]) / 2, y0 + height / 2, z), color, material)
+	end
+	for _, g in gaps or {} do
+		if height > 9 then
+			block(parent, Vector3.new(g[2] - g[1], height - 9, 1.2), Vector3.new((g[1] + g[2]) / 2, y0 + 9 + (height - 9) / 2, z), color, material)
+		end
+	end
+end
+
+function MapKit.wallZ(parent, x, z1, z2, height, gaps, color, material, y0)
+	y0 = y0 or 0
+	for _, s in splitGaps(z1, z2, gaps or {}) do
+		block(parent, Vector3.new(1.2, height, s[2] - s[1]), Vector3.new(x, y0 + height / 2, (s[1] + s[2]) / 2), color, material)
+	end
+	for _, g in gaps or {} do
+		if height > 9 then
+			block(parent, Vector3.new(1.2, height - 9, g[2] - g[1]), Vector3.new(x, y0 + 9 + (height - 9) / 2, (g[1] + g[2]) / 2), color, material)
+		end
+	end
+end
+
+function MapKit.lamp(parent, base, lit)
+	block(parent, Vector3.new(0.6, 12, 0.6), base + Vector3.new(0, 6, 0), C.metal, Enum.Material.Metal)
+	block(parent, Vector3.new(0.3, 0.3, 2.4), base + Vector3.new(0, 11.9, -1.1), C.metal, Enum.Material.Metal)
+	local head = block(parent, Vector3.new(1.4, 0.5, 1.0), base + Vector3.new(0, 11.7, -2.2), lit == false and C.metal or C.warm, lit == false and Enum.Material.Metal or Enum.Material.Neon)
+	if lit ~= false then
+		local light = Instance.new("SpotLight")
+		light.Face = Enum.NormalId.Bottom
+		light.Range = 28
+		light.Angle = 100
+		light.Brightness = 2
+		light.Color = C.warm
+		light.Shadows = true
+		light.Parent = head
+		MapKit.volume(parent, Vector3.new(20, 10, 20), base + Vector3.new(0, 5, -2), "LitZone")
+	end
+end
+
+function MapKit.bulb(parent, position, range)
+	local bulb = block(parent, Vector3.new(0.7, 0.7, 0.7), position, C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+	local light = Instance.new("PointLight")
+	light.Range = range or 18
+	light.Brightness = 1.3
+	light.Color = C.warm
+	light.Shadows = true
+	light.Parent = bulb
+	MapKit.volume(parent, Vector3.new(14, 10, 14), Vector3.new(position.X, position.Y - 6, position.Z), "LitZone")
+end
+
+function MapKit.fog(parent, position, size)
+	local p = block(parent, Vector3.new(size.X, 1, size.Z), position, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = SMOKE
+	e.Rate = 1.2
+	e.Lifetime = NumberRange.new(14, 20)
+	e.Speed = NumberRange.new(0.3, 1)
+	e.SpreadAngle = Vector2.new(60, 60)
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-4, 4)
+	e.LightInfluence = 1
+	e.Color = ColorSequence.new(Color3.fromRGB(215, 220, 220))
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 16), NumberSequenceKeypoint.new(1, 28) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.9), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
+	e.Drag = 0.4
+	e.WindAffectsDrag = true -- fog drifts with the map's wind
+	e.Parent = p
+end
+
+-- Terrain --------------------------------------------------------------------------------------
+
+local terrain = Workspace.Terrain
+
+function MapKit.clearTerrain()
+	terrain:Clear()
+	pcall(function()
+		terrain.Decoration = true -- animated grass blades on Grass terrain
+	end)
+	terrain.WaterColor = Color3.fromRGB(38, 56, 60)
+	terrain.WaterTransparency = 0.55
+	terrain.WaterReflectance = 0.6
+	terrain.WaterWaveSize = 0.08
+	terrain.WaterWaveSpeed = 6
+end
+
+-- A flat slab of terrain material whose top surface is at y = top.
+function MapKit.slab(x0, z0, x1, z1, material, top, depth)
+	depth = depth or 8
+	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+	terrain:FillBlock(CFrame.new(cx, top - depth / 2, cz), Vector3.new(math.abs(x1 - x0), depth, math.abs(z1 - z0)), material)
+end
+
+-- Removes terrain above height y in a rectangle (carving dips, clearing for water).
+function MapKit.clearAbove(x0, z0, x1, z1, y)
+	local top = 60
+	terrain:FillBlock(CFrame.new((x0 + x1) / 2, (y + top) / 2, (z0 + z1) / 2), Vector3.new(math.abs(x1 - x0), top - y, math.abs(z1 - z0)), Enum.Material.Air)
+end
+
+function MapKit.water(x0, z0, x1, z1, surface, depth)
+	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+	terrain:FillBlock(CFrame.new(cx, surface - depth / 2, cz), Vector3.new(math.abs(x1 - x0), depth, math.abs(z1 - z0)), Enum.Material.Water)
+end
+
+-- Rolling ground: columns of terrain following heightFn(x, z), material by materialFn.
+function MapKit.heightfield(x0, z0, x1, z1, step, heightFn, materialFn)
+	for x = x0, x1 - step, step do
+		for z = z0, z1 - step, step do
+			local h = heightFn(x + step / 2, z + step / 2)
+			terrain:FillBlock(CFrame.new(x + step / 2, (h - 12) / 2, z + step / 2), Vector3.new(step, h + 12, step), materialFn(x, z, h))
+		end
+	end
+end
+
+-- Surface height at (x, z) (terrain or parts), for placing things on hills.
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Include
+groundParams.IgnoreWater = true
+function MapKit.ground(x, z, include)
+	groundParams.FilterDescendantsInstances = include or { terrain }
+	-- walk down through every surface (roofs, ceilings, floors, props) to the terrain, then
+	-- pick the lowest non-prop surface that sits close to the terrain (a floor), else terrain
+	local origin = Vector3.new(x, 300, z)
+	local surfaces = {}
+	local terrainY = nil
+	for _ = 1, 48 do -- buildings stack many surfaces (roof, ceiling, shelves, lamps) above the floor
+		local hit = Workspace:Raycast(origin, Vector3.new(0, -600, 0), groundParams)
+		if not hit then
+			break
+		end
+		if hit.Instance == terrain then
+			terrainY = hit.Position.Y
+			break
+		end
+		local inProp = hit.Instance.Parent and hit.Instance.Parent:IsA("Model")
+		if not inProp and hit.Normal.Y > 0.7 then
+			table.insert(surfaces, hit.Position.Y)
+		end
+		origin = hit.Position - Vector3.new(0, 0.05, 0)
+	end
+	local base = terrainY or 0
+	local best = base
+	for _, y in surfaces do
+		if y - base < 2.5 and y > best then
+			best = y
+		end
+	end
+	return best
+end
+
+function MapKit.onGround(v, include)
+	return Vector3.new(v.X, MapKit.ground(v.X, v.Z, include), v.Z)
+end
+
+-- Props ------------------------------------------------------------------------------------------
+
+local FALLBACK = {}
+function FALLBACK.rock(parent, cf, scale)
+	block(parent, Vector3.new(4, 2.6, 3.4) * scale, cf * CFrame.new(0, 1.1 * scale, 0) * CFrame.Angles(0.2, 0.7, 0.1), Color3.fromRGB(104, 102, 98), Enum.Material.Rock)
+end
+function FALLBACK.tree(parent, cf, scale)
+	block(parent, Vector3.new(1.2, 14, 1.2) * scale, cf * CFrame.new(0, 7 * scale, 0), Color3.fromRGB(70, 54, 42), Enum.Material.Wood)
+	block(parent, Vector3.new(9, 12, 9) * scale, cf * CFrame.new(0, 15 * scale, 0), Color3.fromRGB(40, 56, 36), Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball })
+end
+function FALLBACK.car(parent, cf, scale)
+	block(parent, Vector3.new(4, 1.4, 9) * scale, cf * CFrame.new(0, 1.3 * scale, 0), Color3.fromRGB(90, 96, 98), Enum.Material.Metal)
+	block(parent, Vector3.new(3.6, 1.2, 4.6) * scale, cf * CFrame.new(0, 2.6 * scale, 0.4), Color3.fromRGB(40, 44, 46), Enum.Material.Glass)
+end
+function FALLBACK.bush(parent, cf, scale)
+	block(parent, Vector3.new(3, 2.4, 3) * scale, cf * CFrame.new(0, 1.2 * scale, 0), Color3.fromRGB(46, 62, 40), Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
+end
+
+local KIND = {
+	Rock_1 = "rock", Rock_2 = "rock", Boulder_1 = "rock",
+	Pine_1 = "tree", Pine_2 = "tree", DeadTree_1 = "tree",
+	CarSedan_1 = "car", CarSedan_2 = "car", CarVan_1 = "car",
+	Bush_1 = "bush", Bush_2 = "bush",
+}
+
+-- Place a sculpted prop (or a simple stand-in). cf = ground point + facing.
+function MapKit.prop(parent, name, cf, scale)
+	scale = scale or 1
+	if Assets and Assets.hasKit(name) then
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		if m then
+			if KIND[name] == "car" or KIND[name] == "rock" then
+				for _, p in m:GetChildren() do
+					if p:IsA("BasePart") then
+						p.CanCollide = true
+					end
+				end
+			else
+				for _, p in m:GetChildren() do
+					if p:IsA("BasePart") then
+						p.CanCollide = KIND[name] == "tree" and p.Name == "Trunk"
+					end
+				end
+			end
+			return m
+		end
+	end
+	local fb = FALLBACK[KIND[name] or ""]
+	if fb then
+		fb(parent, cf, scale)
+	end
+	return nil
+end
+
+-- Grass ------------------------------------------------------------------------------------------
+
+local function grassMesh(parent, name, cf, scale)
+	if Assets and Assets.hasKit(name) then
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		if m then
+			for _, p in m:GetChildren() do
+				if p:IsA("BasePart") then
+					p.CanCollide = false
+					p.CanQuery = false
+					p.CanTouch = false
+					p.CastShadow = false
+				end
+			end
+			return true
+		end
+	end
+	return false
+end
+
+-- A patch of tall grass you can hide in (stealth volume + clumps).
+-- groundFn(x, z) gives the height (default flat 0).
+function MapKit.tallGrass(parent, center, size, rng, groundFn, density)
+	-- on hills the hiding volume follows the ground at the patch centre and is taller
+	local gy = groundFn and groundFn(center.X, center.Z) or center.Y
+	local vh = groundFn and 22 or 7
+	MapKit.volume(parent, Vector3.new(size.X, vh, size.Z), Vector3.new(center.X, gy + (groundFn and 4 or 3.5), center.Z), "TallGrass")
+	local count = math.floor(size.X * size.Z / 7 * (density or 1))
+	for _ = 1, count do
+		local x = center.X + rng:NextNumber(-size.X / 2, size.X / 2)
+		local z = center.Z + rng:NextNumber(-size.Z / 2, size.Z / 2)
+		local y = groundFn and groundFn(x, z) or center.Y
+		local cf = CFrame.new(x, y, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+		if not grassMesh(parent, "GrassTall_" .. rng:NextInteger(1, 3), cf, rng:NextNumber(0.85, 1.2)) then
+			local h = rng:NextNumber(3.6, 5.6)
+			block(parent, Vector3.new(0.22, h, 0.22), CFrame.new(x, y + h / 2, z) * CFrame.Angles(rng:NextNumber(-0.18, 0.18), rng:NextNumber(0, 6.28), rng:NextNumber(-0.18, 0.18)), C.reed, Enum.Material.Grass, {
+				CanCollide = false,
+				CanQuery = false,
+				CanTouch = false,
+				CastShadow = false,
+			})
+		end
+	end
+end
+
+-- Short grass and ferns sprinkled over an area (decorative only).
+function MapKit.shortGrass(parent, center, size, count, rng, groundFn, ferns)
+	if not (Assets and Assets.hasKit("GrassShort_1")) then
+		return
+	end
+	for _ = 1, count do
+		local x = center.X + rng:NextNumber(-size.X / 2, size.X / 2)
+		local z = center.Z + rng:NextNumber(-size.Z / 2, size.Z / 2)
+		local y = groundFn and groundFn(x, z) or center.Y
+		local name = (ferns and rng:NextNumber() < 0.3) and "Fern_1" or ("GrassShort_" .. rng:NextInteger(1, 2))
+		grassMesh(parent, name, CFrame.new(x, y, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.8, 1.3))
+	end
+end
+
+-- Houses -------------------------------------------------------------------------------------------
+
+-- A weatherboard house. origin = front-door ground point, facing = yaw (radians,
+-- front faces -Z when 0). Returns { doorways = {...}, containers = {...}, loot = {...} }.
+function MapKit.house(parent, origin, yaw, rng, style)
+	style = style or {}
+	local W, D, H = style.w or 26, style.d or 22, style.h or 11
+	local cf = CFrame.new(origin) * CFrame.Angles(0, yaw, 0)
+	local function at(x, y, z)
+		return cf * CFrame.new(x, y, z)
+	end
+	local siding = style.color or ({ Color3.fromRGB(150, 156, 150), Color3.fromRGB(176, 160, 132), Color3.fromRGB(120, 132, 140), Color3.fromRGB(168, 150, 140) })[rng:NextInteger(1, 4)]
+	local trim = Color3.fromRGB(200, 196, 186)
+	local wallMat = Enum.Material.WoodPlanks
+	local function wall(size, pos)
+		return block(parent, size, at(pos.X, pos.Y, pos.Z), siding, wallMat)
+	end
+	-- floor + porch
+	block(parent, Vector3.new(W, 1, D), at(0, 0.5, D / 2), Color3.fromRGB(96, 82, 66), Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(10, 0.8, 5), at(0, 0.4, -2.5), Color3.fromRGB(110, 96, 80), Enum.Material.WoodPlanks)
+	for _, sx in { -4.5, 4.5 } do
+		block(parent, Vector3.new(0.5, H - 1, 0.5), at(sx, H / 2, -4.6), trim, Enum.Material.Wood)
+	end
+	block(parent, Vector3.new(11, 0.5, 6), at(0, H - 0.6, -2.4), C.roof, Enum.Material.RoofShingles)
+	-- walls: front (door gap + windows), back, sides
+	local t = 1
+	local doorW = 5
+	wall(Vector3.new((W - doorW) / 2, H, t), Vector3.new(-(W + doorW) / 4, H / 2, 0))
+	wall(Vector3.new((W - doorW) / 2, H, t), Vector3.new((W + doorW) / 4, H / 2, 0))
+	wall(Vector3.new(doorW, H - 8, t), Vector3.new(0, 8 + (H - 8) / 2, 0))
+	wall(Vector3.new(W, H, t), Vector3.new(0, H / 2, D))
+	wall(Vector3.new(t, H, D), Vector3.new(-W / 2, H / 2, D / 2))
+	wall(Vector3.new(t, H, D), Vector3.new(W / 2, H / 2, D / 2))
+	-- windows (dark glass with trim) on front and sides
+	for _, wx in { -W * 0.32, W * 0.32 } do
+		block(parent, Vector3.new(4, 3.4, 0.3), at(wx, 5.2, -0.6), Color3.fromRGB(30, 34, 36), Enum.Material.Glass, { Transparency = 0.25 })
+		block(parent, Vector3.new(4.6, 0.3, 0.6), at(wx, 3.4, -0.7), trim, Enum.Material.Wood)
+	end
+	for _, sz in { D * 0.3, D * 0.7 } do
+		for _, sx in { -1, 1 } do
+			block(parent, Vector3.new(0.3, 3.4, 4), at(sx * (W / 2 + 0.6), 5.2, sz), Color3.fromRGB(30, 34, 36), Enum.Material.Glass, { Transparency = 0.25 })
+		end
+	end
+	-- interior: one partition with a doorway, a few furniture blocks
+	wall(Vector3.new(W * 0.35, H, t), Vector3.new(-W * 0.325, H / 2, D * 0.55))
+	wall(Vector3.new(W * 0.35, H, t), Vector3.new(W * 0.325, H / 2, D * 0.55))
+	block(parent, Vector3.new(6, 2.4, 3), at(-W * 0.3, 1.7, D * 0.3), Color3.fromRGB(86, 70, 60), Enum.Material.Fabric) -- sofa
+	block(parent, Vector3.new(5, 3, 2.5), at(W * 0.3, 2, D * 0.85), Color3.fromRGB(120, 110, 96), Enum.Material.Wood) -- counter
+	-- roof: two sloped wedges
+	local rise = 7
+	-- WedgePart: tall edge at +Z, slope descending to -Z
+	MapKit.wedge(parent, Vector3.new(W + 2, rise, D / 2 + 1), at(0, H + rise / 2, D * 0.25 - 0.5), C.roof, Enum.Material.RoofShingles)
+	MapKit.wedge(parent, Vector3.new(W + 2, rise, D / 2 + 1), at(0, H + rise / 2, D * 0.75 + 0.5) * CFrame.Angles(0, math.pi, 0), C.roof, Enum.Material.RoofShingles)
+	block(parent, Vector3.new(W, 1, D), at(0, H + 0.5, D / 2), siding, wallMat) -- ceiling
+	-- a dim lamp inside
+	MapKit.bulb(parent, at(0, H - 1.5, D * 0.3).Position, 16)
+	local function world(x, z)
+		return at(x, 0, z).Position
+	end
+	return {
+		doorways = { { hinge = world(-doorW / 2, -0.1), width = doorW, dir = cf.RightVector } },
+		containers = {
+			{ pos = world(-W * 0.38, D * 0.85), type = "Drawer", yaw = math.deg(yaw) + 180 },
+			{ pos = world(W * 0.4, D * 0.4), type = rng:NextNumber() < 0.5 and "Locker" or "Toolbox", yaw = math.deg(yaw) - 90 },
+		},
+		loot = { world(0, D * 0.3), world(-W * 0.25, D * 0.75), world(W * 0.2, D * 0.25) },
+	}
+end
+
+-- World edge ------------------------------------------------------------------------------------
+
+-- The sea beyond the flood walls: every map is a pocket of land held behind them.
+-- style "forest" adds distant wooded islands and headlands rising out of the water.
+function MapKit.outskirts(style)
+	local M = Enum.Material
+	local R, E = 460, 123
+	for _, r in { { -R, -R, R, -E }, { -R, E, R, R }, { -R, -E, -E, E }, { E, -E, R, E } } do
+		MapKit.clearAbove(r[1], r[2], r[3], r[4], -10)
+		MapKit.slab(r[1], r[2], r[3], r[4], M.Sand, -10, 8)
+		MapKit.water(r[1], r[2], r[3], r[4], 0.4, 10.4)
+	end
+	if style == "forest" or style == "suburb" then
+		for i = 1, 18 do
+			local a = i / 18 * math.pi * 2 + 0.3
+			local d = 230 + (i % 3) * 55
+			terrain:FillBall(Vector3.new(math.cos(a) * d, -26, math.sin(a) * d), 48 + (i % 4) * 14, style == "forest" and M.Grass or M.Rock)
+		end
+	end
+end
+
+-- Tall concrete flood walls around the whole map, standing in the sea, with buttresses, a
+-- walkway cap and a few work lights. groundFn(x, z) gives the land height (hills).
+function MapKit.floodWall(parent, groundFn, opts)
+	opts = opts or {}
+	local H = opts.height or 16
+	local E = 120
+	local concrete = opts.color or Color3.fromRGB(118, 116, 110)
+	local stain = Color3.fromRGB(86, 84, 78)
+	local M = Enum.Material
+	local seg = 12
+	for edge = 1, 4 do
+		local i = 0
+		for t = -E - seg / 2, E + seg / 2, seg do
+			i += 1
+			local x, z, along
+			if edge == 1 then
+				x, z, along = t, E + 2, "x"
+			elseif edge == 2 then
+				x, z, along = t, -E - 2, "x"
+			elseif edge == 3 then
+				x, z, along = E + 2, t, "z"
+			else
+				x, z, along = -E - 2, t, "z"
+			end
+			local inX, inZ = x * 0.94, z * 0.94 -- sample the land just inside, not the sea
+			local g = groundFn and groundFn(inX, inZ) or 0
+			local base = math.min(g, 0) - 12
+			local top = g + H
+			local size = along == "x" and Vector3.new(seg + 0.4, top - base, 4) or Vector3.new(4, top - base, seg + 0.4)
+			block(parent, size, Vector3.new(x, (top + base) / 2, z), i % 3 == 0 and stain or concrete, M.Concrete)
+			-- walkway cap
+			local cap = along == "x" and Vector3.new(seg + 0.4, 1, 6) or Vector3.new(6, 1, seg + 0.4)
+			block(parent, cap, Vector3.new(x, top + 0.5, z), Color3.fromRGB(96, 94, 90), M.Concrete)
+			-- buttresses on the land side
+			if i % 2 == 0 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local bsize = along == "x" and Vector3.new(2.4, top - g + 2, 3) or Vector3.new(3, top - g + 2, 2.4)
+				block(parent, bsize, Vector3.new(x, g + (top - g) / 2 - 1, z) + inward, concrete, M.Concrete)
+			end
+			-- rust streaks below drainage pipes
+			if i % 4 == 1 then
+				local face = along == "x" and Vector3.new(0, 0, -math.sign(z) * 2.05) or Vector3.new(-math.sign(x) * 2.05, 0, 0)
+				local ssize = along == "x" and Vector3.new(1.2, H * 0.6, 0.1) or Vector3.new(0.1, H * 0.6, 1.2)
+				block(parent, ssize, Vector3.new(x, top - H * 0.32, z) + face, Color3.fromRGB(110, 72, 48), M.SmoothPlastic, { Transparency = 0.45, CanCollide = false, CanQuery = false })
+			end
+			-- a work light every few segments
+			if i % 6 == 3 then
+				local inward = along == "x" and Vector3.new(0, 0, -math.sign(z) * 3) or Vector3.new(-math.sign(x) * 3, 0, 0)
+				local lamp = block(parent, Vector3.new(1, 0.6, 1), Vector3.new(x, top - 1, z) + inward, Color3.fromRGB(255, 214, 160), M.Neon, { CanCollide = false })
+				local light = Instance.new("SpotLight")
+				light.Face = Enum.NormalId.Bottom
+				light.Range = 40
+				light.Angle = 70
+				light.Brightness = 1.6
+				light.Color = Color3.fromRGB(255, 214, 160)
+				light.Parent = lamp
+			end
+		end
+	end
+end
+
+-- A wall of terrain rock along the map edge (forest ridges). groundFn gives the height.
+function MapKit.ridge(groundFn, seed)
+	local M = Enum.Material
+	local E = 118
+	for _, edge in { "N", "S", "E", "W" } do
+		for t = -E, E, 6 do
+			local x, z = t, t
+			if edge == "N" then
+				z = E
+			elseif edge == "S" then
+				z = -E
+			elseif edge == "E" then
+				x = E
+			else
+				x = -E
+			end
+			local g = groundFn and groundFn(x, z) or 0
+			local h = 16 + math.noise(t / 23, seed or 1, edge == "N" and 1 or (edge == "S" and 2 or (edge == "E" and 3 or 4))) * 10
+			terrain:FillBlock(CFrame.new(x, g + h / 2 - 2, z), Vector3.new(10, h + 4, 10), M.Rock)
+		end
+	end
+end
+
+-- A barricade around the map (suburb): plank walls, corrugated sheets and wrecks at the roads.
+function MapKit.barricade(parent, rng, roadHalfWidth)
+	local E = 117
+	local wood = Color3.fromRGB(104, 86, 66)
+	local tin = Color3.fromRGB(110, 104, 92)
+	local function sheet(cf, len, h)
+		block(parent, Vector3.new(len, h, 0.4), cf * CFrame.new(0, h / 2, 0) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-3, 3))), rng:NextNumber() < 0.55 and wood or tin, rng:NextNumber() < 0.55 and Enum.Material.WoodPlanks or Enum.Material.CorrodedMetal)
+	end
+	for _, edge in { 1, 2, 3, 4 } do
+		for t = -E, E - 6, 6 do
+			local mid = t + 3
+			local onRoad = (edge == 3 or edge == 4) and math.abs(mid) < (roadHalfWidth or 13)
+			local cf
+			if edge == 1 then
+				cf = CFrame.new(mid, 0, E)
+			elseif edge == 2 then
+				cf = CFrame.new(mid, 0, -E)
+			elseif edge == 3 then
+				cf = CFrame.new(E, 0, mid) * CFrame.Angles(0, math.pi / 2, 0)
+			else
+				cf = CFrame.new(-E, 0, mid) * CFrame.Angles(0, math.pi / 2, 0)
+			end
+			if onRoad then
+				MapKit.prop(parent, (t % 12 == 0) and "CarVan_1" or "CarSedan_1", cf * CFrame.Angles(0, math.pi / 2 + rng:NextNumber(-0.3, 0.3), 0), 1)
+				sheet(cf * CFrame.new(0, 0, 2.5), 6.4, 8)
+			else
+				sheet(cf, 6.4, rng:NextNumber(10, 13))
+				if t % 18 == 0 then
+					block(parent, Vector3.new(0.7, 14, 0.7), cf * CFrame.new(-3.2, 7, 0), wood, Enum.Material.Wood)
+				end
+			end
+		end
+	end
+end
+
+-- Buildings with interiors ------------------------------------------------------------------------
+
+-- A wall along X or Z with openings: { {a, b, bottom, top} } (doors bottom = 0, windows ~3.5..7).
+local function wallWithOpenings(parent, axis, fixed, a0, a1, y0, h, openings, color, material, thick)
+	thick = thick or 1
+	table.sort(openings, function(p, q)
+		return p[1] < q[1]
+	end)
+	local function piece(a, b, lo, hi)
+		if b - a < 0.05 or hi - lo < 0.05 then
+			return
+		end
+		local len, height = b - a, hi - lo
+		local mid = (a + b) / 2
+		local pos = axis == "x" and Vector3.new(mid, y0 + lo + height / 2, fixed) or Vector3.new(fixed, y0 + lo + height / 2, mid)
+		local size = axis == "x" and Vector3.new(len, height, thick) or Vector3.new(thick, height, len)
+		block(parent, size, pos, color, material)
+	end
+	local cursor = a0
+	for _, o in openings do
+		piece(cursor, o[1], 0, h)
+		piece(o[1], o[2], 0, o[3])
+		piece(o[1], o[2], o[4], h)
+		if o[3] > 0.5 then -- a window: glass with a dusty tint
+			local mid = (o[1] + o[2]) / 2
+			local pos = axis == "x" and Vector3.new(mid, y0 + (o[3] + o[4]) / 2, fixed) or Vector3.new(fixed, y0 + (o[3] + o[4]) / 2, mid)
+			local size = axis == "x" and Vector3.new(o[2] - o[1], o[4] - o[3], 0.15) or Vector3.new(0.15, o[4] - o[3], o[2] - o[1])
+			block(parent, size, pos, Color3.fromRGB(150, 160, 160), Enum.Material.Glass, { Transparency = 0.6, CanCollide = true })
+		end
+		cursor = o[2]
+	end
+	piece(cursor, a1, 0, h)
+end
+
+-- A one-storey building with real rooms: BSP-split interior, doorways between rooms, two
+-- entrances, windows, ceiling lights (some dead), furniture, containers and loot.
+-- rect = {x0, z0, x1, z1}; y = floor height. Returns { doorways, containers, loot }.
+function MapKit.building(parent, rect, y, rng, style)
+	style = style or {}
+	local x0, z0, x1, z1 = rect[1], rect[2], rect[3], rect[4]
+	local H = style.h or 11
+	local outer = style.color or Color3.fromRGB(128, 118, 104)
+	local inner = style.inner or Color3.fromRGB(176, 170, 156)
+	local outerMat = style.material or Enum.Material.Brick
+	local M = Enum.Material
+	local doorways, containers, loot = {}, {}, {}
+	local floorY = y + 1
+
+	-- floor, ceiling, roof with a parapet
+	block(parent, Vector3.new(x1 - x0, 1, z1 - z0), Vector3.new((x0 + x1) / 2, y + 0.5, (z0 + z1) / 2), Color3.fromRGB(92, 88, 82), M.Concrete)
+	block(parent, Vector3.new(x1 - x0, 1, z1 - z0), Vector3.new((x0 + x1) / 2, floorY + H + 0.5, (z0 + z1) / 2), Color3.fromRGB(80, 78, 74), M.Concrete)
+	for _, e in { { "x", z0 }, { "x", z1 }, { "z", x0 }, { "z", x1 } } do
+		if e[1] == "x" then
+			block(parent, Vector3.new(x1 - x0, 1.6, 0.8), Vector3.new((x0 + x1) / 2, floorY + H + 1.8, e[2]), outer, outerMat)
+		else
+			block(parent, Vector3.new(0.8, 1.6, z1 - z0), Vector3.new(e[2], floorY + H + 1.8, (z0 + z1) / 2), outer, outerMat)
+		end
+	end
+
+	-- exterior walls: front + back doors, windows every ~9 studs
+	local function windows(a0, a1, door)
+		local list = {}
+		local a = a0 + 4
+		while a + 4 < a1 - 2 do
+			if not door or math.abs(a + 2 - door) > 5 then
+				table.insert(list, { a, a + 4, 4, 7.5 })
+			end
+			a += 9
+		end
+		if door then
+			table.insert(list, { door - 2.5, door + 2.5, 0, 8 })
+		end
+		return list
+	end
+	local frontDoor = (x0 + x1) / 2 + rng:NextNumber(-4, 4)
+	local backDoor = (x0 + x1) / 2 + rng:NextNumber(-6, 6)
+	wallWithOpenings(parent, "x", z0, x0, x1, floorY, H, windows(x0, x1, frontDoor), outer, outerMat)
+	wallWithOpenings(parent, "x", z1, x0, x1, floorY, H, windows(x0, x1, backDoor), outer, outerMat)
+	wallWithOpenings(parent, "z", x0, z0, z1, floorY, H, windows(z0, z1, nil), outer, outerMat)
+	wallWithOpenings(parent, "z", x1, z0, z1, floorY, H, windows(z0, z1, nil), outer, outerMat)
+	table.insert(doorways, { hinge = Vector3.new(frontDoor - 2.5, floorY, z0 - 0.1), width = 5, dir = Vector3.new(1, 0, 0) })
+	table.insert(doorways, { hinge = Vector3.new(backDoor - 2.5, floorY, z1 + 0.1), width = 5, dir = Vector3.new(1, 0, 0) })
+
+	-- interior: split into rooms
+	local rooms = {}
+	local function split(r, depth)
+		local w, d = r[3] - r[1], r[4] - r[2]
+		if depth >= 3 or (w < 20 and d < 20) then
+			table.insert(rooms, r)
+			return
+		end
+		if w >= d then
+			local sx = r[1] + w * rng:NextNumber(0.38, 0.62)
+			local door = rng:NextNumber(r[2] + 3, r[4] - 3)
+			wallWithOpenings(parent, "z", sx, r[2] + 0.5, r[4] - 0.5, floorY, H, { { door - 2, door + 2, 0, 8 } }, inner, M.SmoothPlastic, 0.6)
+			split({ r[1], r[2], sx, r[4] }, depth + 1)
+			split({ sx, r[2], r[3], r[4] }, depth + 1)
+		else
+			local sz = r[2] + d * rng:NextNumber(0.38, 0.62)
+			local door = rng:NextNumber(r[1] + 3, r[3] - 3)
+			wallWithOpenings(parent, "x", sz, r[1] + 0.5, r[3] - 0.5, floorY, H, { { door - 2, door + 2, 0, 8 } }, inner, M.SmoothPlastic, 0.6)
+			split({ r[1], r[2], r[3], sz }, depth + 1)
+			split({ r[1], sz, r[3], r[4] }, depth + 1)
+		end
+	end
+	split({ x0 + 0.5, z0 + 0.5, x1 - 0.5, z1 - 0.5 }, 0)
+
+	local furniture = { Color3.fromRGB(84, 70, 56), Color3.fromRGB(70, 74, 76), Color3.fromRGB(96, 84, 70) }
+	for i, r in rooms do
+		local cx, cz = (r[1] + r[3]) / 2, (r[2] + r[4]) / 2
+		local w, d = r[3] - r[1], r[4] - r[2]
+		-- ceiling light (about a third are dead: interiors stay dark, bring a flashlight)
+		if rng:NextNumber() < 0.65 then
+			MapKit.bulb(parent, Vector3.new(cx, floorY + H - 1.2, cz), 15)
+		else
+			block(parent, Vector3.new(0.7, 0.7, 0.7), Vector3.new(cx, floorY + H - 1.2, cz), Color3.fromRGB(60, 60, 58), M.Glass, { Shape = Enum.PartType.Ball, CanCollide = false })
+		end
+		-- furniture against one wall: shelves, a desk, or crates
+		local kind = rng:NextInteger(1, 3)
+		local col = furniture[rng:NextInteger(1, #furniture)]
+		if kind == 1 and w > 8 then
+			for k = 0, math.floor((w - 4) / 4) - 1 do
+				local sx = r[1] + 2.5 + k * 4
+				block(parent, Vector3.new(3.6, 7, 1.6), Vector3.new(sx, floorY + 3.5, r[4] - 1.4), col, M.Wood)
+				for shelf = 1, 3 do
+					block(parent, Vector3.new(3.4, 0.2, 1.5), Vector3.new(sx, floorY + shelf * 2, r[4] - 1.5), Color3.fromRGB(60, 52, 44), M.Wood)
+				end
+			end
+		elseif kind == 2 then
+			block(parent, Vector3.new(5, 2.6, 2.6), Vector3.new(cx, floorY + 1.3, r[2] + 2.2), col, M.Wood) -- desk
+			block(parent, Vector3.new(1.6, 2.4, 1.6), Vector3.new(cx + 0.5, floorY + 1.2, r[2] + 4.2), Color3.fromRGB(50, 50, 52), M.Fabric) -- chair
+		else
+			for k = 1, rng:NextInteger(2, 4) do
+				local s3 = rng:NextNumber(2.2, 3.4)
+				block(parent, Vector3.new(s3, s3, s3), Vector3.new(r[1] + 2 + rng:NextNumber(0, math.max(0.1, w - 4)), floorY + s3 / 2, r[2] + 2 + rng:NextNumber(0, math.max(0.1, d - 4))) , Color3.fromRGB(92, 72, 52), M.WoodPlanks)
+			end
+		end
+		table.insert(containers, { pos = Vector3.new(r[3] - 1.6, floorY, cz), type = ({ "Locker", "Drawer", "Toolbox", "AmmoCrate" })[rng:NextInteger(1, 4)], yaw = -90 })
+		table.insert(loot, Vector3.new(cx + rng:NextNumber(-w / 4, w / 4), floorY, cz + rng:NextNumber(-d / 4, d / 4)))
+		assert(i)
+	end
+	return { doorways = doorways, containers = containers, loot = loot }
+end
+
+function MapKit.inside(rect, v, pad)
+	pad = pad or 0
+	return v.X > rect[1] - pad and v.X < rect[3] + pad and v.Z > rect[2] - pad and v.Z < rect[4] + pad
+end
+
+return MapKit

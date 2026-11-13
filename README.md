@@ -3,3 +3,5 @@
 **TikTok LIVE Tools**: interactive TikTok LIVE games (Can Steve Survive? in real Minecraft, plus the browser game Castle Clash) where viewers' likes and gifts control the action. It runs 24/7 on a free cloud server, with no gaming PC.
 
 Everything lives in [`tiktok-live-tools/`](tiktok-live-tools/). Start with its [README](tiktok-live-tools/README.md).
+
+**AFTERTIDE**: a cinematic stealth-survival roguelike on Roblox (design pack + playable Slice 0). See [`aftertide/`](aftertide/README.md).
