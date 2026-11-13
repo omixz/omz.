@@ -244,6 +244,12 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.V)
 
+	bind("Controls", function(state)
+		if state == Begin then
+			Controllers.UIController.toggleControls()
+		end
+	end, Enum.KeyCode.F1)
+
 	bind("Settings", function(state)
 		if state == Begin then
 			Controllers.UIController.toggleSettings()

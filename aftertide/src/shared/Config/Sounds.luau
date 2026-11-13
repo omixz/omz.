@@ -61,11 +61,11 @@ local IDS = {
 
 -- Placeholders that ship inside the Roblox client, used until you upload the pack.
 local FALLBACK = {
-	Swing = "rbxassetid://139526386779157",
-	MeleeHit = "rbxassetid://76888463032588",
-	Dodge = "rbxassetid://72502613219569",
-	BottleBreak = "rbxassetid://72011235975599",
-	StepWater = "rbxassetid://104706538460409",
+	Swing = "rbxasset://sounds/swordlunge.wav",
+	MeleeHit = "rbxasset://sounds/swordslash.wav",
+	Dodge = "rbxasset://sounds/swordlunge.wav",
+	BottleBreak = "rbxasset://sounds/impact_water.mp3",
+	StepWater = "rbxasset://sounds/impact_water.mp3",
 }
 
 -- Older keys used around the code, mapped onto the pack.
@@ -78,7 +78,7 @@ local ALIASES = {
 }
 
 local VOLUME = {
-	Amb_Wind = 0.35, Amb_Sea = 0.3, Amb_Drone = 0.25, Music_Tension = 0.4,
+	Amb_Wind = 0.7, Amb_Sea = 0.45, Amb_Drone = 0.6, Music_Tension = 0.8,
 	Step = 0.35, StepWater = 0.45, Hushed_Breath = 0.6, Heartbeat = 0.6,
 	Ui_Tick = 0.3, Ui_Confirm = 0.4,
 }

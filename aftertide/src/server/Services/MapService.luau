@@ -300,6 +300,59 @@ local function setupLighting()
 	bloom.Parent = Lighting
 end
 
+-- Custom skyboxes (Config/Skies). Each face ID is a Decal upload: the server reads the
+-- Decal's underlying image once (InsertService), falling back to the ID itself.
+local InsertService = game:GetService("InsertService")
+local Skies = require(Shared.Config.Skies)
+local skyObject
+local textureCache = {}
+
+local function skyTexture(id)
+	if textureCache[id] then
+		return textureCache[id]
+	end
+	local texture = "rbxassetid://" .. tostring(id)
+	local ok, model = pcall(function()
+		return InsertService:LoadAsset(id)
+	end)
+	if ok and model then
+		local decal = model:FindFirstChildWhichIsA("Decal", true)
+		if decal and decal.Texture ~= "" then
+			texture = decal.Texture
+		end
+		model:Destroy()
+	end
+	textureCache[id] = texture
+	return texture
+end
+
+local currentSky
+local function applySky(name)
+	local ids = Skies[name or "ferry"] or Skies.ferry
+	if not ids or currentSky == name then
+		return
+	end
+	currentSky = name
+	if not skyObject then
+		skyObject = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
+		skyObject.Name = "AftertideSky"
+		skyObject.CelestialBodiesShown = true
+		skyObject.SunAngularSize = 14
+		skyObject.MoonAngularSize = 9
+		skyObject.Parent = Lighting
+	end
+	task.spawn(function()
+		local side = skyTexture(ids.Side)
+		local up, dn = skyTexture(ids.Up), skyTexture(ids.Dn)
+		if currentSky ~= name then
+			return
+		end
+		skyObject.SkyboxBk, skyObject.SkyboxFt, skyObject.SkyboxLf, skyObject.SkyboxRt = side, side, side, side
+		skyObject.SkyboxUp, skyObject.SkyboxDn = up, dn
+		skyObject.StarCount = name == "night" and 2500 or 0
+	end)
+end
+
 local clouds
 local function setupSky()
 	clouds = Workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
@@ -309,7 +362,7 @@ local function setupSky()
 	clouds.Parent = Workspace.Terrain
 end
 
-local FERRY_LIGHT = { clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 210, 204, 196 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])
@@ -332,6 +385,7 @@ local function applyPreset(L, modifier)
 		atmosphere.Haze = L.haze
 		atmosphere.Color = rgb(L.fogColor)
 	end
+	applySky(night and "night" or (L.sky or "ferry"))
 	-- weather: volumetric clouds and wind (moves grass, clouds and particles)
 	if clouds then
 		local cover = L.clouds or 0.55
@@ -656,6 +710,14 @@ function MapService.start()
 
 	setupLighting()
 	setupSky()
+	task.spawn(function()
+		-- warm the texture cache for every sky so map changes are instant
+		for _, ids in Skies do
+			skyTexture(ids.Side)
+			skyTexture(ids.Up)
+			skyTexture(ids.Dn)
+		end
+	end)
 	MapService.applyFerryLighting()
 	MapService.setFerryRepairs({})
 	MapService.ready = true

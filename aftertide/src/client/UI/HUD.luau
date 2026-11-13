@@ -34,6 +34,40 @@ local toastHolder
 local downed, downedText, secondWindButton
 local indicatorLayer
 local indicators = {}
+local controlsPanel, controlsHint
+
+local CONTROLS = {
+	{ "MOVE", "WASD", "Left stick" },
+	{ "SPRINT", "Shift (hold)", "L3" },
+	{ "CROUCH", "C / Ctrl", "B" },
+	{ "DODGE · DIVE", "Space (dive while sprinting)", "L1" },
+	{ "AIM", "Right mouse", "L2" },
+	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
+	{ "FIRE", "Left mouse", "R2" },
+	{ "RELOAD", "R", "X (no enemy near)" },
+	{ "WEAPONS", "1 long gun · 2 sidearm · 3 holster", "D-pad right" },
+	{ "QUIETING · MELEE", "F", "X" },
+	{ "THROW · NEXT ITEM", "G · Z", "R1 · D-pad down" },
+	{ "ABILITY", "Q", "Y" },
+	{ "HEAL", "H", "D-pad up" },
+	{ "FLASHLIGHT", "T", "D-pad left" },
+	{ "AMMO CACHE · RESUPPLY", "V · B", "" },
+	{ "SATCHEL", "Tab", "View / Back" },
+	{ "SWAP SHOULDER", "X", "R3" },
+	{ "SETTINGS · CONTROLS", "P · F1", "" },
+	{ "INTERACT", "E (hold)", "A" },
+}
+
+function HUD.toggleControls(force)
+	if not controlsPanel then
+		return
+	end
+	if force == nil then
+		controlsPanel.Visible = not controlsPanel.Visible
+	else
+		controlsPanel.Visible = force
+	end
+end
 local noiseSmoothed, lastActivity, hitUntil, hurtFlash = 0, 0, 0, 0
 local lastSig = ""
 
@@ -158,6 +192,18 @@ function HUD.build(gui, onSecondWind, weaponController)
 	end
 
 	breathLabel = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 34), Size = UDim2.new(0, 220, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Font = Theme.Head, TextSize = 11, TextColor3 = C.dim, Text = "", Parent = root })
+
+	-- controls card (F1)
+	controlsPanel = Theme.panel({ Name = "Controls", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 22, 0.5, 0), Size = UDim2.new(0, 470, 0, 30 + #CONTROLS * 19), BackgroundTransparency = 0.18, Visible = false, ZIndex = 5, Parent = root })
+	Theme.padding(12).Parent = controlsPanel
+	Theme.heading({ Text = "CONTROLS", TextSize = 16, Size = UDim2.new(1, 0, 0, 18), ZIndex = 5, Parent = controlsPanel })
+	for i, row in CONTROLS do
+		local y = 22 + (i - 1) * 19
+		label({ Text = row[1], Position = UDim2.new(0, 0, 0, y), Size = UDim2.new(0.36, 0, 0, 18), Font = Theme.Head, TextSize = 12, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
+		label({ Text = row[2], Position = UDim2.new(0.36, 0, 0, y), Size = UDim2.new(0.4, 0, 0, 18), TextSize = 12, ZIndex = 5, Parent = controlsPanel })
+		label({ Text = row[3], Position = UDim2.new(0.76, 0, 0, y), Size = UDim2.new(0.24, 0, 0, 18), TextSize = 11, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
+	end
+	controlsHint = label({ Text = "F1  CONTROLS", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -52), Size = UDim2.new(0, 200, 0, 14), Font = Theme.Head, TextSize = 11, TextColor3 = C.dim, Parent = root })
 
 	indicatorLayer = Theme.make("Frame", { Name = "Indicators", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
 

@@ -115,7 +115,10 @@ def set_sound_ids(ids):
     path = os.path.join(ROOT, "src", "shared", "Config", "Sounds.luau")
     src = open(path).read()
     for key, asset_id in ids.items():
-        src = re.sub(r'(\n\t%s = )"[^"]*"' % re.escape(key), r'\g<1>"rbxassetid://%d"' % asset_id, src)
+        # only inside the IDS table (FALLBACK below holds built-in sounds with the same keys)
+        head, sep, tail = src.partition("local FALLBACK")
+        head = re.sub(r'(\n\t%s = )"[^"]*"' % re.escape(key), r'\g<1>"rbxassetid://%d"' % asset_id, head)
+        src = head + sep + tail
     open(path, "w").write(src)
 
 

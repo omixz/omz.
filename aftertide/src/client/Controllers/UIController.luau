@@ -26,6 +26,25 @@ function UIController.toggleSatchel()
 	Satchel.toggle()
 end
 
+-- First time you're in the world: show the controls for a while.
+local shownControls = false
+function UIController.onCharacter()
+	if shownControls then
+		return
+	end
+	shownControls = true
+	task.delay(1.5, function()
+		HUD.toggleControls(true)
+		task.delay(14, function()
+			HUD.toggleControls(false)
+		end)
+	end)
+end
+
+function UIController.toggleControls(force)
+	HUD.toggleControls(force)
+end
+
 function UIController.toggleSettings()
 	Settings.toggle()
 end

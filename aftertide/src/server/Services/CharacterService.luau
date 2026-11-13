@@ -24,6 +24,7 @@ local AssetIds = require(Shared.Config.AssetIds)
 local Cosmetics = require(Shared.Config.Cosmetics)
 
 local CharacterService = {}
+local CREW_SCALE = 0.88 -- sculpt units -> studs (a 6-unit sculpt is ~5.3 studs, a 1.75 m person)
 local Services
 
 local sessions = {} -- [Player] = session
@@ -224,16 +225,22 @@ local function setupCharacter(player, char, session, isCustomRig)
 	if not isCustomRig then
 		-- Replace the Roblox look and motion: sculpted, clothed body + our own animation
 		-- (client PlayerAnimator) instead of the default Animate script.
-		local animate = char:FindFirstChild("Animate")
-		if animate then
-			animate:Destroy()
-		end
+		-- Roblox's Animate script stays as a safety net: PlayerAnimator overrides every joint
+		-- each frame, and if it ever fails you still get a walk/run instead of a frozen slide.
 		local kit = "Crew_" .. session.charId
 		local ok, err
 		if Services.AssetService.hasKit(kit) then
 			-- sculpted, realistic crew model fitted onto the skeleton
 			local colors = Services.CosmeticsService.layerColors(player, session.charId)
-			ok, err = pcall(MeshKit.applyRig, char, Services.AssetService.meta(kit), Services.AssetService.part, "r15", AssetIds.YawFix, colors)
+			local meta = Services.AssetService.meta(kit)
+			-- rebuild the skeleton to the sculpt's proportions first, so every piece fits its bone
+			local okFit, hip = pcall(MeshKit.conformSkeleton, char, meta, "r15", CREW_SCALE)
+			if okFit and hip then
+				humanoid.HipHeight = hip
+			elseif not okFit then
+				warn("[CharacterService] skeleton fit failed: " .. tostring(hip))
+			end
+			ok, err = pcall(MeshKit.applyRig, char, meta, Services.AssetService.part, "r15", AssetIds.YawFix, colors)
 		else
 			ok, err = pcall(BodyBuilder.build, char, CharacterService.dressedDef(player, session.charId))
 		end

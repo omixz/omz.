@@ -173,9 +173,18 @@ function SoundController.start()
 		p.CharacterAdded:Connect(onChar)
 	end)
 
+	-- load every sound up front so nothing is silent the first time it plays
+	task.spawn(function()
+		pcall(function()
+			game:GetService("ContentProvider"):PreloadAsync(Sfx.preloadList())
+		end)
+	end)
+
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
 		data = data or {}
-		if kind == "Shot" and typeof(data.from) == "Vector3" and data.shooter ~= player.UserId then
+		if kind == "Sfx" then
+			Sfx.fromServer(data)
+		elseif kind == "Shot" and typeof(data.from) == "Vector3" and data.shooter ~= player.UserId then
 			SoundController.gunshot(data.weapon, data.from, false, data.quiet)
 		elseif kind == "Spotted" then
 			Sfx.ui("Stinger_Spotted", 0.7)
@@ -197,9 +206,10 @@ function SoundController.start()
 				sound.Volume += (target - sound.Volume) * math.min(1, dt * (rate or 1.5))
 			end
 		end
-		fade(amb.wind, inEncounter and 0.35 or 0.2)
-		fade(amb.sea, inEncounter and 0.12 or 0.35)
-		fade(amb.drone, inEncounter and (0.22 + threat * 0.1) or 0.08)
+		-- ambience sits under everything (and the Ambience group scales it down again)
+		fade(amb.wind, inEncounter and 0.45 or 0.3)
+		fade(amb.sea, inEncounter and 0.08 or 0.3)
+		fade(amb.drone, inEncounter and (0.25 + threat * 0.15) or 0.05)
 		musicLevel += ((inEncounter and threat or 0) - musicLevel) * math.min(1, dt * (threat > musicLevel and 2.5 or 0.4))
 		fade(music, musicLevel * 0.45, 4)
 		local char = State.character

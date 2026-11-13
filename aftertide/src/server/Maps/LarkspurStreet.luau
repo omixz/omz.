@@ -8,11 +8,15 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "LarkspurStreet",
 	name = "Larkspur Street",
-	lighting = { clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
+	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 218, 208, 190 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
 }
+
+local PHARMACY = { 62, 66, 106, 100 }
 
 function Map.build(parent, rng)
 	local M = Enum.Material
+	MapKit.outskirts("suburb")
+	MapKit.barricade(parent, rng, 13)
 	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
 	MapKit.slab(-120, -9, 120, 9, M.Asphalt, 0.05)
 	MapKit.slab(-120, 9, 120, 13, M.Pavement, 0.15)
@@ -48,14 +52,14 @@ function Map.build(parent, rng)
 	-- back fences and yards gone wild
 	for _, z in { 58, -58 } do
 		for x = -115, 115, 8 do
-			if rng:NextNumber() > 0.15 then
+			if rng:NextNumber() > 0.15 and not (z > 0 and x > 64 and x < 84) then -- gap to the pharmacy
 				block(parent, Vector3.new(7.6, 5, 0.3), CFrame.new(x, 2.5, z) * CFrame.Angles(0, 0, rng:NextNumber(-0.06, 0.06)), Color3.fromRGB(120, 100, 80), M.WoodPlanks)
 			end
 		end
 	end
 	for _, z in { 80, -80 } do
 		MapKit.tallGrass(parent, Vector3.new(-60, 0, z), Vector3.new(60, 0, 30), rng, nil, 0.8)
-		MapKit.tallGrass(parent, Vector3.new(55, 0, z), Vector3.new(70, 0, 30), rng, nil, 0.8)
+		MapKit.tallGrass(parent, Vector3.new(z > 0 and 25 or 55, 0, z), Vector3.new(z > 0 and 50 or 70, 0, 30), rng, nil, 0.8)
 	end
 	for _, x in { -57, -7, 43, 93 } do
 		MapKit.tallGrass(parent, Vector3.new(x, 0, 36), Vector3.new(10, 0, 18), rng)
@@ -67,6 +71,9 @@ function Map.build(parent, rng)
 	-- trees and bushes
 	for _ = 1, 22 do
 		local x, z = rng:NextNumber(-115, 115), (rng:NextNumber() < 0.5 and 1 or -1) * rng:NextNumber(62, 112)
+		if MapKit.inside(PHARMACY, Vector3.new(x, 0, z), 6) then
+			continue
+		end
 		MapKit.prop(parent, rng:NextNumber() < 0.6 and "Pine_1" or "DeadTree_1", CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.55, 0.85))
 	end
 	for _ = 1, 26 do
@@ -93,6 +100,16 @@ function Map.build(parent, rng)
 	end
 	MapKit.lamp(parent, Vector3.new(-60, 0, 12), false)
 	MapKit.lamp(parent, Vector3.new(40, 0, -12), false)
+	local pharmacy = MapKit.building(parent, PHARMACY, 0.1, rng, { color = Color3.fromRGB(150, 128, 110), inner = Color3.fromRGB(196, 190, 176), material = Enum.Material.Brick })
+	for _, d in pharmacy.doorways do
+		table.insert(doorways, d)
+	end
+	for _, c in pharmacy.containers do
+		table.insert(containers, c)
+	end
+	for _, l in pharmacy.loot do
+		table.insert(loot, l)
+	end
 
 	return {
 		StartSpawns = { Vector3.new(108, 3, -3), Vector3.new(108, 3, 3), Vector3.new(104, 3, -6), Vector3.new(104, 3, 6) },
@@ -107,7 +124,7 @@ function Map.build(parent, rng)
 		},
 		PatrolRoutes = {
 			{ Vector3.new(-90, 0, 0), Vector3.new(90, 0, 0) },
-			{ Vector3.new(-90, 0, 75), Vector3.new(0, 0, 70), Vector3.new(90, 0, 80) },
+			{ Vector3.new(-90, 0, 75), Vector3.new(0, 0, 70), Vector3.new(84, 0, 60), Vector3.new(84, 0, 84) },
 			{ Vector3.new(-90, 0, -75), Vector3.new(0, 0, -70), Vector3.new(90, 0, -80) },
 			{ Vector3.new(-30, 0, 34), Vector3.new(20, 0, 34), Vector3.new(70, 0, 34) },
 			{ Vector3.new(-26, 0, -34), Vector3.new(24, 0, -34), Vector3.new(74, 0, -34) },

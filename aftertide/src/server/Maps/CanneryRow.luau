@@ -9,11 +9,14 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 200, 206, 208 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
 }
+
+local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors, offices)
 
 function Map.build(parent, rng)
 	local M = Enum.Material
+	MapKit.outskirts("coast")
 	-- terrain base: concrete yard, asphalt lanes, grass verges, mud by the water
 	MapKit.slab(-118, -118, 118, 118, M.Concrete, 0)
 	MapKit.slab(-12, 14, 118, 30, M.Asphalt, 0.02)
@@ -107,12 +110,13 @@ function Map.build(parent, rng)
 	MapKit.prop(parent, "CarSedan_2", CFrame.new(88, 0, -100) * CFrame.Angles(0, 2.2, 0))
 	for _ = 1, 14 do
 		local x, z = rng:NextNumber(-60, 105), rng:NextNumber(-105, 105)
-		if not (x > -12 and x < 62 and z > -52 and z < 12) then
+		if not (x > -12 and x < 62 and z > -52 and z < 12) and not MapKit.inside(OFFICE, Vector3.new(x, 0, z), 3) then
 			MapKit.prop(parent, "Barrel_1", CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), 0.9)
 		end
 	end
 	MapKit.prop(parent, "Rubble_1", CFrame.new(-25, 0, -60), 1.4)
-	MapKit.prop(parent, "Rubble_1", CFrame.new(55, 0, 100) * CFrame.Angles(0, 2, 0), 1.1)
+	MapKit.prop(parent, "Rubble_1", CFrame.new(90, 0, 104) * CFrame.Angles(0, 2, 0), 1.1)
+	local office = MapKit.building(parent, OFFICE, 0, rng, { color = Color3.fromRGB(120, 112, 100), inner = Color3.fromRGB(170, 166, 150) })
 	MapKit.prop(parent, "Rock_1", CFrame.new(-72, -1.6, -20), 1.2)
 	MapKit.prop(parent, "Rock_2", CFrame.new(-100, -1.6, 40) * CFrame.Angles(0, 1, 0), 1)
 	MapKit.prop(parent, "DeadTree_1", CFrame.new(-55, 0, 95), 0.8)
@@ -127,7 +131,7 @@ function Map.build(parent, rng)
 		MapKit.fog(parent, f[1], f[2])
 	end
 
-	return {
+	local data = {
 		StartSpawns = { Vector3.new(-6, 3, 100), Vector3.new(-2, 3, 102), Vector3.new(2, 3, 102), Vector3.new(6, 3, 100) },
 		ExtractionPos = Vector3.new(-92, 0, -102),
 		LanternPos = Vector3.new(5, 0, 55),
@@ -172,6 +176,30 @@ function Map.build(parent, rng)
 			{ hinge = Vector3.new(-30, 0, -100), width = 6, dir = Vector3.new(0, 0, 1) },
 		},
 	}
+	local function keep(list)
+		local out = {}
+		for _, v in list do
+			local pos = typeof(v) == "Vector3" and v or v.pos
+			if not MapKit.inside(OFFICE, pos, 1) then
+				table.insert(out, v)
+			end
+		end
+		return out
+	end
+	data.LootSpots = keep(data.LootSpots)
+	data.ContainerSpots = keep(data.ContainerSpots)
+	data.SupplyCandidates = keep(data.SupplyCandidates)
+	for _, l in office.loot do
+		table.insert(data.LootSpots, l)
+	end
+	for _, c in office.containers do
+		table.insert(data.ContainerSpots, c)
+	end
+	table.insert(data.SupplyCandidates, office.loot[1])
+	for _, d in office.doorways do
+		table.insert(data.Doorways, d)
+	end
+	return data
 end
 
 return Map

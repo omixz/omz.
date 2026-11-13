@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Movement = require(Shared.Config.Movement)
+local WeaponModels = require(Shared.WeaponModels)
 local State = require(script.Parent.Parent.State)
 
 local PlayerAnimator = {}
@@ -85,10 +86,10 @@ end
 -- Two-bone IK: solves the left shoulder + elbow so the left hand lands on `target` (world).
 -- Works in the shoulder joint's frame. The elbow is a hinge about the upper arm's X axis
 -- (positive = forearm forward), the same convention the procedural poses use.
-local POLE = Vector3.new(-0.5, -1, 0.15) -- elbow tucked down and out (shoulder space)
+local POLES = { L = Vector3.new(-0.55, -1, 0.2), R = Vector3.new(0.55, -1, 0.2) } -- elbows down and out
 
-local function solveLeftArm(J, target)
-	local shoulder, elbow, wrist = J.ls, J.le, J.lw
+local function solveArm(J, side, target)
+	local shoulder, elbow, wrist = J[side == "L" and "ls" or "rs"], J[side == "L" and "le" or "re"], J[side == "L" and "lw" or "rw"]
 	local torso, upper, lower = shoulder.Part0, shoulder.Part1, elbow.Part1
 	local hand = wrist.Part1
 	if not (torso and upper and lower and hand) then
@@ -98,17 +99,20 @@ local function solveLeftArm(J, target)
 	local b = (wrist.C0.Position - elbow.C1.Position).Magnitude + hand.Size.Y * 0.45
 	local frame = torso.CFrame * shoulder.C0
 	local t = frame:PointToObjectSpace(target)
+	if t.Magnitude < 1e-3 then
+		return nil
+	end
 	local d = math.clamp(t.Magnitude, math.abs(a - b) + 0.05, a + b - 0.02)
 	local cosB = math.clamp((d * d - a * a - b * b) / (2 * a * b), -1, 1)
 	local beta = math.acos(cosB) -- elbow flex
-	-- where the hand ends up in the upper arm's own frame with that flex
 	local h = Vector3.new(0, -a - b * math.cos(beta), -b * math.sin(beta))
 	local u1 = h.Unit
 	local u2 = Vector3.new(1, 0, 0)
 	local u3 = u1:Cross(u2)
-	local e3 = Vector3.new(0, -a, 0):Dot(u3) -- which side of the arm line the elbow sits
+	local e3 = Vector3.new(0, -a, 0):Dot(u3)
 	local w1 = t.Unit
-	local q = POLE - w1 * POLE:Dot(w1)
+	local pole = POLES[side]
+	local q = pole - w1 * pole:Dot(w1)
 	if q.Magnitude < 1e-3 then
 		return nil
 	end
@@ -120,6 +124,94 @@ local function solveLeftArm(J, target)
 	end
 	local rot = CFrame.fromMatrix(Vector3.zero, R(Vector3.xAxis), R(Vector3.yAxis), R(Vector3.zAxis))
 	return rot, CFrame.Angles(beta, 0, 0)
+end
+
+-- Gun poses, as the grip's CFrame in UpperTorso space (barrel along -Z).
+local GUN_POSES = {
+	long = {
+		ready = CFrame.new(0.3, -0.05, -0.95) * CFrame.Angles(-0.55, 0.45, 0.25), -- low ready, across the body
+		sprint = CFrame.new(0.25, 0.05, -0.8) * CFrame.Angles(-0.9, 0.9, 0.4),
+		aim = CFrame.new(0.36, 0.42, -0.7), -- stock in the shoulder pocket
+		reload = CFrame.new(0.15, -0.1, -0.95) * CFrame.Angles(-0.2, 0.55, 0.75), -- rolled toward you
+	},
+	sidearm = {
+		ready = CFrame.new(0.35, -0.25, -0.95) * CFrame.Angles(-0.7, 0.15, 0),
+		sprint = CFrame.new(0.45, -0.45, -0.7) * CFrame.Angles(-1.2, 0.1, 0),
+		aim = CFrame.new(0.12, 0.42, -1.75), -- arms out, two-handed
+		reload = CFrame.new(0.1, 0.05, -1.0) * CFrame.Angles(0.9, 0.2, 0.5), -- muzzle up, cylinder open
+	},
+}
+-- where the left hand goes while reloading (grip space): magazine / loading gate / cylinder
+local RELOAD_HAND = { long = Vector3.new(0, -0.12, -0.45), sidearm = Vector3.new(-0.12, 0.25, -0.15) }
+
+local shotAt = setmetatable({}, { __mode = "k" }) -- [character] = os.clock() of its last shot
+
+function PlayerAnimator.noteShot(char)
+	if char then
+		shotAt[char] = os.clock()
+	end
+end
+
+-- Places the held gun (client-side, every frame) and IKs both hands onto it.
+local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch)
+	local torso = char:FindFirstChild("UpperTorso")
+	local model = char:FindFirstChild("Weapon_" .. slot)
+	local grip = model and model.PrimaryPart
+	local weld = grip and grip:FindFirstChild("Mount")
+	local set = GUN_POSES[slot]
+	if not (torso and weld and set) then
+		return false
+	end
+	local now = os.clock()
+	local pose = set.ready
+	if reloading then
+		local wobble = math.sin(now * 6) * 0.04
+		pose = set.reload * CFrame.new(0, wobble, 0) * CFrame.Angles(wobble, 0, 0)
+	elseif a > 0.01 then
+		local aimPose = set.aim * CFrame.Angles(pitch * 0.55, 0, 0)
+		pose = (sprinting and set.sprint or set.ready):Lerp(aimPose, a)
+	elseif sprinting then
+		pose = set.sprint
+	end
+	-- recoil: back into the shoulder and up, settling fast
+	local since = now - (shotAt[char] or -10)
+	if since < 0.25 then
+		local k = (1 - since / 0.25) ^ 2
+		pose = pose * CFrame.new(0, 0.03 * k, 0.18 * k) * CFrame.Angles(0.14 * k, 0, 0)
+	end
+	-- drawing: from where it was holstered into the hands
+	if drawK < 1 then
+		local holster = slot == "long" and WeaponModels.BackOffset or (torso.CFrame:ToObjectSpace((char:FindFirstChild("LowerTorso") or torso).CFrame) * WeaponModels.HipOffset)
+		pose = holster:Lerp(pose, drawK * drawK * (3 - 2 * drawK))
+	end
+	weld.Part0 = torso
+	weld.C0 = pose
+	weld.C1 = CFrame.new()
+	rig.posedWeld = weld
+	-- hands onto the gun
+	local gripWorld = torso.CFrame * pose
+	local rightTarget = gripWorld.Position
+	local support = grip:FindFirstChild("Support")
+	local leftTarget = support and (gripWorld * support.CFrame).Position or nil
+	if reloading then
+		local cycle = (math.sin(now * 5) * 0.5 + 0.5)
+		leftTarget = (gripWorld * CFrame.new(RELOAD_HAND[slot] + Vector3.new(0, -0.25 * cycle, 0.1 * cycle))).Position
+	elseif drawK < 0.6 then
+		leftTarget = nil -- the off hand joins once the gun is out
+	end
+	local ok, rs, re = pcall(solveArm, J, "R", rightTarget)
+	if ok and rs then
+		J.rs.Transform, J.re.Transform = rs, re
+		J.rw.Transform = CFrame.Angles(-0.2, 0, 0)
+	end
+	if leftTarget and (slot == "long" or a > 0.3 or reloading) then
+		local okL, ls, le = pcall(solveArm, J, "L", leftTarget)
+		if okL and ls then
+			J.ls.Transform, J.le.Transform = ls, le
+			J.lw.Transform = CFrame.Angles(0.3, 0, 0)
+		end
+	end
+	return true
 end
 
 local function animate(char, rig, dt, serverNow, isLocal)
@@ -346,21 +438,27 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	J.lw.Transform = ang(0, 0, 0)
 	J.rw.Transform = ang(a * 0.1, 0, 0)
 
-	-- left hand on the gun: IK onto the weapon's support point (forend / pump / under the grip)
+	-- the gun in your hands: pose it against the chest and put both hands on it
 	local busyHands = melee < 0.45 or throw < 0.5 or takedown < 1.2 or heal < 2.2 or dodge < dodgeLen
-		or (reloadUntil > serverNow) or char:GetAttribute("Reloading") == true or (rig.drawAt and os.clock() - rig.drawAt < 0.4)
-	local wantIK = armed and not downed and not busyHands and (longGun or a > 0.3)
-	rig.ik = approach(rig.ik or 0, wantIK and 1 or 0, 12, dt)
-	if rig.ik > 0.01 then
-		local model = char:FindFirstChild("Weapon_" .. slot)
-		local grip = model and model.PrimaryPart
-		local support = grip and grip:FindFirstChild("Support")
-		if support then
-			local okIK, shoulderT, elbowT = pcall(solveLeftArm, J, support.WorldPosition)
-			if okIK and shoulderT then
-				J.ls.Transform = J.ls.Transform:Lerp(shoulderT, rig.ik)
-				J.le.Transform = J.le.Transform:Lerp(elbowT, rig.ik)
-				J.lw.Transform = J.lw.Transform:Lerp(CFrame.Angles(0.3, 0, 0), rig.ik)
+	local reloading = (reloadUntil > serverNow) or char:GetAttribute("Reloading") == true
+	local drawK = math.clamp((os.clock() - (rig.drawAt or -10)) / 0.4, 0, 1)
+	if armed and not downed and not busyHands then
+		local sprinting = (isLocal and State.sprinting or char:GetAttribute("Sprint") == true) and moving > 0.5
+		local okPose, err = pcall(poseGun, char, rig, J, slot, a, sprinting, reloading, drawK, pitch)
+		if not okPose and not rig.poseWarned then
+			rig.poseWarned = true
+			warn("[PlayerAnimator] gun pose: " .. tostring(err))
+		end
+	elseif rig.posedWeld then
+		-- hands busy or holstered: give the weld back to the server's mount (hand / back / hip)
+		local w = rig.posedWeld
+		rig.posedWeld = nil
+		local model = w.Parent and w.Parent.Parent
+		if model and model.Name == "Weapon_" .. slot and armed then
+			local hand = char:FindFirstChild("RightHand")
+			if hand then
+				w.Part0 = hand
+				w.C0 = WeaponModels.HandOffset
 			end
 		end
 	end
@@ -373,6 +471,13 @@ local function animate(char, rig, dt, serverNow, isLocal)
 end
 
 function PlayerAnimator.start()
+	local Net = require(Shared.Net)
+	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
+		if kind == "Shot" and type(data) == "table" and data.shooter and data.shooter ~= player.UserId then
+			local shooter = Players:GetPlayerByUserId(data.shooter)
+			PlayerAnimator.noteShot(shooter and shooter.Character)
+		end
+	end)
 	RunService.Stepped:Connect(function(_, dt)
 		local serverNow = Workspace:GetServerTimeNow()
 		local camPos = Workspace.CurrentCamera.CFrame.Position
@@ -387,8 +492,17 @@ function PlayerAnimator.start()
 				if rig and rig.root.Parent and (rig.root.Position - camPos).Magnitude < 220 then
 					local ok, err = pcall(animate, char, rig, dt, serverNow, p == player)
 					if not ok then
-						warn("[PlayerAnimator] " .. tostring(err))
+						-- report once, fall back to Roblox's own animation, try again shortly
+						if not rig.reported then
+							rig.reported = true
+							warn("[PlayerAnimator] " .. tostring(err))
+						end
 						rigs[char] = false
+						task.delay(2, function()
+							if rigs[char] == false then
+								rigs[char] = nil
+							end
+						end)
 					end
 				end
 			end

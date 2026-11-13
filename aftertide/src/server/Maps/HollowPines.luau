@@ -9,7 +9,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 205, 214, 220 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
 }
 
 local function creekX(z)
@@ -24,8 +24,11 @@ local function baseHeight(x, z)
 	return h + 6
 end
 
+local STATION = { -106, 18, -70, 46 }
+
 function Map.build(parent, rng)
 	local M = Enum.Material
+	MapKit.outskirts("forest")
 	MapKit.heightfield(-120, -120, 120, 120, 6, baseHeight, function(x, z, h)
 		local slope = math.abs(baseHeight(x + 6, z) - h) + math.abs(baseHeight(x, z + 6) - h)
 		if slope > 5 then
@@ -64,6 +67,18 @@ function Map.build(parent, rng)
 		end
 	end
 
+	-- the ranger station: a flattened pad and a building with rooms
+	local sy = baseHeight(-88, 32)
+	MapKit.clearAbove(STATION[1] - 6, STATION[2] - 8, STATION[3] + 6, STATION[4] + 8, sy)
+	MapKit.slab(STATION[1] - 6, STATION[2] - 8, STATION[3] + 6, STATION[4] + 8, M.Ground, sy, 16)
+	local station = MapKit.building(parent, STATION, sy, rng, { color = Color3.fromRGB(96, 78, 60), inner = Color3.fromRGB(150, 132, 108), material = Enum.Material.WoodPlanks, h = 10 })
+	for _, d in station.doorways do
+		table.insert(doorways, d)
+	end
+	for _, c in station.containers do
+		table.insert(containers, c)
+	end
+
 	-- the ranger lookout
 	local ly = g(0, 10)
 	for _, o in { Vector3.new(-4, 0, -4), Vector3.new(4, 0, -4), Vector3.new(-4, 0, 4), Vector3.new(4, 0, 4) } do
@@ -79,7 +94,7 @@ function Map.build(parent, rng)
 		if math.abs(x - creekX(z)) < 9 then
 			return false
 		end
-		for _, spot in { Vector3.new(55, 0, 48), Vector3.new(-70, 0, -22), Vector3.new(40, 0, -62), Vector3.new(0, 0, 10) } do
+		for _, spot in { Vector3.new(55, 0, 48), Vector3.new(-70, 0, -22), Vector3.new(40, 0, -62), Vector3.new(0, 0, 10), Vector3.new(-88, 0, 32) } do
 			if (Vector3.new(x, 0, z) - spot).Magnitude < 24 then
 				return false
 			end
@@ -118,6 +133,7 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
+	MapKit.ridge(g, 7)
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end
@@ -128,7 +144,7 @@ function Map.build(parent, rng)
 		LanternPos = Vector3.new(0, 0, 32),
 		SupplyCandidates = { loot[1], loot[2], loot[4], loot[5], loot[7], loot[8], Vector3.new(-20, 0, -40), Vector3.new(90, 0, 10), Vector3.new(-95, 0, 40), Vector3.new(20, 0, 80) },
 		LootSpots = {
-			loot[3], loot[6], loot[9], Vector3.new(-40, 0, 60), Vector3.new(-10, 0, 40), Vector3.new(30, 0, 20), Vector3.new(70, 0, 0),
+			loot[3], loot[6], loot[9], station.loot[1], station.loot[2] or loot[1], station.loot[3] or loot[2], station.loot[4] or loot[4], Vector3.new(-40, 0, 60), Vector3.new(-10, 0, 40), Vector3.new(30, 0, 20), Vector3.new(70, 0, 0),
 			Vector3.new(-80, 0, 0), Vector3.new(-50, 0, -70), Vector3.new(0, 0, -60), Vector3.new(60, 0, -90), Vector3.new(90, 0, 60),
 			Vector3.new(-90, 0, 70), Vector3.new(20, 0, 100), Vector3.new(-30, 0, -100), Vector3.new(100, 0, -40),
 		},

@@ -8,6 +8,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local AssetIds = require(Shared.Config.AssetIds)
 local MeshMeta = require(Shared.Config.MeshMeta)
+local MeshKit = require(Shared.MeshKit)
 
 local AssetService = {}
 
@@ -85,6 +86,7 @@ local function index(container)
 end
 
 function AssetService.load()
+	MeshKit.setYawFix(AssetIds.YawFix)
 	local cache = Instance.new("Folder")
 	cache.Name = "AftertideMeshCache"
 	cache.Parent = ServerStorage

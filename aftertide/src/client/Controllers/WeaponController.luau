@@ -163,6 +163,7 @@ function WeaponController.fire()
 	local runUpgrades = player:GetAttribute("RunUpgrades") or ""
 	local quiet = id == "revolver" and runUpgrades:find('"baffle":true') ~= nil
 	Controllers.SoundController.gunshot(id, State.root.Position, true, quiet)
+	Controllers.PlayerAnimator.noteShot(State.character)
 	if def and not def.projectile then
 		muzzleFlash(slot)
 		if id ~= "revolver" and id ~= "bow" then

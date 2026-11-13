@@ -597,7 +597,25 @@ function EnemyService.spawn(typeName, position, opts)
 	local model, humanoid, root, head = buildModel(position, typeName, cfg)
 	local kit = (cfg.human and "Faction_" or "Hushed_") .. typeName
 	if Services.AssetService.hasKit(kit) then
-		pcall(MeshKit.applyRig, model, Services.AssetService.meta(kit), Services.AssetService.part, "enemy", AssetIds.YawFix)
+		local meta = Services.AssetService.meta(kit)
+		-- the sculpt replaces the part-built rags, crust and spines (and their hit boxes)
+		for _, child in model:GetChildren() do
+			if child:IsA("BasePart") and child:FindFirstChildOfClass("Weld") then
+				child:Destroy()
+			end
+		end
+		local okFit, hip = pcall(MeshKit.conformSkeleton, model, meta, "enemy", 0.88 * cfg.scale)
+		if okFit and hip then
+			humanoid.HipHeight = hip
+			root.CFrame = CFrame.new(position + Vector3.new(0, hip + root.Size.Y / 2, 0))
+			MeshKit.conformSkeleton(model, meta, "enemy", 0.88 * cfg.scale) -- re-place bones around the moved root
+		elseif not okFit then
+			warn("[EnemyService] skeleton fit failed: " .. tostring(hip))
+		end
+		local okRig, err = pcall(MeshKit.applyRig, model, meta, Services.AssetService.part, "enemy", AssetIds.YawFix)
+		if not okRig then
+			warn("[EnemyService] mesh fit failed: " .. tostring(err))
+		end
 	end
 	if cfg.flashlight then
 		Services.CharacterService.addFlashlight(model, "Torso")
