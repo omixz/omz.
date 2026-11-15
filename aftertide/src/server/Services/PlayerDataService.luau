@@ -42,6 +42,9 @@ local function defaultData()
 		kit = {}, -- [kitId] = count, delivered at the start of the next crossing
 		firstFinaleWin = false,
 		spinDay = "", -- UTC day of the last free Lucky Spin
+		lastLoginDay = 0, -- daily streak (RewardsService)
+		streak = 0,
+		pages = {}, -- [pageId] = true (Logbook)
 		tutorial = {}, -- first-time Meridian steps done: { crew, chart, sail }
 	}
 end
@@ -51,7 +54,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" and key ~= "tutorial" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" and key ~= "tutorial" and key ~= "pages" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2

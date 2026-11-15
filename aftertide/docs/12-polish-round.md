@@ -47,3 +47,23 @@ button automatically.
   restricted (those players still get the free daily spin).
 - **Ammo Crate** (R$35) / **Ammo Crate x3** (R$89): ammo for your next crossing (+8 revolver,
   +4 rifle, +4 shells, +6 arrows). At most 2 crates open per crossing, so ammo stays scarce.
+
+# Round 2: Brinewake
+
+- **New name: Brinewake** (no Roblox experience uses it). Store icon, three thumbnails and the
+  description are in `store/` with upload steps.
+- **Fixes:** crafting needs room for the whole batch (reported on the PR); spin prizes name exactly
+  what they give (the "long-gun ammo" prize was an ammo kit, packed for the next crossing); a rare
+  real gun prize was added. Cross / A presses the nearest prompt on every console.
+- **Clearer upgrades:** station signs name the currency they take (Scrip / Materials / Salvage);
+  after your first crossing a NEXT STEP card and a gold line point to whatever you can afford.
+- **Stealth:** crouched or prone in tall grass you can't be seen (unless your light is on, you just
+  fired, or someone is right on top of you).
+- **Gun handling:** breathing sway, walk bob, aim-in lift, a weapon check when idle, harder
+  recoil that rocks the whole body.
+- **World:** 11 containers per mission instead of one in every room, built as real furniture.
+- **Crew:** realistic proportions, hair texture, cuffs, seams, laces.
+- **Cheap options:** Pocket Rounds R$5, Bandage Roll R$5, Scrip Pouch R$9, Lucky Spin x3 R$25,
+  four R$19 outfits; brighter wardrobe colours.
+- **New features:** 7-day login streak (rewards every day, bigger on day 7) and the Logbook:
+  16 torn pages of story hidden two per mission; every 4 found pays Scrip and Materials.

@@ -1121,6 +1121,28 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 
 	-- scavenging: containers + loose items
 	Services.LootService.populate(encounterFolder, rng, pall or 1, MapService.ContainerSpots, MapService.LootSpots)
+	-- torn Logbook pages (lore): two per mission, ones the crew hasn't found yet
+	local okPages, pageIds = pcall(Services.RewardsService.pickPages, rng, 2)
+	if okPages and #MapService.LootSpots > 2 then
+		for i, pageId in pageIds do
+			local spot = MapService.LootSpots[rng:NextInteger(1, #MapService.LootSpots)]
+			local at = Services.LootService.settle(spot + Vector3.new(rng:NextNumber(-2, 2), 0, rng:NextNumber(-2, 2)), encounterFolder)
+			local page = block(encounterFolder, Vector3.new(0.9, 0.05, 1.2), CFrame.new(at + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), Color3.fromRGB(246, 236, 206), Enum.Material.SmoothPlastic, { Name = "LogbookPage", CanCollide = false })
+			local glow = Instance.new("PointLight")
+			glow.Range = 5
+			glow.Brightness = 0.6
+			glow.Color = Color3.fromRGB(255, 230, 170)
+			glow.Parent = page
+			local sparkle = Instance.new("Sparkles")
+			sparkle.SparkleColor = Color3.fromRGB(255, 230, 160)
+			sparkle.Parent = page
+			local pr = makePrompt(page, "Read", "Torn logbook page", 0.4)
+			pr.Triggered:Connect(function(player)
+				Services.RewardsService.findPage(player, pageId)
+			end)
+			assert(i)
+		end
+	end
 	encounterFolder:SetAttribute("Modifier", modifier.id)
 
 	-- extraction: the Slipway flare (inactive until the quota is met)

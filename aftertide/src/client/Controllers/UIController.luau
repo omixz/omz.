@@ -23,6 +23,7 @@ local Quests = require(UI:WaitForChild("Quests"))
 local Quartermaster = require(UI:WaitForChild("Quartermaster"))
 local Spin = require(UI:WaitForChild("Spin"))
 local Guide = require(UI:WaitForChild("Guide"))
+local Logbook = require(UI:WaitForChild("Logbook"))
 
 local UIController = {}
 local Controllers
@@ -69,6 +70,7 @@ local function closeMenus()
 	Quests.close()
 	Quartermaster.close()
 	Spin.close()
+	Logbook.close()
 end
 
 function UIController.init(registry)
@@ -131,6 +133,9 @@ function UIController.start()
 	build("Quartermaster", function()
 		Quartermaster.build(gui, request)
 	end)
+	build("Logbook", function()
+		Logbook.build(gui)
+	end)
 	build("Guide", function()
 		Guide.build(gui, request)
 	end)
@@ -149,6 +154,9 @@ function UIController.start()
 	Satchel.setMenuHandlers({
 		spin = function()
 			Spin.open()
+		end,
+		logbook = function()
+			Logbook.open()
 		end,
 		shop = function()
 			Shop.open()
@@ -247,6 +255,8 @@ function UIController.start()
 			Quests.open()
 		elseif kind == "OpenQuartermaster" then
 			Quartermaster.open()
+		elseif kind == "DailyReward" then
+			Logbook.showDaily(data.day, data.text)
 		elseif kind == "OpenSpin" then
 			Spin.open()
 		elseif kind == "SpinResult" then
