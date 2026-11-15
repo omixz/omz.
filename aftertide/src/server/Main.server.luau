@@ -65,4 +65,4 @@ LogService.MessageOut:Connect(function(message, messageType)
 	end
 end)
 
-print("[AFTERTIDE] server ready")
+print("[BRINEWAKE] server ready")

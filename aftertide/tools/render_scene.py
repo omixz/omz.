@@ -39,12 +39,16 @@ def main():
     ap.add_argument("--at", default="0,0,0")
     ap.add_argument("--fov", type=float, default=55)
     ap.add_argument("--size", default="1600,900")
+    ap.add_argument("--ground", default=None, help="r,g,b,y: a flat ground/sea plane at height y")
+    ap.add_argument("--ss", type=int, default=2, help="supersampling factor (anti-aliasing)")
     a = ap.parse_args()
     data = json.load(open(a.scene))
     if isinstance(data, list):
         data = data[0]
     origin = np.array(data.get("origin", [0, 0, 0]), float)
     W, H = map(int, a.size.split(","))
+    outW, outH = W, H
+    W, H = W * a.ss, H * a.ss
     eye = np.array(list(map(float, a.eye.split(","))))
     at = np.array(list(map(float, a.at.split(","))))
     r, u, f = look_at(eye, at)
@@ -52,6 +56,9 @@ def main():
     sun = np.array([0.45, 0.8, 0.35])
     sun /= np.linalg.norm(sun)
     polys = []
+    if a.ground:
+        gr, gg, gb, gy = map(float, a.ground.split(","))
+        data["parts"].insert(0, {"c": [eye[0] + origin[0], gy - 0.5 + origin[1], eye[2] + origin[2], 1, 0, 0, 0, 1, 0, 0, 0, 1], "s": [3000, 1, 3000], "col": [gr, gg, gb], "t": 0, "m": "Ground", "sh": "Block"})
     for p in data["parts"]:
         c = p["c"]
         pos = np.array(c[0:3]) - origin
@@ -69,21 +76,28 @@ def main():
                 continue
             cam = [(np.dot(q - eye, r), np.dot(q - eye, u), np.dot(q - eye, f)) for q in pts]
             if min(z for _, _, z in cam) < 0.5:
-                continue
+                if p.get("m") != "Ground":
+                    continue
+                # clip the ground quad to the near plane
+                keep = [(x, y, max(z, 0.5)) for x, y, z in cam]
+                cam = keep
             scr = [(W / 2 + x / z * focal, H / 2 - y / z * focal) for x, y, z in cam]
             light = 0.42 + 0.58 * max(0.0, float(np.dot(nw, sun))) + 0.12 * max(0.0, nw[1])
             if p.get("m") == "Neon":
                 light = 1.4
             shade = np.clip(col * light, 0, 255)
-            depth = np.linalg.norm(centre - eye)
+            depth = np.linalg.norm(centre - eye) if p.get("m") != "Ground" else 1e9
+            # aerial perspective: far faces fade toward the sky haze
+            fog = min(1.0, max(0.0, (np.linalg.norm(centre - eye) - 120) / 600)) if p.get("m") != "Ground" else 0
+            shade = shade * (1 - fog) + np.array([200, 220, 236]) * fog
             alpha = 1 - p.get("t", 0)
             polys.append((depth, scr, tuple(int(v) for v in shade), alpha))
     polys.sort(key=lambda t: -t[0])
-    img = Image.new("RGB", (W, H), (150, 186, 214))
+    img = Image.new("RGB", (W, H), (214, 232, 246))
     sky = ImageDraw.Draw(img)
-    for y in range(H // 2):
-        k = y / (H / 2)
-        sky.line([(0, y), (W, y)], fill=(int(120 + 80 * k), int(160 + 60 * k), int(210 + 30 * k)))
+    for y in range(H):
+        k = min(1.0, y / (H * 0.6))
+        sky.line([(0, y), (W, y)], fill=(int(70 + 150 * k), int(130 + 104 * k), int(210 + 38 * k)))
     over = Image.new("RGBA", (W, H))
     for depth, scr, shade, alpha in polys:
         if alpha >= 0.99:
@@ -92,6 +106,7 @@ def main():
             layer = Image.new("RGBA", (W, H))
             ImageDraw.Draw(layer).polygon(scr, fill=shade + (int(255 * alpha),))
             img.paste(Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB"))
+    img = img.resize((outW, outH), Image.LANCZOS)
     img.save(a.out)
     print("wrote", a.out, len(polys), "faces")
 
