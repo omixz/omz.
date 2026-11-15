@@ -8,7 +8,9 @@ local rig = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigTyp
 rig.Parent = workspace
 rig:PivotTo(CFrame.new(0, 20, 0))
 local meta = AssetService.meta("Crew_mara")
-MeshKit.conformSkeleton(rig, meta, "r15", 0.88)
+local hip = MeshKit.conformSkeleton(rig, meta, "r15", 0.88)
+rig.Humanoid.HipHeight = hip
+rig:SetAttribute("BaseHipHeight", hip)
 MeshKit.applyRig(rig, meta, AssetService.part, "r15", 0, {})
 local gun = WeaponModels.build("carbine", AssetService.part, AssetService.meta("Weapon_carbine"))
 gun.Name = "Weapon_long"
@@ -31,13 +33,27 @@ State.pitch = 0
 local PlayerAnimator = require(ClientFolder.Controllers.PlayerAnimator)
 local results = {}
 for frame = 1, 30 do -- let the blends settle
-	local ok, err = PlayerAnimator.debugAnimate(rig, true)
+	local ok, err = PlayerAnimator.debugAnimate(rig, true, true)
 	if not ok then
 		results.error = tostring(err)
 		break
 	end
 end
 local pieces, bones = posedPieces(rig)
+local mountW = gun.PrimaryPart:FindFirstChild("Mount")
+local function boneCF(name)
+	local b = bones[name]
+	return b and CFrame.new(table.unpack(b.cframe)) or nil
+end
+if mountW and mountW.Part0 and boneCF(mountW.Part0.Name) then
+	local gripCF = boneCF(mountW.Part0.Name) * mountW.C0 * mountW.C1:Inverse()
+	for _, mp in gun:GetDescendants() do
+		if mp:IsA("MeshPart") then
+			local rel = gun.PrimaryPart.CFrame:ToObjectSpace(mp.CFrame)
+			table.insert(pieces, { name = mp.Name, cframe = cf12(gripCF * rel), size = v3t(mp.Size), source = mp:GetAttribute("SourceName"), fitRot = mp:GetAttribute("FitRot") and cf12(mp:GetAttribute("FitRot")) or nil })
+		end
+	end
+end
 -- the gun's pieces are welded to its grip, which the animator re-welds to the torso
 local gunPieces = {}
 local mount = gun.PrimaryPart:FindFirstChild("Mount")

@@ -42,8 +42,8 @@ def main():
     ap.add_argument("--place-id")
     args = ap.parse_args()
     cfg = config(args.place_id)
-    body = open(os.path.join(ROOT, "build", "Aftertide.rbxlx"), "rb").read()
-    res = call("POST", f"https://apis.roblox.com/universes/v1/{cfg['universeId']}/places/{cfg['placeId']}/versions?versionType=Published", body, "application/xml")
+    body = open(os.path.join(ROOT, "build", "Aftertide.rbxl"), "rb").read()
+    res = call("POST", f"https://apis.roblox.com/universes/v1/{cfg['universeId']}/places/{cfg['placeId']}/versions?versionType=Published", body, "application/octet-stream")
     print("published version", res.get("versionNumber"), "of place", cfg["placeId"])
 
 

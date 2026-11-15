@@ -237,7 +237,12 @@ local function setupCharacter(player, char, session, isCustomRig)
 	local humanoid = char:WaitForChild("Humanoid")
 	local root = char:WaitForChild("HumanoidRootPart")
 	local head = char:WaitForChild("Head")
-
+	-- new-style rigs use AnimationConstraints; our animation and fitting need Motor6Ds
+	local converted = MeshKit.ensureMotors(char)
+	if converted > 0 then
+		print(("[CharacterService] converted %d AnimationConstraint joints to Motor6D for %s"):format(converted, player.Name))
+	end
+	humanoid.RequiresNeck = false -- health is ours; a joint change must never kill the Humanoid
 	humanoid.UseJumpPower = true
 	humanoid.JumpPower = 0 -- grounded movement; vaulting comes in Stage 5
 	humanoid.BreakJointsOnDeath = false

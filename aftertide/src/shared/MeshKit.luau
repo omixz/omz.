@@ -110,6 +110,37 @@ local function canonicalJoints(meta, format)
 	return J
 end
 
+-- Roblox now builds R15 characters with AnimationConstraint joints (+ BallSocketConstraints)
+-- instead of Motor6D. Everything here (skeleton fit, procedural animation, ragdolls) works on
+-- Motor6D, so convert: same parts, same frames (C0/C1 = the constraint's attachment frames).
+-- Server-side; the new joints replicate. Returns how many joints were converted.
+function MeshKit.ensureMotors(model)
+	local converted = 0
+	for _, d in model:GetDescendants() do
+		if d:IsA("AnimationConstraint") and d.Attachment0 and d.Attachment1 then
+			local a0, a1 = d.Attachment0, d.Attachment1
+			local part0, part1 = a0.Parent, a1.Parent
+			if part0 and part1 and part0:IsA("BasePart") and part1:IsA("BasePart") then
+				local motor = Instance.new("Motor6D")
+				motor.Name = d.Name
+				motor.Part0 = part0
+				motor.Part1 = part1
+				motor.C0 = a0.CFrame
+				motor.C1 = a1.CFrame
+				motor.Parent = d.Parent
+				converted += 1
+			end
+			d:Destroy()
+		end
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BallSocketConstraint") and d.Name:match("BallSocket$") then
+			d:Destroy() -- the upgraded rig's ragdoll sockets; we ragdoll our own way
+		end
+	end
+	return converted
+end
+
 local function setJoint(model, partName, motorName, parentCenter, childCenter, joint)
 	local part = model:FindFirstChild(partName)
 	local motor
@@ -139,6 +170,7 @@ end
 -- so every mesh segment fits its bone exactly: no gaps, no stretched pieces.
 -- Returns the HipHeight the Humanoid needs, or nil if the kit has no usable anchors.
 function MeshKit.conformSkeleton(model, meta, format, s)
+	MeshKit.ensureMotors(model)
 	local J0 = canonicalJoints(meta, format)
 	if not J0 then
 		return nil
@@ -310,8 +342,9 @@ end
 
 -- Builds a static prop model (anchored) at `cframe` with uniform `scale`.
 -- Props are generated with their base at y = 0, so cframe is the ground point.
-function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
+function MeshKit.buildProp(meta, getPart, cframe, scale, parent, name)
 	local model = Instance.new("Model")
+	model.Name = name or "Prop"
 	local any = false
 	for layerName, layer in meta.layers do
 		local mp = getPart(layer.part)

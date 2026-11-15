@@ -544,10 +544,17 @@ local function animate(char, rig, dt, serverNow, isLocal)
 end
 
 -- Test hook: run one animation frame on a rig (used by the engine tests) and report errors.
-function PlayerAnimator.debugAnimate(char, isLocal)
-	local rig = setup(char)
+-- The rig state is kept between calls (like the live loop), so blends settle over frames.
+-- `settled` skips the draw-from-holster timer (test frames run faster than real time).
+function PlayerAnimator.debugAnimate(char, isLocal, settled)
+	local rig = rigs[char] or setup(char)
 	if not rig then
 		return false, "setup failed: " .. tostring(diag.setupFail)
+	end
+	rigs[char] = rig
+	if settled then
+		rig.lastSlot = char:GetAttribute("EquippedSlot") or "none"
+		rig.drawAt = -10
 	end
 	local ok, err = pcall(animate, char, rig, 1 / 60, Workspace:GetServerTimeNow(), isLocal == true)
 	return ok, err, rig

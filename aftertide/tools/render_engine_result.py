@@ -42,6 +42,8 @@ def cframe(c):
 
 def main(path, out):
     res = json.load(open(path))
+    if isinstance(res, list):
+        res = res[0]
     meshes = glb_meshes()
     samples = {s["name"]: np.array(s["points"]) for s in res.get("samples", []) if isinstance(s, dict) and "points" in s}
     clouds = []

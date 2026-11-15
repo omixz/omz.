@@ -10,27 +10,52 @@ world.Parent = workspace
 local out = { maps = {} }
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Exclude
+params.IgnoreWater = true -- rocks in the harbour are meant to be under water
 for _, id in MapService.MapIds do
 	MapService.loadMap(id, Random.new(7))
 	local folder = world:FindFirstChild("Map_" .. id)
 	local floating, lodged = {}, {}
-	for _, m in folder:GetChildren() do
-		if m:IsA("Model") then
+	task.wait(0.2) -- let terrain writes settle before ray casts
+	local terrainHits = 0
+	local allProps = {}
+	for _, m in folder:GetDescendants() do
+		if m:IsA("Model") and m:GetAttribute("Prop") then
+			table.insert(allProps, m)
+		end
+	end
+	for _, m in folder:GetDescendants() do
+		local solid = false
+		if m:IsA("Model") and m:GetAttribute("Prop") then
+			for _, p in m:GetChildren() do
+				if p:IsA("BasePart") and p.CanQuery then
+					solid = true
+				end
+			end
+		end
+		if solid then
 			local cf, size = m:GetBoundingBox()
 			local bottom = cf.Position - Vector3.new(0, size.Y / 2, 0)
-			params.FilterDescendantsInstances = { m }
-			local hit = workspace:Raycast(bottom + Vector3.new(0, 0.3, 0), Vector3.new(0, -6, 0), params)
-			local gap = hit and (bottom.Y - hit.Position.Y) or 99
-			if gap > 0.7 then
-				table.insert(floating, { name = m.Name, at = v3t(bottom), gap = gap })
+			params.FilterDescendantsInstances = allProps -- ground only, not a neighbouring tree's canopy
+			local hit = workspace:Raycast(bottom + Vector3.new(0, 0.5, 0), Vector3.new(0, -12, 0), params)
+			local gap = hit and (bottom.Y - hit.Position.Y) or 0
+			local up = workspace:Raycast(bottom + Vector3.new(0, 7, 0), Vector3.new(0, -7, 0), params)
+			if up and up.Position.Y - bottom.Y > 2.5 then
+				gap = -(up.Position.Y - bottom.Y) -- buried
+				hit = up
+			end
+			if hit and hit.Instance == workspace.Terrain then
+				terrainHits += 1
+			end
+			if gap > 0.7 or gap < -2.5 then
+				table.insert(floating, { name = m.Name, at = v3t(bottom), gap = gap, on = hit and hit.Instance.Name or "nothing" })
 			end
 			local op = OverlapParams.new()
 			op.FilterType = Enum.RaycastFilterType.Exclude
 			op.FilterDescendantsInstances = { m }
 			local inside = workspace:GetPartBoundsInBox(cf, size * 0.6, op)
 			for _, p in inside do
-				if p.Parent == folder and p.CanCollide and p.Size.Magnitude > 6 then
-					table.insert(lodged, { name = m.Name, into = p.Name .. " " .. p.Material.Name, at = v3t(cf.Position) })
+				if not p:IsA("Terrain") and not p.Parent:IsA("Model") and p.CanCollide and p.Transparency < 1 and p.Size.Magnitude > 6 then
+					table.insert(lodged, { name = m.Name, into = p.Name .. " " .. p.Material.Name .. " " .. tostring(p.Size), at = v3t(cf.Position) })
 					break
 				end
 			end
@@ -45,7 +70,7 @@ for _, id in MapService.MapIds do
 			end
 		end
 	end
-	out.maps[id] = { floating = floating, lodged = lodged, misplacedSpots = spots }
+	out.maps[id] = { floating = floating, lodged = lodged, misplacedSpots = spots, terrainHits = terrainHits, terrainAt0 = workspace:Raycast(Vector3.new(3, 50, 3), Vector3.new(0, -100, 0)) and true or false }
 end
 MapService.buildFerryForTest({})
 local overlapsEmpty = MapService.checkLayout("test: Meridian (nothing built)")

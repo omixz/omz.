@@ -283,8 +283,9 @@ local KIND = {
 function MapKit.prop(parent, name, cf, scale)
 	scale = scale or 1
 	if Assets and Assets.hasKit(name) then
-		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent, name)
 		if m then
+			m:SetAttribute("Prop", KIND[name] or "decor")
 			if KIND[name] == "car" or KIND[name] == "rock" then
 				for _, p in m:GetChildren() do
 					if p:IsA("BasePart") then
@@ -312,7 +313,7 @@ end
 
 local function grassMesh(parent, name, cf, scale)
 	if Assets and Assets.hasKit(name) then
-		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent, name)
 		if m then
 			for _, p in m:GetChildren() do
 				if p:IsA("BasePart") then
@@ -565,7 +566,7 @@ function MapKit.barricade(parent, rng, roadHalfWidth)
 			end
 			if onRoad then
 				MapKit.prop(parent, (t % 12 == 0) and "CarVan_1" or "CarSedan_1", cf * CFrame.Angles(0, math.pi / 2 + rng:NextNumber(-0.3, 0.3), 0), 1)
-				sheet(cf * CFrame.new(0, 0, 2.5), 6.4, 8)
+				sheet(cf * CFrame.new(0, 0, 5.2), 6.4, 8)
 			else
 				sheet(cf, 6.4, rng:NextNumber(10, 13))
 				if t % 18 == 0 then
@@ -574,6 +575,73 @@ function MapKit.barricade(parent, rng, roadHalfWidth)
 			end
 		end
 	end
+end
+
+-- Tidy pass (runs after a map is built; the engine map scan found these):
+--   * a decorative prop (bush, tree, rock, rubble) lodged in a wall, floor or barricade is removed
+--   * a car lodged in geometry is removed too (they're cover, not structure)
+--   * a prop hovering over the ground is lowered onto it; one buried deep in a hill is raised
+-- Returns counts for the log.
+function MapKit.tidy(folder)
+	local props = {}
+	for _, m in folder:GetDescendants() do
+		if m:IsA("Model") and m:GetAttribute("Prop") then
+			table.insert(props, m)
+		end
+	end
+	local removed, lowered, raised = 0, 0, 0
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = props
+	local keep = {}
+	for _, m in props do
+		local cf, size = m:GetBoundingBox()
+		-- its core (60% of its box) must be clear of walls, floors and barricades
+		local probe, probeCF = size * 0.6, cf
+		local clash = false
+		for _, p in Workspace:GetPartBoundsInBox(probeCF, probe, op) do
+			if p.CanCollide and p.Transparency < 1 and p.Size.Magnitude > 4 and not p:IsA("Terrain") then
+				clash = true
+				break
+			end
+		end
+		if clash then
+			m:Destroy()
+			removed += 1
+		else
+			table.insert(keep, m)
+		end
+	end
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	rp.IgnoreWater = true
+	local exclude = table.clone(keep)
+	for _, v in folder:GetDescendants() do
+		if v:IsA("BasePart") and (v.Transparency >= 1 or not v.CanCollide) and not v.Parent:IsA("Model") then
+			table.insert(exclude, v)
+		end
+	end
+	rp.FilterDescendantsInstances = exclude
+	local SINK = { tree = 0.6, rock = 0.35, car = 0.05, bush = 0.3 }
+	for _, m in keep do
+		local cf, size = m:GetBoundingBox()
+		local bottom = cf.Position - Vector3.new(0, size.Y / 2, 0)
+		local sink = SINK[m:GetAttribute("Prop")] or 0.15
+		local target
+		local down = Workspace:Raycast(bottom + Vector3.new(0, 0.5, 0), Vector3.new(0, -80, 0), rp)
+		local up = Workspace:Raycast(bottom + Vector3.new(0, 7, 0), Vector3.new(0, -7, 0), rp)
+		if up and up.Position.Y - bottom.Y > 2 then
+			target = up.Position.Y - sink -- buried deep in a hill
+			raised += 1
+		elseif down and bottom.Y - down.Position.Y > 0.25 then
+			target = down.Position.Y - sink -- hovering
+			lowered += 1
+		end
+		if target then
+			m:PivotTo(m:GetPivot() + Vector3.new(0, target - bottom.Y, 0))
+		end
+	end
+	return removed, lowered, raised
 end
 
 -- Buildings with interiors ------------------------------------------------------------------------

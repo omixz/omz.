@@ -630,6 +630,13 @@ function MapService.loadMap(mapId, rng)
 	for _, w in { { Vector3.new(246, 120, 2), Vector3.new(0, 40, -122) }, { Vector3.new(246, 120, 2), Vector3.new(0, 40, 122) }, { Vector3.new(2, 120, 246), Vector3.new(-122, 40, 0) }, { Vector3.new(2, 120, 246), Vector3.new(122, 40, 0) } } do
 		block(mapFolder, w[1], w[2], Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, { Name = "Boundary", Transparency = 1, CanQuery = false, CastShadow = false })
 	end
+	task.wait(0.2) -- terrain writes reach ray casts on the next physics steps (the engine scan showed this)
+	local okTidy, removed, lowered, raised = pcall(MapKit.tidy, mapFolder)
+	if okTidy then
+		print(("[Layout] %s: removed %d lodged props, lowered %d, raised %d"):format(def.id, removed, lowered, raised))
+	else
+		warn("[Layout] tidy failed: " .. tostring(removed))
+	end
 	-- snap every gameplay position onto the actual ground (hills, house floors)
 	local function snap(v)
 		return Vector3.new(v.X, MapKit.ground(v.X, v.Z, { Workspace.Terrain, mapFolder }), v.Z)

@@ -5754,6 +5754,37 @@ local function canonicalJoints(meta, format)
 	return J
 end
 
+-- Roblox now builds R15 characters with AnimationConstraint joints (+ BallSocketConstraints)
+-- instead of Motor6D. Everything here (skeleton fit, procedural animation, ragdolls) works on
+-- Motor6D, so convert: same parts, same frames (C0/C1 = the constraint's attachment frames).
+-- Server-side; the new joints replicate. Returns how many joints were converted.
+function MeshKit.ensureMotors(model)
+	local converted = 0
+	for _, d in model:GetDescendants() do
+		if d:IsA("AnimationConstraint") and d.Attachment0 and d.Attachment1 then
+			local a0, a1 = d.Attachment0, d.Attachment1
+			local part0, part1 = a0.Parent, a1.Parent
+			if part0 and part1 and part0:IsA("BasePart") and part1:IsA("BasePart") then
+				local motor = Instance.new("Motor6D")
+				motor.Name = d.Name
+				motor.Part0 = part0
+				motor.Part1 = part1
+				motor.C0 = a0.CFrame
+				motor.C1 = a1.CFrame
+				motor.Parent = d.Parent
+				converted += 1
+			end
+			d:Destroy()
+		end
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BallSocketConstraint") and d.Name:match("BallSocket$") then
+			d:Destroy() -- the upgraded rig's ragdoll sockets; we ragdoll our own way
+		end
+	end
+	return converted
+end
+
 local function setJoint(model, partName, motorName, parentCenter, childCenter, joint)
 	local part = model:FindFirstChild(partName)
 	local motor
@@ -5783,6 +5814,7 @@ end
 -- so every mesh segment fits its bone exactly: no gaps, no stretched pieces.
 -- Returns the HipHeight the Humanoid needs, or nil if the kit has no usable anchors.
 function MeshKit.conformSkeleton(model, meta, format, s)
+	MeshKit.ensureMotors(model)
 	local J0 = canonicalJoints(meta, format)
 	if not J0 then
 		return nil
@@ -5954,8 +5986,9 @@ end
 
 -- Builds a static prop model (anchored) at `cframe` with uniform `scale`.
 -- Props are generated with their base at y = 0, so cframe is the ground point.
-function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
+function MeshKit.buildProp(meta, getPart, cframe, scale, parent, name)
 	local model = Instance.new("Model")
+	model.Name = name or "Prop"
 	local any = false
 	for layerName, layer in meta.layers do
 		local mp = getPart(layer.part)
@@ -7437,8 +7470,9 @@ local KIND = {
 function MapKit.prop(parent, name, cf, scale)
 	scale = scale or 1
 	if Assets and Assets.hasKit(name) then
-		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent, name)
 		if m then
+			m:SetAttribute("Prop", KIND[name] or "decor")
 			if KIND[name] == "car" or KIND[name] == "rock" then
 				for _, p in m:GetChildren() do
 					if p:IsA("BasePart") then
@@ -7466,7 +7500,7 @@ end
 
 local function grassMesh(parent, name, cf, scale)
 	if Assets and Assets.hasKit(name) then
-		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent)
+		local m = MeshKit.buildProp(Assets.meta(name), Assets.part, cf, scale, parent, name)
 		if m then
 			for _, p in m:GetChildren() do
 				if p:IsA("BasePart") then
@@ -7719,7 +7753,7 @@ function MapKit.barricade(parent, rng, roadHalfWidth)
 			end
 			if onRoad then
 				MapKit.prop(parent, (t % 12 == 0) and "CarVan_1" or "CarSedan_1", cf * CFrame.Angles(0, math.pi / 2 + rng:NextNumber(-0.3, 0.3), 0), 1)
-				sheet(cf * CFrame.new(0, 0, 2.5), 6.4, 8)
+				sheet(cf * CFrame.new(0, 0, 5.2), 6.4, 8)
 			else
 				sheet(cf, 6.4, rng:NextNumber(10, 13))
 				if t % 18 == 0 then
@@ -7728,6 +7762,73 @@ function MapKit.barricade(parent, rng, roadHalfWidth)
 			end
 		end
 	end
+end
+
+-- Tidy pass (runs after a map is built; the engine map scan found these):
+--   * a decorative prop (bush, tree, rock, rubble) lodged in a wall, floor or barricade is removed
+--   * a car lodged in geometry is removed too (they're cover, not structure)
+--   * a prop hovering over the ground is lowered onto it; one buried deep in a hill is raised
+-- Returns counts for the log.
+function MapKit.tidy(folder)
+	local props = {}
+	for _, m in folder:GetDescendants() do
+		if m:IsA("Model") and m:GetAttribute("Prop") then
+			table.insert(props, m)
+		end
+	end
+	local removed, lowered, raised = 0, 0, 0
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = props
+	local keep = {}
+	for _, m in props do
+		local cf, size = m:GetBoundingBox()
+		-- its core (60% of its box) must be clear of walls, floors and barricades
+		local probe, probeCF = size * 0.6, cf
+		local clash = false
+		for _, p in Workspace:GetPartBoundsInBox(probeCF, probe, op) do
+			if p.CanCollide and p.Transparency < 1 and p.Size.Magnitude > 4 and not p:IsA("Terrain") then
+				clash = true
+				break
+			end
+		end
+		if clash then
+			m:Destroy()
+			removed += 1
+		else
+			table.insert(keep, m)
+		end
+	end
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	rp.IgnoreWater = true
+	local exclude = table.clone(keep)
+	for _, v in folder:GetDescendants() do
+		if v:IsA("BasePart") and (v.Transparency >= 1 or not v.CanCollide) and not v.Parent:IsA("Model") then
+			table.insert(exclude, v)
+		end
+	end
+	rp.FilterDescendantsInstances = exclude
+	local SINK = { tree = 0.6, rock = 0.35, car = 0.05, bush = 0.3 }
+	for _, m in keep do
+		local cf, size = m:GetBoundingBox()
+		local bottom = cf.Position - Vector3.new(0, size.Y / 2, 0)
+		local sink = SINK[m:GetAttribute("Prop")] or 0.15
+		local target
+		local down = Workspace:Raycast(bottom + Vector3.new(0, 0.5, 0), Vector3.new(0, -80, 0), rp)
+		local up = Workspace:Raycast(bottom + Vector3.new(0, 7, 0), Vector3.new(0, -7, 0), rp)
+		if up and up.Position.Y - bottom.Y > 2 then
+			target = up.Position.Y - sink -- buried deep in a hill
+			raised += 1
+		elseif down and bottom.Y - down.Position.Y > 0.25 then
+			target = down.Position.Y - sink -- hovering
+			lowered += 1
+		end
+		if target then
+			m:PivotTo(m:GetPivot() + Vector3.new(0, target - bottom.Y, 0))
+		end
+	end
+	return removed, lowered, raised
 end
 
 -- Buildings with interiors ------------------------------------------------------------------------
@@ -9310,7 +9411,12 @@ local function setupCharacter(player, char, session, isCustomRig)
 	local humanoid = char:WaitForChild("Humanoid")
 	local root = char:WaitForChild("HumanoidRootPart")
 	local head = char:WaitForChild("Head")
-
+	-- new-style rigs use AnimationConstraints; our animation and fitting need Motor6Ds
+	local converted = MeshKit.ensureMotors(char)
+	if converted > 0 then
+		print(("[CharacterService] converted %d AnimationConstraint joints to Motor6D for %s"):format(converted, player.Name))
+	end
+	humanoid.RequiresNeck = false -- health is ours; a joint change must never kill the Humanoid
 	humanoid.UseJumpPower = true
 	humanoid.JumpPower = 0 -- grounded movement; vaulting comes in Stage 5
 	humanoid.BreakJointsOnDeath = false
@@ -12708,6 +12814,13 @@ function MapService.loadMap(mapId, rng)
 	-- invisible boundary so nobody can walk off the edge of the map
 	for _, w in { { Vector3.new(246, 120, 2), Vector3.new(0, 40, -122) }, { Vector3.new(246, 120, 2), Vector3.new(0, 40, 122) }, { Vector3.new(2, 120, 246), Vector3.new(-122, 40, 0) }, { Vector3.new(2, 120, 246), Vector3.new(122, 40, 0) } } do
 		block(mapFolder, w[1], w[2], Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, { Name = "Boundary", Transparency = 1, CanQuery = false, CastShadow = false })
+	end
+	task.wait(0.2) -- terrain writes reach ray casts on the next physics steps (the engine scan showed this)
+	local okTidy, removed, lowered, raised = pcall(MapKit.tidy, mapFolder)
+	if okTidy then
+		print(("[Layout] %s: removed %d lodged props, lowered %d, raised %d"):format(def.id, removed, lowered, raised))
+	else
+		warn("[Layout] tidy failed: " .. tostring(removed))
 	end
 	-- snap every gameplay position onto the actual ground (hills, house floors)
 	local function snap(v)
@@ -17818,10 +17931,17 @@ local function animate(char, rig, dt, serverNow, isLocal)
 end
 
 -- Test hook: run one animation frame on a rig (used by the engine tests) and report errors.
-function PlayerAnimator.debugAnimate(char, isLocal)
-	local rig = setup(char)
+-- The rig state is kept between calls (like the live loop), so blends settle over frames.
+-- `settled` skips the draw-from-holster timer (test frames run faster than real time).
+function PlayerAnimator.debugAnimate(char, isLocal, settled)
+	local rig = rigs[char] or setup(char)
 	if not rig then
 		return false, "setup failed: " .. tostring(diag.setupFail)
+	end
+	rigs[char] = rig
+	if settled then
+		rig.lastSlot = char:GetAttribute("EquippedSlot") or "none"
+		rig.drawAt = -10
 	end
 	local ok, err = pcall(animate, char, rig, 1 / 60, Workspace:GetServerTimeNow(), isLocal == true)
 	return ok, err, rig

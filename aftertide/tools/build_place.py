@@ -12,6 +12,7 @@ Usage: python3 tools/build_place.py
 Then open build/Aftertide.rbxlx in Roblox Studio (File > Open from File).
 """
 import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -66,6 +67,38 @@ def folder(name, directory):
     return item("Folder", name, "", folder_children(directory))
 
 
+def tree_folder(name, directory):
+    from rbxl import Inst
+    kids = []
+    for entry in sorted(os.listdir(directory)):
+        full = os.path.join(directory, entry)
+        if os.path.isdir(full):
+            kids.append(tree_folder(entry, full))
+        elif entry.endswith(".luau"):
+            if entry.endswith(".server.luau"):
+                cls, nm = "Script", entry[: -len(".server.luau")]
+            elif entry.endswith(".client.luau"):
+                cls, nm = "LocalScript", entry[: -len(".client.luau")]
+            else:
+                cls, nm = "ModuleScript", entry[: -len(".luau")]
+            kids.append(Inst(cls, nm, {"Source": ("string", open(full, encoding="utf-8").read())}))
+    return Inst("Folder", name, None, kids)
+
+
+def write_binary(path):
+    from rbxl import Inst, write
+    roots = [
+        Inst("Workspace", "Workspace", {"StreamingEnabled": ("bool", False)}, [Inst("Terrain", "Terrain", {"Decoration": ("bool", True)})]),
+        Inst("Lighting", "Lighting", {"Technology": ("token", 4)}),
+        Inst("Players", "Players", {"CharacterAutoLoads": ("bool", False)}),
+        Inst("ReplicatedStorage", "ReplicatedStorage", None, [tree_folder("Shared", os.path.join(SRC, "shared"))]),
+        Inst("ServerScriptService", "ServerScriptService", None, [tree_folder("Server", os.path.join(SRC, "server"))]),
+        Inst("StarterPlayer", "StarterPlayer", {"EnableMouseLockOption": ("bool", False), "LoadCharacterAppearance": ("bool", False), "CharacterJumpPower": ("float", 0.0)},
+             [Inst("StarterPlayerScripts", "StarterPlayerScripts", None, [tree_folder("Client", os.path.join(SRC, "client"))])]),
+    ]
+    return write(roots, path)
+
+
 def main():
     body = "".join(
         [
@@ -100,6 +133,10 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(xml)
     print(f"Wrote {os.path.relpath(OUT, ROOT)} ({len(xml) // 1024} KB)")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    binary = OUT[: -len(".rbxlx")] + ".rbxl"
+    size = write_binary(binary)
+    print(f"Wrote {os.path.relpath(binary, ROOT)} ({size // 1024} KB, binary: used for Open Cloud publishing)")
 
 
 if __name__ == "__main__":
