@@ -384,7 +384,7 @@ return Characters
 -- odds are shown before buying and which aren't sold where paid random items are restricted); every run aid has a per-crossing
 -- or per-encounter limit and can also be earned free by playing; cosmetics never change stats.
 --
--- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   outfit = "<Cosmetics outfit id>"
+-- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   scrip = n   outfit = "<Cosmetics outfit id>"
 --               outfits = { ids }   oneTime = true (can only be bought once per account)
 return {
 	Products = {
@@ -474,6 +474,63 @@ return {
 			grant = { tokens = { spin = 5 } },
 			randomItem = true,
 		},
+		PocketRounds = {
+			productId = 3732039191,
+			name = "Pocket Rounds",
+			price = 5,
+			desc = "+5 revolver rounds, packed for your next crossing.",
+			grant = { kit = { pocketrounds = 1 } },
+		},
+		Bandage = {
+			productId = 3732039195,
+			name = "Bandage Roll",
+			price = 5,
+			desc = "+1 Field Dressing, packed for your next crossing.",
+			grant = { kit = { bandage = 1 } },
+		},
+		ScripPouch = {
+			productId = 3732039202,
+			name = "Scrip Pouch",
+			price = 9,
+			desc = "+120 Scrip to spend at the Quartermaster or the Wardrobe.",
+			grant = { scrip = 120 },
+		},
+		LuckySpin3 = {
+			productId = 3732039205,
+			name = "Lucky Spin x3",
+			price = 25,
+			desc = "Three extra spins of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 3 } },
+			randomItem = true,
+		},
+		Outfit_mara_sunset = {
+			productId = 3732039210,
+			name = "Mara: Sunset Sail",
+			price = 19,
+			desc = "Peach jacket, cream trousers, purple beanie. Cosmetic.",
+			grant = { outfit = "mara_sunset" },
+		},
+		Outfit_tobias_sunset = {
+			productId = 3732039215,
+			name = "Tobias: Lifeguard",
+			price = 19,
+			desc = "Red and yellow lifeguard colours. Cosmetic.",
+			grant = { outfit = "tobias_sunset" },
+		},
+		Outfit_ines_sunset = {
+			productId = 3732039218,
+			name = "Ines: Mint Medic",
+			price = 19,
+			desc = "Mint jacket, white trousers, pink kit bag. Cosmetic.",
+			grant = { outfit = "ines_sunset" },
+		},
+		Outfit_sefa_sunset = {
+			productId = 3732039225,
+			name = "Sefa: Coral Reefer",
+			price = 19,
+			desc = "Coral raincoat, ocean-blue trousers, sunny boots. Cosmetic.",
+			grant = { outfit = "sefa_sunset" },
+		},
 		Outfit_mara_pilot = {
 			productId = 3731795745,
 			name = "Mara: Night Pilot",
@@ -504,7 +561,7 @@ return {
 		},
 	},
 	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
-	Order = { "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
+	Order = { "PocketRounds", "Bandage", "ScripPouch", "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
 
 	-- Game passes (permanent). Created by tools/create_products.py like the products above.
 	Passes = {
@@ -536,36 +593,40 @@ local Cosmetics = {}
 Cosmetics.Outfits = {
 	-- Mara ---------------------------------------------------------------------------------
 	mara_default = { char = "mara", name = "Harbour Pilot", unlock = "default", colors = {} },
-	mara_storm = { char = "mara", name = "Storm Watch", unlock = "scrip", scrip = 400, colors = { top = rgb(84, 92, 74), pants = rgb(40, 40, 38), hat = rgb(46, 50, 44), scarf = rgb(180, 160, 110) } },
-	mara_pilot = { char = "mara", name = "Night Pilot", unlock = "product", product = "Outfit_mara_pilot", scrip = 1500, colors = { top = rgb(34, 42, 64), pants = rgb(30, 30, 34), hat = rgb(30, 34, 52), scarf = rgb(160, 40, 36), pack = rgb(70, 58, 40) } },
-	mara_deckhand = { char = "mara", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
-	mara_officer = { char = "mara", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), scarf = rgb(196, 160, 80), pack = rgb(60, 50, 40) } },
+	mara_storm = { char = "mara", name = "Storm Watch", unlock = "scrip", scrip = 400, colors = { top = rgb(80, 150, 90), pants = rgb(70, 70, 76), hat = rgb(240, 200, 70), scarf = rgb(240, 240, 232), boots = rgb(60, 50, 44) } },
+	mara_pilot = { char = "mara", name = "Night Pilot", unlock = "product", product = "Outfit_mara_pilot", scrip = 1500, colors = { top = rgb(40, 70, 150), pants = rgb(46, 50, 66), hat = rgb(40, 70, 150), scarf = rgb(230, 60, 60), pack = rgb(180, 130, 70), boots = rgb(70, 46, 32) } },
+	mara_sunset = { char = "mara", name = "Sunset Sail", unlock = "product", product = "Outfit_mara_sunset", scrip = 700, colors = { top = rgb(250, 140, 90), pants = rgb(240, 230, 210), hat = rgb(120, 70, 170), scarf = rgb(255, 210, 80), boots = rgb(150, 90, 60) } },
+	mara_deckhand = { char = "mara", name = "Deckhand", unlock = "pack", colors = { top = rgb(240, 140, 50), pants = rgb(54, 80, 130), hat = rgb(40, 130, 150) } },
+	mara_officer = { char = "mara", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(245, 245, 240), pants = rgb(30, 50, 90), hat = rgb(30, 50, 90), scarf = rgb(220, 180, 70), pack = rgb(150, 110, 70) } },
 	-- Tobias -------------------------------------------------------------------------------
 	tobias_default = { char = "tobias", name = "Ferry Engineer", unlock = "default", colors = {} },
-	tobias_rust = { char = "tobias", name = "Rust Bucket", unlock = "scrip", scrip = 400, colors = { top = rgb(120, 60, 36), pants = rgb(70, 64, 54), hat = rgb(90, 50, 30) } },
-	tobias_stoker = { char = "tobias", name = "Boiler Stoker", unlock = "product", product = "Outfit_tobias_stoker", scrip = 1500, colors = { top = rgb(34, 32, 30), pants = rgb(46, 40, 34), hat = rgb(70, 50, 34), pack = rgb(60, 44, 30), boots = rgb(26, 22, 20) } },
-	tobias_deckhand = { char = "tobias", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
-	tobias_officer = { char = "tobias", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), pack = rgb(60, 50, 40) } },
+	tobias_rust = { char = "tobias", name = "Rust Bucket", unlock = "scrip", scrip = 400, colors = { top = rgb(190, 80, 50), pants = rgb(90, 84, 70), hat = rgb(240, 190, 60) } },
+	tobias_stoker = { char = "tobias", name = "Boiler Stoker", unlock = "product", product = "Outfit_tobias_stoker", scrip = 1500, colors = { top = rgb(60, 60, 66), pants = rgb(110, 70, 40), hat = rgb(220, 70, 50), pack = rgb(170, 120, 60), boots = rgb(40, 34, 30) } },
+	tobias_sunset = { char = "tobias", name = "Lifeguard", unlock = "product", product = "Outfit_tobias_sunset", scrip = 700, colors = { top = rgb(230, 50, 50), pants = rgb(250, 220, 90), hat = rgb(250, 250, 245), boots = rgb(240, 240, 235) } },
+	tobias_deckhand = { char = "tobias", name = "Deckhand", unlock = "pack", colors = { top = rgb(240, 140, 50), pants = rgb(54, 80, 130), hat = rgb(40, 130, 150) } },
+	tobias_officer = { char = "tobias", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(245, 245, 240), pants = rgb(30, 50, 90), hat = rgb(30, 50, 90), pack = rgb(150, 110, 70) } },
 	-- Ines ---------------------------------------------------------------------------------
 	ines_default = { char = "ines", name = "Ship's Medic", unlock = "default", colors = {} },
-	ines_mourning = { char = "ines", name = "Mourning Grey", unlock = "scrip", scrip = 400, colors = { top = rgb(70, 72, 76), pants = rgb(36, 38, 42), pack = rgb(120, 116, 108) } },
-	ines_field = { char = "ines", name = "Field Surgeon", unlock = "product", product = "Outfit_ines_field", scrip = 1500, colors = { top = rgb(214, 208, 194), pants = rgb(60, 66, 72), pack = rgb(150, 40, 36), mask = rgb(150, 40, 36) } },
-	ines_deckhand = { char = "ines", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70) } },
-	ines_officer = { char = "ines", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), pack = rgb(60, 50, 40), mask = rgb(196, 160, 80) } },
+	ines_mourning = { char = "ines", name = "Lavender Watch", unlock = "scrip", scrip = 400, colors = { top = rgb(170, 140, 220), pants = rgb(60, 64, 90), pack = rgb(240, 236, 226), boots = rgb(90, 70, 120) } },
+	ines_field = { char = "ines", name = "Field Surgeon", unlock = "product", product = "Outfit_ines_field", scrip = 1500, colors = { top = rgb(245, 244, 238), pants = rgb(70, 140, 160), pack = rgb(220, 50, 50), boots = rgb(70, 140, 160) } },
+	ines_sunset = { char = "ines", name = "Mint Medic", unlock = "product", product = "Outfit_ines_sunset", scrip = 700, colors = { top = rgb(120, 220, 180), pants = rgb(240, 240, 235), pack = rgb(250, 120, 140), boots = rgb(250, 250, 248) } },
+	ines_deckhand = { char = "ines", name = "Deckhand", unlock = "pack", colors = { top = rgb(240, 140, 50), pants = rgb(54, 80, 130) } },
+	ines_officer = { char = "ines", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(245, 245, 240), pants = rgb(30, 50, 90), pack = rgb(150, 110, 70), boots = rgb(30, 30, 34) } },
 	-- Sefa ---------------------------------------------------------------------------------
 	sefa_default = { char = "sefa", name = "Salvage Diver", unlock = "default", colors = {} },
-	sefa_dune = { char = "sefa", name = "Dune Walker", unlock = "scrip", scrip = 400, colors = { top = rgb(170, 150, 110), hat = rgb(150, 130, 96), pants = rgb(90, 80, 64) } },
-	sefa_reef = { char = "sefa", name = "Reef Diver", unlock = "product", product = "Outfit_sefa_reef", scrip = 1500, colors = { top = rgb(44, 70, 56), hat = rgb(150, 140, 110), pants = rgb(30, 40, 38), boots = rgb(20, 30, 30) } },
-	sefa_deckhand = { char = "sefa", name = "Deckhand", unlock = "pack", colors = { top = rgb(190, 120, 50), pants = rgb(54, 60, 70), hat = rgb(40, 60, 70) } },
-	sefa_officer = { char = "sefa", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(26, 30, 36), pants = rgb(26, 28, 30), hat = rgb(24, 26, 30), pack = rgb(60, 50, 40) } },
+	sefa_dune = { char = "sefa", name = "Dune Walker", unlock = "scrip", scrip = 400, colors = { top = rgb(230, 190, 130), hat = rgb(200, 90, 60), pants = rgb(120, 100, 76) } },
+	sefa_reef = { char = "sefa", name = "Reef Diver", unlock = "product", product = "Outfit_sefa_reef", scrip = 1500, colors = { top = rgb(40, 160, 170), hat = rgb(250, 140, 60), pants = rgb(30, 60, 90), boots = rgb(250, 140, 60) } },
+	sefa_sunset = { char = "sefa", name = "Coral Reefer", unlock = "product", product = "Outfit_sefa_sunset", scrip = 700, colors = { top = rgb(250, 110, 120), hat = rgb(250, 110, 120), pants = rgb(60, 150, 200), boots = rgb(255, 220, 90) } },
+	sefa_deckhand = { char = "sefa", name = "Deckhand", unlock = "pack", colors = { top = rgb(240, 140, 50), pants = rgb(54, 80, 130), hat = rgb(40, 130, 150) } },
+	sefa_officer = { char = "sefa", name = "Meridian Officer", unlock = "supporter", colors = { top = rgb(245, 245, 240), pants = rgb(30, 50, 90), hat = rgb(30, 50, 90), pack = rgb(150, 110, 70) } },
 }
 
 -- Wardrobe order per crew member.
 Cosmetics.Order = {
-	mara = { "mara_default", "mara_storm", "mara_pilot", "mara_deckhand", "mara_officer" },
-	tobias = { "tobias_default", "tobias_rust", "tobias_stoker", "tobias_deckhand", "tobias_officer" },
-	ines = { "ines_default", "ines_mourning", "ines_field", "ines_deckhand", "ines_officer" },
-	sefa = { "sefa_default", "sefa_dune", "sefa_reef", "sefa_deckhand", "sefa_officer" },
+	mara = { "mara_default", "mara_storm", "mara_sunset", "mara_pilot", "mara_deckhand", "mara_officer" },
+	tobias = { "tobias_default", "tobias_rust", "tobias_sunset", "tobias_stoker", "tobias_deckhand", "tobias_officer" },
+	ines = { "ines_default", "ines_mourning", "ines_sunset", "ines_field", "ines_deckhand", "ines_officer" },
+	sefa = { "sefa_default", "sefa_dune", "sefa_sunset", "sefa_reef", "sefa_deckhand", "sefa_officer" },
 }
 
 -- Which sculpted mesh layers each colour slot repaints (see tools/sculpt/human.py layer names).
@@ -910,6 +971,7 @@ return {
 		},
 	},
 	LooseItems = 14, -- per encounter
+	MaxContainers = 11, -- searchable containers per encounter (random subset of the map's spots)
 	PallBonusRolls = 0.15, -- extra roll chance per Pall level
 }
 ]]></ProtectedString></Properties></Item>
@@ -2217,65 +2279,65 @@ return {
 						part = "Crew_mara_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.8392, 0.6745, 0.549 },
-						center = { 0.0, 5.3512, -0.0018 },
-						size = { 0.7675, 1.2154, 0.848 },
-						tris = 10840,
+						center = { 0.0, 5.339, -0.001 },
+						size = { 0.6959, 1.1016, 0.7675 },
+						tris = 11916,
 					},
 					Eyes = {
 						part = "Crew_mara_Head_Eyes",
 						material = "SmoothPlastic",
 						color = { 0.93, 0.91, 0.88 },
-						center = { 0.0, 5.5464, -0.3169 },
-						size = { 0.3492, 0.0989, 0.0988 },
-						tris = 364,
+						center = { -0.0001, 5.5158, -0.2871 },
+						size = { 0.3114, 0.09, 0.0902 },
+						tris = 328,
 					},
 					Iris = {
 						part = "Crew_mara_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.2353, 0.4706, 0.3529 },
-						center = { 0.0004, 5.5425, -0.3494 },
-						size = { 0.2924, 0.0446, 0.0438 },
-						tris = 84,
+						center = { -0.0013, 5.5121, -0.3157 },
+						size = { 0.2605, 0.0399, 0.0419 },
+						tris = 72,
 					},
 					Pupil = {
 						part = "Crew_mara_Head_Pupil",
 						material = "SmoothPlastic",
 						color = { 0.04, 0.04, 0.05 },
-						center = { -0.0012, 5.5533, -0.3687 },
-						size = { 0.2421, 0.0008, 0.0021 },
+						center = { 0.0069, 5.5189, -0.3313 },
+						size = { 0.2261, 0.0071, 0.013 },
 						tris = 24,
 					},
 					Lips = {
 						part = "Crew_mara_Head_Lips",
 						material = "SmoothPlastic",
 						color = { 0.8733, 0.3573, 0.3145 },
-						center = { -0.0008, 5.282, -0.3669 },
-						size = { 0.2156, 0.06, 0.0646 },
-						tris = 232,
+						center = { 0.0001, 5.2777, -0.3317 },
+						size = { 0.1975, 0.0585, 0.0622 },
+						tris = 180,
 					},
 					Brows = {
 						part = "Crew_mara_Head_Brows",
 						material = "Fabric",
 						color = { 0.5882, 0.2824, 0.1569 },
-						center = { -0.0002, 5.6233, -0.3671 },
-						size = { 0.3915, 0.0414, 0.055 },
-						tris = 192,
+						center = { 0.0055, 5.5856, -0.3368 },
+						size = { 0.3401, 0.037, 0.0392 },
+						tris = 144,
 					},
 					Hat = {
 						part = "Crew_mara_Head_Hat",
 						material = "Fabric",
 						color = { 0.7843, 0.2353, 0.2039 },
-						center = { -0.0004, 5.824, 0.0391 },
-						size = { 0.7537, 0.4126, 0.8677 },
-						tris = 8512,
+						center = { -0.0001, 5.7674, 0.0351 },
+						size = { 0.6809, 0.374, 0.7856 },
+						tris = 7076,
 					},
 					Hair = {
 						part = "Crew_mara_Head_Hair",
 						material = "Fabric",
 						color = { 0.5882, 0.2824, 0.1569 },
-						center = { 0.0, 5.5079, 0.1561 },
-						size = { 0.71, 0.691, 0.5902 },
-						tris = 9680,
+						center = { -0.0002, 5.4804, 0.1391 },
+						size = { 0.634, 0.6356, 0.5481 },
+						tris = 8212,
 					},
 				},
 			},
@@ -2287,41 +2349,41 @@ return {
 						part = "Crew_mara_UpperTorso_Jacket",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { 0.0019, 4.2312, -0.0384 },
-						size = { 1.8175, 2.0365, 0.9189 },
-						tris = 6916,
+						center = { 0.003, 4.2332, -0.0389 },
+						size = { 1.7388, 2.0404, 0.9203 },
+						tris = 10192,
 					},
 					Scarf = {
 						part = "Crew_mara_UpperTorso_Scarf",
 						material = "Fabric",
 						color = { 0.9647, 0.7294, 0.2353 },
-						center = { -0.0007, 4.5775, -0.0623 },
-						size = { 0.7656, 0.836, 0.9527 },
-						tris = 1448,
+						center = { -0.0004, 4.5764, -0.0617 },
+						size = { 0.7657, 0.836, 0.9534 },
+						tris = 2176,
 					},
 					Pack = {
 						part = "Crew_mara_UpperTorso_Pack",
 						material = "Fabric",
 						color = { 0.7686, 0.6275, 0.3922 },
-						center = { -0.0001, 4.3424, 0.5645 },
-						size = { 1.1375, 1.2129, 0.4939 },
-						tris = 2628,
+						center = { -0.0, 4.3424, 0.5646 },
+						size = { 1.1384, 1.2148, 0.4938 },
+						tris = 3992,
 					},
 					Straps = {
 						part = "Crew_mara_UpperTorso_Straps",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { 0.0, 4.4091, -0.0442 },
-						size = { 0.5968, 1.1489, 0.9263 },
-						tris = 956,
+						center = { -0.0009, 4.4215, -0.0478 },
+						size = { 0.5973, 1.1767, 0.9341 },
+						tris = 1584,
 					},
 					Flashlight = {
 						part = "Crew_mara_UpperTorso_Flashlight",
 						material = "Metal",
 						color = { 0.12, 0.12, 0.12 },
-						center = { -0.4654, 4.3563, -0.382 },
-						size = { 0.1273, 0.1276, 0.28 },
-						tris = 96,
+						center = { -0.458, 4.3604, -0.382 },
+						size = { 0.1498, 0.1492, 0.28 },
+						tris = 176,
 					},
 				},
 			},
@@ -2333,25 +2395,25 @@ return {
 						part = "Crew_mara_LowerTorso_Pants",
 						material = "Fabric",
 						color = { 0.4627, 0.4078, 0.3294 },
-						center = { 0.0027, 3.2474, 0.0343 },
-						size = { 1.3088, 0.8543, 0.804 },
-						tris = 3024,
+						center = { 0.0021, 3.2471, 0.0341 },
+						size = { 1.3104, 0.8558, 0.8051 },
+						tris = 4552,
 					},
 					Belt = {
 						part = "Crew_mara_LowerTorso_Belt",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { 0.0059, 3.43, 0.0205 },
-						size = { 1.3517, 0.12, 0.825 },
-						tris = 1392,
+						center = { 0.0059, 3.43, 0.0212 },
+						size = { 1.3461, 0.12, 0.82 },
+						tris = 1772,
 					},
 					JacketHem = {
 						part = "Crew_mara_LowerTorso_JacketHem",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { 0.0027, 3.4808, 0.0297 },
-						size = { 1.3689, 0.3755, 0.8541 },
-						tris = 2204,
+						center = { -0.0001, 3.4807, 0.0246 },
+						size = { 1.3729, 0.3758, 0.841 },
+						tris = 3132,
 					},
 				},
 			},
@@ -2363,9 +2425,9 @@ return {
 						part = "Crew_mara_RightUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { 0.8095, 4.2893, 0.0269 },
-						size = { 0.4621, 1.2959, 0.4056 },
-						tris = 1316,
+						center = { 0.8096, 4.2888, 0.0267 },
+						size = { 0.4617, 1.2935, 0.4052 },
+						tris = 1992,
 					},
 				},
 			},
@@ -2377,17 +2439,25 @@ return {
 						part = "Crew_mara_RightLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { 0.8793, 3.4537, 0.0596 },
-						size = { 0.3372, 1.0301, 0.3361 },
-						tris = 896,
+						center = { 0.8788, 3.4539, 0.0582 },
+						size = { 0.3366, 1.031, 0.3382 },
+						tris = 1296,
 					},
 					Skin = {
 						part = "Crew_mara_RightLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.8392, 0.6745, 0.549 },
-						center = { 0.9198, 2.9164, 0.0025 },
-						size = { 0.1746, 0.2873, 0.1787 },
-						tris = 156,
+						center = { 0.9198, 2.9174, 0.0019 },
+						size = { 0.1746, 0.2852, 0.1745 },
+						tris = 208,
+					},
+					Cuff = {
+						part = "Crew_mara_RightLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.1129, 0.4016, 0.5333 },
+						center = { 0.9118, 3.0047, 0.0108 },
+						size = { 0.2932, 0.0953, 0.2979 },
+						tris = 260,
 					},
 				},
 			},
@@ -2413,9 +2483,9 @@ return {
 						part = "Crew_mara_RightUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.4627, 0.4078, 0.3294 },
-						center = { 0.3303, 2.4293, -0.0033 },
-						size = { 0.609, 1.8763, 0.6192 },
-						tris = 2892,
+						center = { 0.3303, 2.4301, -0.003 },
+						size = { 0.6089, 1.8764, 0.62 },
+						tris = 4260,
 					},
 				},
 			},
@@ -2427,17 +2497,25 @@ return {
 						part = "Crew_mara_RightLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.4627, 0.4078, 0.3294 },
-						center = { 0.3095, 1.3619, -0.0033 },
-						size = { 0.4271, 1.1035, 0.4747 },
-						tris = 1352,
+						center = { 0.3096, 1.3613, -0.003 },
+						size = { 0.4264, 1.1027, 0.4762 },
+						tris = 1936,
 					},
 					Boot = {
 						part = "Crew_mara_RightLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.4314, 0.2588, 0.1569 },
-						center = { 0.3065, 0.5841, 0.034 },
-						size = { 0.3495, 0.7758, 0.3751 },
-						tris = 772,
+						center = { 0.3051, 0.5852, 0.0363 },
+						size = { 0.3443, 0.7744, 0.3706 },
+						tris = 1184,
+					},
+					Laces = {
+						part = "Crew_mara_RightLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { 0.3121, 0.6452, -0.1497 },
+						size = { 0.1386, 0.324, 0.0086 },
+						tris = 84,
 					},
 				},
 			},
@@ -2449,9 +2527,9 @@ return {
 						part = "Crew_mara_RightFoot_Boot",
 						material = "Leather",
 						color = { 0.4314, 0.2588, 0.1569 },
-						center = { 0.2993, 0.25, -0.2355 },
-						size = { 0.3775, 0.5395, 1.0473 },
-						tris = 1148,
+						center = { 0.3, 0.2495, -0.2345 },
+						size = { 0.3799, 0.5389, 1.0474 },
+						tris = 1704,
 					},
 				},
 			},
@@ -2463,9 +2541,9 @@ return {
 						part = "Crew_mara_LeftUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { -0.8061, 4.2929, 0.0301 },
-						size = { 0.4605, 1.3016, 0.411 },
-						tris = 1336,
+						center = { -0.8056, 4.2939, 0.0312 },
+						size = { 0.4607, 1.3001, 0.4102 },
+						tris = 2012,
 					},
 				},
 			},
@@ -2477,17 +2555,25 @@ return {
 						part = "Crew_mara_LeftLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.1412, 0.502, 0.6667 },
-						center = { -0.8781, 3.4537, 0.058 },
-						size = { 0.3346, 1.0301, 0.3392 },
-						tris = 860,
+						center = { -0.8781, 3.4538, 0.059 },
+						size = { 0.3326, 1.0304, 0.3381 },
+						tris = 1244,
 					},
 					Skin = {
 						part = "Crew_mara_LeftLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.8392, 0.6745, 0.549 },
-						center = { -0.9196, 2.9162, 0.0003 },
-						size = { 0.1743, 0.2877, 0.1756 },
-						tris = 152,
+						center = { -0.9198, 2.9164, 0.0011 },
+						size = { 0.1748, 0.2873, 0.1771 },
+						tris = 224,
+					},
+					Cuff = {
+						part = "Crew_mara_LeftLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.1129, 0.4016, 0.5333 },
+						center = { -0.9123, 3.0041, 0.0114 },
+						size = { 0.2924, 0.0941, 0.2972 },
+						tris = 272,
 					},
 				},
 			},
@@ -2513,9 +2599,9 @@ return {
 						part = "Crew_mara_LeftUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.4627, 0.4078, 0.3294 },
-						center = { -0.332, 2.4222, -0.0034 },
-						size = { 0.6068, 1.8757, 0.6157 },
-						tris = 2772,
+						center = { -0.3313, 2.4221, -0.0035 },
+						size = { 0.6068, 1.8761, 0.6159 },
+						tris = 4228,
 					},
 				},
 			},
@@ -2527,17 +2613,25 @@ return {
 						part = "Crew_mara_LeftLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.4627, 0.4078, 0.3294 },
-						center = { -0.312, 1.3674, -0.0073 },
-						size = { 0.4373, 1.1169, 0.48 },
-						tris = 1372,
+						center = { -0.3118, 1.3667, -0.0067 },
+						size = { 0.4378, 1.1142, 0.4834 },
+						tris = 1956,
 					},
 					Boot = {
 						part = "Crew_mara_LeftLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.4314, 0.2588, 0.1569 },
-						center = { -0.3045, 0.586, 0.0342 },
-						size = { 0.3543, 0.7699, 0.3713 },
-						tris = 776,
+						center = { -0.3038, 0.5857, 0.0298 },
+						size = { 0.3493, 0.7711, 0.3789 },
+						tris = 1132,
+					},
+					Laces = {
+						part = "Crew_mara_LeftLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { -0.298, 0.6468, -0.1497 },
+						size = { 0.1516, 0.3287, 0.0085 },
+						tris = 84,
 					},
 				},
 			},
@@ -2549,9 +2643,9 @@ return {
 						part = "Crew_mara_LeftFoot_Boot",
 						material = "Leather",
 						color = { 0.4314, 0.2588, 0.1569 },
-						center = { -0.2991, 0.25, -0.2356 },
-						size = { 0.3779, 0.5395, 1.0474 },
-						tris = 1152,
+						center = { -0.3, 0.2494, -0.2348 },
+						size = { 0.3799, 0.5387, 1.0475 },
+						tris = 1700,
 					},
 				},
 			},
@@ -2569,65 +2663,65 @@ return {
 						part = "Crew_tobias_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.6275, 0.4471, 0.3373 },
-						center = { -0.0001, 5.4958, -0.0012 },
-						size = { 0.767, 1.2578, 0.847 },
-						tris = 10912,
+						center = { 0.0001, 5.4855, -0.0014 },
+						size = { 0.6952, 1.1398, 0.7682 },
+						tris = 10896,
 					},
 					Eyes = {
 						part = "Crew_tobias_Head_Eyes",
 						material = "SmoothPlastic",
 						color = { 0.93, 0.91, 0.88 },
-						center = { 0.0, 5.7119, -0.3166 },
-						size = { 0.3487, 0.0987, 0.0983 },
-						tris = 376,
+						center = { -0.0001, 5.6815, -0.2872 },
+						size = { 0.3137, 0.0878, 0.0902 },
+						tris = 312,
 					},
 					Iris = {
 						part = "Crew_tobias_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.3529, 0.2353, 0.1176 },
-						center = { -0.0, 5.7038, -0.3522 },
-						size = { 0.2935, 0.0391, 0.0385 },
+						center = { 0.0001, 5.6784, -0.3169 },
+						size = { 0.2606, 0.0406, 0.0395 },
 						tris = 80,
 					},
 					Pupil = {
 						part = "Crew_tobias_Head_Pupil",
 						material = "SmoothPlastic",
 						color = { 0.04, 0.04, 0.05 },
-						center = { -0.0047, 5.7141, -0.371 },
-						size = { 0.2516, 0.01, 0.0095 },
+						center = { 0.0071, 5.6708, -0.3325 },
+						size = { 0.2266, 0.0065, 0.0113 },
 						tris = 24,
 					},
 					Lips = {
 						part = "Crew_tobias_Head_Lips",
 						material = "SmoothPlastic",
 						color = { 0.6933, 0.2435, 0.2086 },
-						center = { -0.0037, 5.4492, -0.3681 },
-						size = { 0.211, 0.0641, 0.0662 },
-						tris = 204,
+						center = { 0.0024, 5.443, -0.3311 },
+						size = { 0.1918, 0.0586, 0.0627 },
+						tris = 160,
 					},
 					Brows = {
 						part = "Crew_tobias_Head_Brows",
 						material = "Fabric",
 						color = { 0.1569, 0.1176, 0.0941 },
-						center = { -0.0078, 5.7896, -0.3675 },
-						size = { 0.3771, 0.0396, 0.0552 },
-						tris = 156,
+						center = { 0.0037, 5.7545, -0.3373 },
+						size = { 0.3351, 0.0289, 0.0418 },
+						tris = 116,
 					},
 					Hat = {
 						part = "Crew_tobias_Head_Hat",
 						material = "Fabric",
 						color = { 0.1569, 0.4706, 0.3529 },
-						center = { 0.0, 5.9515, -0.0762 },
-						size = { 0.7287, 0.4039, 1.0348 },
-						tris = 9036,
+						center = { 0.0, 5.8987, -0.0688 },
+						size = { 0.6604, 0.3657, 0.937 },
+						tris = 7204,
 					},
 					Hair = {
 						part = "Crew_tobias_Head_Hair",
 						material = "Fabric",
 						color = { 0.1569, 0.1176, 0.0941 },
-						center = { 0.0, 5.808, 0.1419 },
-						size = { 0.7103, 0.4607, 0.6377 },
-						tris = 7648,
+						center = { 0.0003, 5.7678, 0.1249 },
+						size = { 0.6515, 0.4268, 0.5929 },
+						tris = 6672,
 					},
 				},
 			},
@@ -2639,33 +2733,33 @@ return {
 						part = "Crew_tobias_UpperTorso_Jacket",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { -0.0004, 4.3674, -0.0044 },
-						size = { 1.9962, 2.0863, 0.9703 },
-						tris = 7816,
+						center = { 0.0002, 4.3671, -0.0048 },
+						size = { 1.9115, 2.0855, 0.9713 },
+						tris = 11596,
 					},
 					Pack = {
 						part = "Crew_tobias_UpperTorso_Pack",
 						material = "Fabric",
 						color = { 0.4314, 0.4706, 0.3137 },
-						center = { 0.0001, 4.4518, 0.6762 },
-						size = { 1.1346, 1.2132, 0.5324 },
-						tris = 2776,
+						center = { -0.0001, 4.4513, 0.6768 },
+						size = { 1.138, 1.213, 0.5312 },
+						tris = 4132,
 					},
 					Straps = {
 						part = "Crew_tobias_UpperTorso_Straps",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { -0.0004, 4.5514, -0.0582 },
-						size = { 0.596, 1.2167, 1.0828 },
-						tris = 1216,
+						center = { -0.0, 4.5458, -0.0577 },
+						size = { 0.5936, 1.2134, 1.0824 },
+						tris = 1780,
 					},
 					Flashlight = {
 						part = "Crew_tobias_UpperTorso_Flashlight",
 						material = "Metal",
 						color = { 0.12, 0.12, 0.12 },
-						center = { -0.5257, 4.5068, -0.4432 },
-						size = { 0.1471, 0.1405, 0.28 },
-						tris = 116,
+						center = { -0.5249, 4.5015, -0.4432 },
+						size = { 0.1492, 0.1486, 0.28 },
+						tris = 172,
 					},
 				},
 			},
@@ -2677,25 +2771,25 @@ return {
 						part = "Crew_tobias_LowerTorso_Pants",
 						material = "Fabric",
 						color = { 0.1725, 0.2588, 0.4314 },
-						center = { 0.0018, 3.338, 0.0229 },
-						size = { 1.3435, 0.8686, 0.9035 },
-						tris = 3340,
+						center = { 0.0019, 3.3381, 0.0227 },
+						size = { 1.3442, 0.8688, 0.9036 },
+						tris = 4996,
 					},
 					Belt = {
 						part = "Crew_tobias_LowerTorso_Belt",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { -0.0011, 3.5275, 0.0194 },
-						size = { 1.3717, 0.12, 0.9398 },
-						tris = 1500,
+						center = { 0.0055, 3.5275, 0.0244 },
+						size = { 1.3769, 0.12, 0.9421 },
+						tris = 1940,
 					},
 					JacketHem = {
 						part = "Crew_tobias_LowerTorso_JacketHem",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { -0.0016, 3.5784, 0.0245 },
-						size = { 1.3953, 0.374, 0.9639 },
-						tris = 2424,
+						center = { -0.0023, 3.5782, 0.0216 },
+						size = { 1.4112, 0.3742, 0.965 },
+						tris = 3516,
 					},
 					Pouches = {
 						part = "Crew_tobias_LowerTorso_Pouches",
@@ -2703,7 +2797,7 @@ return {
 						color = { 0.3, 0.22, 0.15 },
 						center = { 0.0, 3.3975, -0.12 },
 						size = { 1.0, 0.28, 0.24 },
-						tris = 340,
+						tris = 616,
 					},
 				},
 			},
@@ -2715,9 +2809,9 @@ return {
 						part = "Crew_tobias_RightUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { 0.8716, 4.4224, 0.0267 },
-						size = { 0.4974, 1.3692, 0.4511 },
-						tris = 1588,
+						center = { 0.8712, 4.4215, 0.0267 },
+						size = { 0.4977, 1.3691, 0.4508 },
+						tris = 2376,
 					},
 				},
 			},
@@ -2729,17 +2823,25 @@ return {
 						part = "Crew_tobias_RightLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { 0.9395, 3.5643, 0.0584 },
-						size = { 0.3798, 1.0814, 0.3806 },
-						tris = 980,
+						center = { 0.9392, 3.5631, 0.0584 },
+						size = { 0.3786, 1.0798, 0.3785 },
+						tris = 1576,
 					},
 					Skin = {
 						part = "Crew_tobias_RightLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.6275, 0.4471, 0.3373 },
-						center = { 0.9796, 2.9965, 0.0022 },
-						size = { 0.2004, 0.2985, 0.201 },
-						tris = 172,
+						center = { 0.9795, 2.9956, 0.0007 },
+						size = { 0.2005, 0.3004, 0.1974 },
+						tris = 276,
+					},
+					Cuff = {
+						part = "Crew_tobias_RightLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.709, 0.3827, 0.1255 },
+						center = { 0.9725, 3.0947, 0.0098 },
+						size = { 0.3233, 0.1019, 0.3239 },
+						tris = 288,
 					},
 				},
 			},
@@ -2765,17 +2867,17 @@ return {
 						part = "Crew_tobias_RightUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.1725, 0.2588, 0.4314 },
-						center = { 0.301, 2.5094, -0.0006 },
-						size = { 0.697, 1.9895, 0.7045 },
-						tris = 3440,
+						center = { 0.2998, 2.5093, -0.0004 },
+						size = { 0.697, 1.9902, 0.7048 },
+						tris = 5168,
 					},
 					Pad = {
 						part = "Crew_tobias_RightUpperLeg_Pad",
 						material = "Plastic",
 						color = { 0.2353, 0.2353, 0.251 },
-						center = { 0.3003, 1.7706, -0.1999 },
-						size = { 0.2963, 0.3359, 0.1589 },
-						tris = 212,
+						center = { 0.3001, 1.771, -0.2 },
+						size = { 0.2962, 0.3365, 0.1594 },
+						tris = 308,
 					},
 				},
 			},
@@ -2787,17 +2889,25 @@ return {
 						part = "Crew_tobias_RightLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.1725, 0.2588, 0.4314 },
-						center = { 0.2994, 1.4075, -0.0054 },
-						size = { 0.4824, 1.1702, 0.5322 },
-						tris = 1528,
+						center = { 0.2991, 1.407, -0.0051 },
+						size = { 0.4814, 1.1705, 0.5299 },
+						tris = 2360,
 					},
 					Boot = {
 						part = "Crew_tobias_RightLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.3294, 0.2196, 0.1412 },
-						center = { 0.3017, 0.5875, 0.034 },
-						size = { 0.3903, 0.7917, 0.407 },
-						tris = 872,
+						center = { 0.3004, 0.5875, 0.0337 },
+						size = { 0.3843, 0.7915, 0.4066 },
+						tris = 1344,
+					},
+					Laces = {
+						part = "Crew_tobias_RightLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { 0.3084, 0.653, -0.1496 },
+						size = { 0.1458, 0.3282, 0.0085 },
+						tris = 104,
 					},
 				},
 			},
@@ -2809,9 +2919,9 @@ return {
 						part = "Crew_tobias_RightFoot_Boot",
 						material = "Leather",
 						color = { 0.3294, 0.2196, 0.1412 },
-						center = { 0.2997, 0.257, -0.2355 },
-						size = { 0.3779, 0.5472, 1.0484 },
-						tris = 1148,
+						center = { 0.3, 0.2571, -0.2348 },
+						size = { 0.38, 0.5474, 1.048 },
+						tris = 1724,
 					},
 				},
 			},
@@ -2823,9 +2933,9 @@ return {
 						part = "Crew_tobias_LeftUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { -0.8675, 4.4239, 0.0302 },
-						size = { 0.5004, 1.3707, 0.4591 },
-						tris = 1608,
+						center = { -0.8675, 4.4227, 0.0319 },
+						size = { 0.5015, 1.37, 0.4623 },
+						tris = 2380,
 					},
 				},
 			},
@@ -2837,17 +2947,25 @@ return {
 						part = "Crew_tobias_LeftLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8863, 0.4784, 0.1569 },
-						center = { -0.9385, 3.5635, 0.0612 },
-						size = { 0.3779, 1.079, 0.3734 },
-						tris = 968,
+						center = { -0.9386, 3.5626, 0.0596 },
+						size = { 0.3754, 1.079, 0.3763 },
+						tris = 1492,
 					},
 					Skin = {
 						part = "Crew_tobias_LeftLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.6275, 0.4471, 0.3373 },
-						center = { -0.9796, 2.9956, 0.0011 },
-						size = { 0.2003, 0.3003, 0.2021 },
-						tris = 192,
+						center = { -0.9796, 2.9957, 0.0006 },
+						size = { 0.2005, 0.3002, 0.2013 },
+						tris = 256,
+					},
+					Cuff = {
+						part = "Crew_tobias_LeftLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.709, 0.3827, 0.1255 },
+						center = { -0.9732, 3.0938, 0.0104 },
+						size = { 0.3181, 0.0988, 0.3215 },
+						tris = 272,
 					},
 				},
 			},
@@ -2873,17 +2991,17 @@ return {
 						part = "Crew_tobias_LeftUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.1725, 0.2588, 0.4314 },
-						center = { -0.2981, 2.5034, -0.001 },
-						size = { 0.7005, 1.9807, 0.6938 },
-						tris = 3380,
+						center = { -0.2993, 2.5027, -0.0017 },
+						size = { 0.6997, 1.9826, 0.6956 },
+						tris = 5120,
 					},
 					Pad = {
 						part = "Crew_tobias_LeftUpperLeg_Pad",
 						material = "Plastic",
 						color = { 0.2353, 0.2353, 0.251 },
-						center = { -0.2997, 1.7706, -0.1999 },
-						size = { 0.2963, 0.3359, 0.1589 },
-						tris = 212,
+						center = { -0.2999, 1.771, -0.2 },
+						size = { 0.2962, 0.3365, 0.1594 },
+						tris = 308,
 					},
 				},
 			},
@@ -2895,17 +3013,25 @@ return {
 						part = "Crew_tobias_LeftLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.1725, 0.2588, 0.4314 },
-						center = { -0.3017, 1.4054, -0.0104 },
-						size = { 0.4949, 1.171, 0.5349 },
-						tris = 1564,
+						center = { -0.3042, 1.405, -0.0085 },
+						size = { 0.4939, 1.1714, 0.5353 },
+						tris = 2364,
 					},
 					Boot = {
 						part = "Crew_tobias_LeftLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.3294, 0.2196, 0.1412 },
-						center = { -0.3016, 0.5884, 0.0346 },
-						size = { 0.3881, 0.7861, 0.4026 },
-						tris = 864,
+						center = { -0.3003, 0.5878, 0.0306 },
+						size = { 0.3848, 0.7872, 0.4067 },
+						tris = 1312,
+					},
+					Laces = {
+						part = "Crew_tobias_LeftLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { -0.2916, 0.653, -0.1496 },
+						size = { 0.1458, 0.3282, 0.0085 },
+						tris = 104,
 					},
 				},
 			},
@@ -2917,9 +3043,9 @@ return {
 						part = "Crew_tobias_LeftFoot_Boot",
 						material = "Leather",
 						color = { 0.3294, 0.2196, 0.1412 },
-						center = { -0.2994, 0.257, -0.2356 },
-						size = { 0.3786, 0.5473, 1.0485 },
-						tris = 1156,
+						center = { -0.3, 0.2571, -0.2351 },
+						size = { 0.38, 0.5473, 1.0481 },
+						tris = 1720,
 					},
 				},
 			},
@@ -2937,57 +3063,49 @@ return {
 						part = "Crew_ines_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.4863, 0.3373, 0.251 },
-						center = { 0.0, 5.1907, -0.0018 },
-						size = { 0.768, 1.2051, 0.8478 },
-						tris = 10808,
+						center = { 0.0, 5.178, -0.0014 },
+						size = { 0.6959, 1.0924, 0.7683 },
+						tris = 11860,
 					},
 					Eyes = {
 						part = "Crew_ines_Head_Eyes",
 						material = "SmoothPlastic",
 						color = { 0.93, 0.91, 0.88 },
-						center = { -0.0001, 5.381, -0.3167 },
-						size = { 0.3472, 0.0986, 0.0967 },
-						tris = 392,
+						center = { -0.0, 5.3501, -0.287 },
+						size = { 0.3137, 0.0878, 0.0902 },
+						tris = 304,
 					},
 					Iris = {
 						part = "Crew_ines_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.2745, 0.1725, 0.102 },
-						center = { -0.0, 5.3726, -0.3522 },
-						size = { 0.2935, 0.0391, 0.0385 },
-						tris = 80,
-					},
-					Pupil = {
-						part = "Crew_ines_Head_Pupil",
-						material = "SmoothPlastic",
-						color = { 0.04, 0.04, 0.05 },
-						center = { -0.0037, 5.3702, -0.3711 },
-						size = { 0.2489, 0.009, 0.0096 },
-						tris = 24,
+						center = { -0.0003, 5.3468, -0.3149 },
+						size = { 0.2641, 0.043, 0.0435 },
+						tris = 76,
 					},
 					Lips = {
 						part = "Crew_ines_Head_Lips",
 						material = "SmoothPlastic",
 						color = { 0.5733, 0.1886, 0.1655 },
-						center = { -0.0009, 5.1177, -0.3677 },
-						size = { 0.2156, 0.0635, 0.0668 },
-						tris = 216,
+						center = { 0.0007, 5.1116, -0.3318 },
+						size = { 0.1956, 0.0576, 0.0632 },
+						tris = 164,
 					},
 					Brows = {
 						part = "Crew_ines_Head_Brows",
 						material = "Fabric",
 						color = { 0.1333, 0.0941, 0.0784 },
-						center = { 0.0017, 5.4539, -0.3663 },
-						size = { 0.3938, 0.0321, 0.0542 },
-						tris = 160,
+						center = { 0.0065, 5.4177, -0.3322 },
+						size = { 0.3462, 0.0235, 0.0496 },
+						tris = 132,
 					},
 					Hair = {
 						part = "Crew_ines_Head_Hair",
 						material = "Fabric",
 						color = { 0.1333, 0.0941, 0.0784 },
-						center = { -0.0, 5.52, 0.1469 },
-						size = { 0.7295, 0.5856, 0.8581 },
-						tris = 10300,
+						center = { -0.0023, 5.4757, 0.1334 },
+						size = { 0.6596, 0.5398, 0.787 },
+						tris = 8748,
 					},
 				},
 			},
@@ -2999,33 +3117,33 @@ return {
 						part = "Crew_ines_UpperTorso_Jacket",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { 0.0043, 4.0996, -0.037 },
-						size = { 1.8214, 1.9864, 0.9382 },
-						tris = 6824,
+						center = { 0.0043, 4.1044, -0.0375 },
+						size = { 1.7435, 1.9972, 0.9392 },
+						tris = 10128,
 					},
 					Pack = {
 						part = "Crew_ines_UpperTorso_Pack",
 						material = "Fabric",
 						color = { 0.9255, 0.8941, 0.8235 },
-						center = { -0.0, 4.2345, 0.5843 },
-						size = { 1.1382, 1.2137, 0.5006 },
-						tris = 2716,
+						center = { 0.0001, 4.2345, 0.5844 },
+						size = { 1.1372, 1.2135, 0.5004 },
+						tris = 3844,
 					},
 					Straps = {
 						part = "Crew_ines_UpperTorso_Straps",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { 0.004, 4.2939, -0.0442 },
-						size = { 0.5871, 1.131, 0.9437 },
-						tris = 948,
+						center = { -0.0006, 4.2922, -0.0492 },
+						size = { 0.5981, 1.1353, 0.9612 },
+						tris = 1572,
 					},
 					Flashlight = {
 						part = "Crew_ines_UpperTorso_Flashlight",
 						material = "Metal",
 						color = { 0.12, 0.12, 0.12 },
-						center = { -0.4611, 4.2186, -0.3928 },
-						size = { 0.1344, 0.147, 0.28 },
-						tris = 128,
+						center = { -0.459, 4.2178, -0.3928 },
+						size = { 0.1496, 0.15, 0.28 },
+						tris = 156,
 					},
 				},
 			},
@@ -3037,25 +3155,25 @@ return {
 						part = "Crew_ines_LowerTorso_Pants",
 						material = "Fabric",
 						color = { 0.1882, 0.2824, 0.4706 },
-						center = { 0.0042, 3.1459, 0.0349 },
-						size = { 1.3421, 0.8664, 0.8259 },
-						tris = 3164,
+						center = { 0.005, 3.1444, 0.035 },
+						size = { 1.3474, 0.8684, 0.8264 },
+						tris = 4676,
 					},
 					Belt = {
 						part = "Crew_ines_LowerTorso_Belt",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { -0.0036, 3.3325, 0.0262 },
-						size = { 1.3888, 0.12, 0.8561 },
-						tris = 1448,
+						center = { -0.0047, 3.3325, 0.0264 },
+						size = { 1.3788, 0.12, 0.8505 },
+						tris = 1864,
 					},
 					JacketHem = {
 						part = "Crew_ines_LowerTorso_JacketHem",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { -0.005, 3.3847, 0.0278 },
-						size = { 1.4069, 0.38, 0.8724 },
-						tris = 2304,
+						center = { -0.0058, 3.3844, 0.0288 },
+						size = { 1.4032, 0.3815, 0.8713 },
+						tris = 3292,
 					},
 				},
 			},
@@ -3067,9 +3185,9 @@ return {
 						part = "Crew_ines_RightUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { 0.808, 4.1636, 0.025 },
-						size = { 0.4683, 1.2736, 0.4222 },
-						tris = 1344,
+						center = { 0.8085, 4.1619, 0.0259 },
+						size = { 0.4705, 1.2747, 0.4232 },
+						tris = 2028,
 					},
 				},
 			},
@@ -3081,17 +3199,25 @@ return {
 						part = "Crew_ines_RightLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { 0.8807, 3.3562, 0.0602 },
-						size = { 0.3432, 1.0048, 0.3432 },
-						tris = 872,
+						center = { 0.8807, 3.3556, 0.0602 },
+						size = { 0.3405, 1.0052, 0.3421 },
+						tris = 1340,
 					},
 					Skin = {
 						part = "Crew_ines_RightLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.4863, 0.3373, 0.251 },
-						center = { 0.9196, 2.8306, 0.0008 },
-						size = { 0.1785, 0.2872, 0.1741 },
-						tris = 136,
+						center = { 0.9199, 2.8306, 0.0019 },
+						size = { 0.1792, 0.2872, 0.1779 },
+						tris = 224,
+					},
+					Cuff = {
+						part = "Crew_ines_RightLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.6714, 0.2008, 0.2384 },
+						center = { 0.9112, 2.9225, 0.0118 },
+						size = { 0.2994, 0.0959, 0.3039 },
+						tris = 276,
 					},
 				},
 			},
@@ -3117,9 +3243,9 @@ return {
 						part = "Crew_ines_RightUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.1882, 0.2824, 0.4706 },
-						center = { 0.3319, 2.3586, -0.0012 },
-						size = { 0.6245, 1.8465, 0.6343 },
-						tris = 2920,
+						center = { 0.3316, 2.359, -0.0017 },
+						size = { 0.624, 1.8476, 0.6341 },
+						tris = 4324,
 					},
 				},
 			},
@@ -3131,17 +3257,25 @@ return {
 						part = "Crew_ines_RightLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.1882, 0.2824, 0.4706 },
-						center = { 0.3096, 1.3333, -0.0038 },
-						size = { 0.4372, 1.0686, 0.4762 },
-						tris = 1372,
+						center = { 0.3098, 1.3332, -0.0035 },
+						size = { 0.4374, 1.0673, 0.4804 },
+						tris = 1952,
 					},
 					Boot = {
 						part = "Crew_ines_RightLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.9412, 0.9255, 0.8941 },
-						center = { 0.3062, 0.5719, 0.0335 },
-						size = { 0.3646, 0.7777, 0.3835 },
-						tris = 788,
+						center = { 0.3077, 0.572, 0.0308 },
+						size = { 0.3716, 0.7788, 0.389 },
+						tris = 1264,
+					},
+					Laces = {
+						part = "Crew_ines_RightLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { 0.3113, 0.6243, -0.1496 },
+						size = { 0.1405, 0.328, 0.0086 },
+						tris = 92,
 					},
 				},
 			},
@@ -3153,9 +3287,9 @@ return {
 						part = "Crew_ines_RightFoot_Boot",
 						material = "Leather",
 						color = { 0.9412, 0.9255, 0.8941 },
-						center = { 0.3, 0.2431, -0.2347 },
-						size = { 0.3793, 0.5318, 1.0489 },
-						tris = 1116,
+						center = { 0.3003, 0.2432, -0.2347 },
+						size = { 0.3791, 0.5301, 1.0461 },
+						tris = 1748,
 					},
 				},
 			},
@@ -3167,9 +3301,9 @@ return {
 						part = "Crew_ines_LeftUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { -0.8052, 4.1642, 0.0296 },
-						size = { 0.4675, 1.2781, 0.4169 },
-						tris = 1348,
+						center = { -0.8056, 4.1628, 0.0295 },
+						size = { 0.4673, 1.2795, 0.4175 },
+						tris = 2020,
 					},
 				},
 			},
@@ -3181,17 +3315,25 @@ return {
 						part = "Crew_ines_LeftLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.8392, 0.251, 0.298 },
-						center = { -0.8791, 3.3554, 0.0625 },
-						size = { 0.341, 1.0096, 0.3442 },
-						tris = 852,
+						center = { -0.8797, 3.3532, 0.0575 },
+						size = { 0.3392, 1.0124, 0.3521 },
+						tris = 1276,
 					},
 					Skin = {
 						part = "Crew_ines_LeftLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.4863, 0.3373, 0.251 },
-						center = { -0.9201, 2.8294, 0.0006 },
-						size = { 0.1793, 0.2895, 0.1794 },
-						tris = 144,
+						center = { -0.9196, 2.8295, 0.0016 },
+						size = { 0.1788, 0.2894, 0.1813 },
+						tris = 240,
+					},
+					Cuff = {
+						part = "Crew_ines_LeftLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.6714, 0.2008, 0.2384 },
+						center = { -0.9119, 2.9247, 0.0116 },
+						size = { 0.2984, 0.0998, 0.3019 },
+						tris = 276,
 					},
 				},
 			},
@@ -3217,9 +3359,9 @@ return {
 						part = "Crew_ines_LeftUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.1882, 0.2824, 0.4706 },
-						center = { -0.3318, 2.3559, -0.0034 },
-						size = { 0.6249, 1.8484, 0.6228 },
-						tris = 2836,
+						center = { -0.3312, 2.3565, -0.0037 },
+						size = { 0.6247, 1.8474, 0.6275 },
+						tris = 4220,
 					},
 				},
 			},
@@ -3231,17 +3373,25 @@ return {
 						part = "Crew_ines_LeftLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.1882, 0.2824, 0.4706 },
-						center = { -0.3099, 1.335, -0.0062 },
-						size = { 0.4388, 1.0739, 0.4851 },
-						tris = 1388,
+						center = { -0.3101, 1.3353, -0.005 },
+						size = { 0.4408, 1.0752, 0.4873 },
+						tris = 1988,
 					},
 					Boot = {
 						part = "Crew_ines_LeftLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.9412, 0.9255, 0.8941 },
-						center = { -0.3046, 0.5729, 0.0338 },
-						size = { 0.3676, 0.7746, 0.3783 },
-						tris = 784,
+						center = { -0.3054, 0.5746, 0.0284 },
+						size = { 0.3753, 0.771, 0.3871 },
+						tris = 1240,
+					},
+					Laces = {
+						part = "Crew_ines_LeftLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { -0.2958, 0.6232, -0.1496 },
+						size = { 0.1519, 0.3285, 0.0084 },
+						tris = 96,
 					},
 				},
 			},
@@ -3253,9 +3403,9 @@ return {
 						part = "Crew_ines_LeftFoot_Boot",
 						material = "Leather",
 						color = { 0.9412, 0.9255, 0.8941 },
-						center = { -0.3001, 0.243, -0.2348 },
-						size = { 0.3792, 0.5318, 1.049 },
-						tris = 1124,
+						center = { -0.3001, 0.2429, -0.235 },
+						size = { 0.3787, 0.5301, 1.0462 },
+						tris = 1756,
 					},
 				},
 			},
@@ -3273,57 +3423,57 @@ return {
 						part = "Crew_sefa_Head_Skin",
 						material = "SmoothPlastic",
 						color = { 0.5725, 0.4, 0.2824 },
-						center = { -0.0, 5.3433, -0.0016 },
-						size = { 0.7677, 1.2313, 0.848 },
-						tris = 10844,
+						center = { -0.0, 5.3317, -0.0013 },
+						size = { 0.6954, 1.1164, 0.7681 },
+						tris = 10780,
 					},
 					Eyes = {
 						part = "Crew_sefa_Head_Eyes",
 						material = "SmoothPlastic",
 						color = { 0.93, 0.91, 0.88 },
-						center = { 0.0, 5.5464, -0.3169 },
-						size = { 0.3492, 0.0989, 0.0988 },
-						tris = 364,
+						center = { -0.0001, 5.5158, -0.2871 },
+						size = { 0.3114, 0.09, 0.0902 },
+						tris = 328,
 					},
 					Iris = {
 						part = "Crew_sefa_Head_Iris",
 						material = "SmoothPlastic",
 						color = { 0.1961, 0.1412, 0.0941 },
-						center = { 0.0004, 5.5425, -0.3494 },
-						size = { 0.2924, 0.0446, 0.0438 },
-						tris = 84,
+						center = { -0.0013, 5.5121, -0.3157 },
+						size = { 0.2605, 0.0399, 0.0419 },
+						tris = 72,
 					},
 					Pupil = {
 						part = "Crew_sefa_Head_Pupil",
 						material = "SmoothPlastic",
 						color = { 0.04, 0.04, 0.05 },
-						center = { -0.0012, 5.5533, -0.3687 },
-						size = { 0.2421, 0.0008, 0.0021 },
+						center = { 0.0069, 5.5189, -0.3313 },
+						size = { 0.2261, 0.0071, 0.013 },
 						tris = 24,
 					},
 					Lips = {
 						part = "Crew_sefa_Head_Lips",
 						material = "SmoothPlastic",
 						color = { 0.6467, 0.22, 0.1812 },
-						center = { -0.0008, 5.282, -0.3669 },
-						size = { 0.2156, 0.06, 0.0646 },
-						tris = 232,
+						center = { 0.0001, 5.2777, -0.3317 },
+						size = { 0.1975, 0.0585, 0.0622 },
+						tris = 180,
 					},
 					Brows = {
 						part = "Crew_sefa_Head_Brows",
 						material = "Fabric",
 						color = { 0.1176, 0.0941, 0.0784 },
-						center = { -0.0002, 5.6233, -0.3671 },
-						size = { 0.3915, 0.0414, 0.055 },
-						tris = 192,
+						center = { 0.0055, 5.5856, -0.3368 },
+						size = { 0.3401, 0.037, 0.0392 },
+						tris = 144,
 					},
 					Hood = {
 						part = "Crew_sefa_Head_Hood",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { 0.0018, 5.545, 0.1349 },
-						size = { 0.9528, 1.1099, 1.039 },
-						tris = 10836,
+						center = { 0.0016, 5.5146, 0.1224 },
+						size = { 0.8635, 1.0059, 0.9413 },
+						tris = 10848,
 					},
 				},
 			},
@@ -3335,33 +3485,33 @@ return {
 						part = "Crew_sefa_UpperTorso_Jacket",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { 0.002, 4.2306, -0.0023 },
-						size = { 1.9708, 2.0371, 0.9175 },
-						tris = 7300,
+						center = { 0.0024, 4.2337, -0.005 },
+						size = { 1.8861, 2.0399, 0.9236 },
+						tris = 10892,
 					},
 					Pack = {
 						part = "Crew_sefa_UpperTorso_Pack",
 						material = "Fabric",
 						color = { 0.2745, 0.3529, 0.4314 },
-						center = { -0.0001, 4.3425, 0.6307 },
-						size = { 1.1333, 1.2149, 0.5157 },
-						tris = 2620,
+						center = { 0.0004, 4.342, 0.6303 },
+						size = { 1.1378, 1.2141, 0.5164 },
+						tris = 4116,
 					},
 					Straps = {
 						part = "Crew_sefa_UpperTorso_Straps",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { -0.001, 4.4158, -0.0603 },
-						size = { 0.5955, 1.1654, 0.9992 },
-						tris = 1144,
+						center = { -0.0, 4.4296, -0.0533 },
+						size = { 0.5971, 1.1606, 1.0233 },
+						tris = 1708,
 					},
 					Flashlight = {
 						part = "Crew_sefa_UpperTorso_Flashlight",
 						material = "Metal",
 						color = { 0.12, 0.12, 0.12 },
-						center = { -0.522, 4.3591, -0.419 },
-						size = { 0.1484, 0.1275, 0.278 },
-						tris = 100,
+						center = { -0.5205, 4.3596, -0.418 },
+						size = { 0.1414, 0.1492, 0.28 },
+						tris = 164,
 					},
 				},
 			},
@@ -3373,25 +3523,25 @@ return {
 						part = "Crew_sefa_LowerTorso_Pants",
 						material = "Fabric",
 						color = { 0.2745, 0.4314, 0.3765 },
-						center = { 0.0039, 3.2405, 0.0287 },
-						size = { 1.2627, 0.8681, 0.8666 },
-						tris = 3176,
+						center = { 0.004, 3.2409, 0.0285 },
+						size = { 1.2662, 0.8686, 0.8666 },
+						tris = 4680,
 					},
 					Belt = {
 						part = "Crew_sefa_LowerTorso_Belt",
 						material = "Leather",
 						color = { 0.16, 0.13, 0.11 },
-						center = { 0.0054, 3.43, 0.0173 },
-						size = { 1.3045, 0.12, 0.9002 },
-						tris = 1412,
+						center = { 0.0, 3.43, 0.017 },
+						size = { 1.3121, 0.12, 0.8934 },
+						tris = 1808,
 					},
 					JacketHem = {
 						part = "Crew_sefa_LowerTorso_JacketHem",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { 0.0012, 3.481, 0.0207 },
-						size = { 1.3197, 0.376, 0.9141 },
-						tris = 2244,
+						center = { -0.0001, 3.4813, 0.0205 },
+						size = { 1.3242, 0.3753, 0.9113 },
+						tris = 3244,
 					},
 				},
 			},
@@ -3403,9 +3553,9 @@ return {
 						part = "Crew_sefa_RightUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { 0.87, 4.2907, 0.0273 },
-						size = { 0.485, 1.323, 0.4319 },
-						tris = 1472,
+						center = { 0.8702, 4.2902, 0.0277 },
+						size = { 0.4845, 1.3222, 0.4328 },
+						tris = 2164,
 					},
 				},
 			},
@@ -3417,17 +3567,25 @@ return {
 						part = "Crew_sefa_RightLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { 0.9405, 3.4601, 0.0604 },
-						size = { 0.3596, 1.0431, 0.3586 },
-						tris = 928,
+						center = { 0.9401, 3.4596, 0.0597 },
+						size = { 0.3588, 1.0425, 0.3598 },
+						tris = 1376,
 					},
 					Skin = {
 						part = "Crew_sefa_RightLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.5725, 0.4, 0.2824 },
-						center = { 0.9798, 2.914, 0.0026 },
-						size = { 0.1902, 0.292, 0.1918 },
-						tris = 192,
+						center = { 0.9796, 2.9136, 0.0013 },
+						size = { 0.1905, 0.2929, 0.1889 },
+						tris = 236,
+					},
+					Cuff = {
+						part = "Crew_sefa_RightLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.7718, 0.6149, 0.1506 },
+						center = { 0.9756, 3.0044, 0.0112 },
+						size = { 0.3075, 0.0947, 0.3157 },
+						tris = 268,
 					},
 				},
 			},
@@ -3453,9 +3611,9 @@ return {
 						part = "Crew_sefa_RightUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.2745, 0.4314, 0.3765 },
-						center = { 0.3016, 2.4345, -0.0009 },
-						size = { 0.66, 1.9192, 0.6671 },
-						tris = 3160,
+						center = { 0.3014, 2.4342, -0.0009 },
+						size = { 0.6599, 1.9195, 0.6673 },
+						tris = 4724,
 					},
 				},
 			},
@@ -3467,17 +3625,25 @@ return {
 						part = "Crew_sefa_RightLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.2745, 0.4314, 0.3765 },
-						center = { 0.2995, 1.3703, -0.0039 },
-						size = { 0.4595, 1.1195, 0.506 },
-						tris = 1436,
+						center = { 0.2999, 1.37, -0.0038 },
+						size = { 0.4602, 1.1206, 0.5055 },
+						tris = 2112,
 					},
 					Boot = {
 						part = "Crew_sefa_RightLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.1569, 0.5098, 0.549 },
-						center = { 0.3058, 0.5796, 0.0336 },
-						size = { 0.3763, 0.7842, 0.3953 },
-						tris = 820,
+						center = { 0.3021, 0.5796, 0.0326 },
+						size = { 0.379, 0.7852, 0.3968 },
+						tris = 1276,
+					},
+					Laces = {
+						part = "Crew_sefa_RightLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { 0.3077, 0.6468, -0.1497 },
+						size = { 0.146, 0.3268, 0.0086 },
+						tris = 84,
 					},
 				},
 			},
@@ -3489,9 +3655,9 @@ return {
 						part = "Crew_sefa_RightFoot_Boot",
 						material = "Leather",
 						color = { 0.1569, 0.5098, 0.549 },
-						center = { 0.2993, 0.25, -0.2355 },
-						size = { 0.3775, 0.5395, 1.0473 },
-						tris = 1148,
+						center = { 0.3, 0.2495, -0.2345 },
+						size = { 0.3799, 0.5389, 1.0474 },
+						tris = 1704,
 					},
 				},
 			},
@@ -3503,9 +3669,9 @@ return {
 						part = "Crew_sefa_LeftUpperArm_Sleeve",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { -0.8656, 4.2964, 0.0324 },
-						size = { 0.4834, 1.328, 0.4448 },
-						tris = 1476,
+						center = { -0.8663, 4.2946, 0.0322 },
+						size = { 0.4819, 1.3268, 0.4426 },
+						tris = 2184,
 					},
 				},
 			},
@@ -3517,17 +3683,25 @@ return {
 						part = "Crew_sefa_LeftLowerArm_Sleeve",
 						material = "Fabric",
 						color = { 0.9647, 0.7686, 0.1882 },
-						center = { -0.9394, 3.4601, 0.0601 },
-						size = { 0.3573, 1.0402, 0.3584 },
-						tris = 920,
+						center = { -0.9398, 3.4595, 0.06 },
+						size = { 0.3554, 1.04, 0.3602 },
+						tris = 1344,
 					},
 					Skin = {
 						part = "Crew_sefa_LeftLowerArm_Skin",
 						material = "SmoothPlastic",
 						color = { 0.5725, 0.4, 0.2824 },
-						center = { -0.9798, 2.9125, 0.0016 },
-						size = { 0.1902, 0.2949, 0.1933 },
-						tris = 204,
+						center = { -0.9797, 2.9126, 0.001 },
+						size = { 0.1903, 0.2949, 0.1925 },
+						tris = 244,
+					},
+					Cuff = {
+						part = "Crew_sefa_LeftLowerArm_Cuff",
+						material = "Fabric",
+						color = { 0.7718, 0.6149, 0.1506 },
+						center = { -0.9724, 3.0042, 0.0113 },
+						size = { 0.3085, 0.0941, 0.3123 },
+						tris = 272,
 					},
 				},
 			},
@@ -3553,9 +3727,9 @@ return {
 						part = "Crew_sefa_LeftUpperLeg_Pants",
 						material = "Fabric",
 						color = { 0.2745, 0.4314, 0.3765 },
-						center = { -0.3004, 2.4269, -0.0025 },
-						size = { 0.6614, 1.9196, 0.6625 },
-						tris = 3140,
+						center = { -0.3003, 2.4269, -0.0026 },
+						size = { 0.6613, 1.9197, 0.6626 },
+						tris = 4680,
 					},
 				},
 			},
@@ -3567,17 +3741,25 @@ return {
 						part = "Crew_sefa_LeftLowerLeg_Pants",
 						material = "Fabric",
 						color = { 0.2745, 0.4314, 0.3765 },
-						center = { -0.3026, 1.3732, -0.0068 },
-						size = { 0.4659, 1.1277, 0.5107 },
-						tris = 1460,
+						center = { -0.3023, 1.3726, -0.0095 },
+						size = { 0.4662, 1.128, 0.5071 },
+						tris = 2152,
 					},
 					Boot = {
 						part = "Crew_sefa_LeftLowerLeg_Boot",
 						material = "Leather",
 						color = { 0.1569, 0.5098, 0.549 },
-						center = { -0.2988, 0.5806, 0.0342 },
-						size = { 0.3752, 0.7803, 0.3903 },
-						tris = 808,
+						center = { -0.3001, 0.58, 0.0291 },
+						size = { 0.3788, 0.781, 0.3976 },
+						tris = 1276,
+					},
+					Laces = {
+						part = "Crew_sefa_LeftLowerLeg_Laces",
+						material = "Fabric",
+						color = { 0.85, 0.82, 0.75 },
+						center = { -0.2923, 0.6468, -0.1497 },
+						size = { 0.146, 0.3268, 0.0086 },
+						tris = 84,
 					},
 				},
 			},
@@ -3589,9 +3771,9 @@ return {
 						part = "Crew_sefa_LeftFoot_Boot",
 						material = "Leather",
 						color = { 0.1569, 0.5098, 0.549 },
-						center = { -0.2991, 0.25, -0.2356 },
-						size = { 0.3779, 0.5395, 1.0474 },
-						tris = 1152,
+						center = { -0.3, 0.2494, -0.2348 },
+						size = { 0.3799, 0.5387, 1.0475 },
+						tris = 1700,
 					},
 				},
 			},
@@ -5435,6 +5617,8 @@ return {
 		{ id = "medkit", name = "Field kit", desc = "+1 Field Dressing, +1 Cloth", price = 30, items = { dressing = 1, cloth = 1 } },
 		-- Robux only (Ammo Crate products); not listed at the Quartermaster
 		{ id = "ammocrate", robux = true, name = "Ammo Crate", desc = "+8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows", price = 0, items = { pistolAmmo = 8, rifleAmmo = 4, shells = 4, arrows = 6 } },
+		{ id = "pocketrounds", robux = true, name = "Pocket Rounds", desc = "+5 revolver rounds", price = 0, items = { pistolAmmo = 5 } },
+		{ id = "bandage", robux = true, name = "Bandage Roll", desc = "+1 Field Dressing", price = 0, items = { dressing = 1 } },
 		{ id = "throwables", name = "Throwables", desc = "+1 Bottle, +1 Flare Pot", price = 35, items = { bottle = 1, flarePot = 1 } },
 	},
 	MaxKitsEach = 2,
@@ -5612,16 +5796,17 @@ return Sounds
 -- weights add up to 1000, so the odds read as exact percentages with one decimal.
 return {
 	Prizes = {
-		{ id = "scrip40", name = "40 Scrip", short = "40", icon = "S", weight = 260, color = { 214, 176, 92 }, grant = { scrip = 40 } },
+		{ id = "scrip40", name = "40 Scrip", short = "40", icon = "S", weight = 250, color = { 214, 176, 92 }, grant = { scrip = 40 } },
 		{ id = "mat25", name = "25 Materials", short = "25", icon = "M", weight = 160, color = { 120, 170, 210 }, grant = { materials = 25 } },
-		{ id = "rounds", name = "Spare Rounds kit", short = "AMMO", icon = "A", weight = 140, color = { 230, 120, 80 }, grant = { kit = { rounds = 1 } } },
+		{ id = "rounds", name = "Revolver ammo (next crossing)", short = "AMMO", icon = "A", weight = 140, color = { 230, 120, 80 }, grant = { kit = { rounds = 1 } } },
 		{ id = "scrip100", name = "100 Scrip", short = "100", icon = "S", weight = 130, color = { 240, 200, 90 }, grant = { scrip = 100 } },
-		{ id = "longrounds", name = "Long-gun Ammo kit", short = "AMMO+", icon = "A", weight = 90, color = { 240, 140, 70 }, grant = { kit = { longrounds = 1 } } },
+		{ id = "longrounds", name = "Rifle, shell & arrow ammo (next crossing)", short = "AMMO+", icon = "A", weight = 90, color = { 240, 140, 70 }, grant = { kit = { longrounds = 1 } } },
 		{ id = "mat60", name = "60 Materials", short = "60", icon = "M", weight = 70, color = { 100, 190, 240 }, grant = { materials = 60 } },
 		{ id = "ammo", name = "Ammo Cache token", short = "CACHE", icon = "C", weight = 60, color = { 250, 110, 90 }, grant = { tokens = { ammo = 1 } } },
 		{ id = "spin", name = "Free re-spin", short = "AGAIN", icon = "R", weight = 40, color = { 170, 130, 240 }, grant = { tokens = { spin = 1 } } },
 		{ id = "secondWind", name = "Second Wind token", short = "LIFE", icon = "W", weight = 30, color = { 120, 220, 140 }, grant = { tokens = { secondWind = 1 } } },
 		{ id = "build", name = "Shipwright's Crew token", short = "BUILD", icon = "B", weight = 15, color = { 90, 210, 200 }, grant = { tokens = { build = 1 } } },
+		{ id = "gun", name = "A new gun (unlocks a locked long gun)", short = "GUN!", icon = "G", weight = 10, color = { 255, 120, 60 }, grant = { gun = true } },
 		{ id = "jackpot", name = "JACKPOT: 500 Scrip", short = "500!", icon = "J", weight = 5, color = { 255, 214, 60 }, grant = { scrip = 500 } },
 	},
 	-- products in Config/Commerce: LuckySpin (1 spin), LuckySpin5 (5 spins)
@@ -7909,9 +8094,10 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	end
 	return {
 		doorways = { { hinge = world(doorX - doorW / 2, -0.1), width = doorW, dir = cf.RightVector } },
+		-- one container per house, against a wall, of a random kind
 		containers = {
-			{ pos = world(-W * 0.38, D * 0.85), type = "Drawer", yaw = math.deg(yaw) + 180 },
-			{ pos = world(W * 0.4, D * 0.4), type = rng:NextNumber() < 0.5 and "Locker" or "Toolbox", yaw = math.deg(yaw) - 90 },
+			rng:NextNumber() < 0.5 and { pos = world(-W * 0.38, D * 0.85), type = pick({ "Drawer", "Drawer", "AmmoCrate" }), yaw = math.deg(yaw) + 180 }
+				or { pos = world(W * 0.4, D * 0.4), type = pick({ "Locker", "Toolbox", "Drawer" }), yaw = math.deg(yaw) - 90 },
 		},
 		loot = { world(0, D * 0.3), world(-W * 0.25, D * 0.75), world(W * 0.2, D * 0.25) },
 	}
@@ -10126,6 +10312,9 @@ local function processReceipt(receipt)
 		data_.kit[kitId] = (data_.kit[kitId] or 0) + amount
 		Services.PlayerDataService.publish(player)
 	end
+	if grant.scrip then
+		Services.PlayerDataService.addScrip(player, grant.scrip)
+	end
 	if grant.outfit then
 		Services.PlayerDataService.ownOutfit(player, grant.outfit)
 	end
@@ -12020,8 +12209,12 @@ function InventoryService.canCraft(player, recipeId)
 	if not recipe or not inv then
 		return false, "Unknown recipe"
 	end
-	if inv.items[recipe.output] >= InventoryService.cap(player, recipe.output) then
-		return false, Items.Items[recipe.output].name .. ": satchel full"
+	-- the whole batch must fit: never charge the full price for a partial yield
+	local space = InventoryService.cap(player, recipe.output) - inv.items[recipe.output]
+	local yield = InventoryService.recipeYield(player, recipe)
+	if space < yield then
+		return false, space <= 0 and (Items.Items[recipe.output].name .. ": satchel full")
+			or ("Room for only %d %s: this makes %d. Use some first."):format(space, Items.Items[recipe.output].name, yield)
 	end
 	for itemId, amount in recipe.cost do
 		if inv.items[itemId] < amount then
@@ -12407,28 +12600,71 @@ LootService.settle = settle
 -- Container models: { body, moving part, open transform }
 local BUILDERS = {}
 
+-- Each builder returns: the body (holds the prompt), the parts that open (list), and the opening
+-- offset. Painted, detailed furniture: drawers with knobs and legs, lockers with vents.
+local WOODS = { Color3.fromRGB(150, 104, 66), Color3.fromRGB(120, 84, 56), Color3.fromRGB(176, 136, 96) }
+local PAINTS = { Color3.fromRGB(236, 230, 214), Color3.fromRGB(150, 196, 214), Color3.fromRGB(196, 214, 170), Color3.fromRGB(230, 190, 120), Color3.fromRGB(210, 150, 140) }
+local function pick(list)
+	return list[math.random(1, #list)]
+end
+
 function BUILDERS.Drawer(parent, cf)
-	local body = part(parent, Vector3.new(2.6, 2.8, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(96, 80, 62), Enum.Material.WoodPlanks)
-	local drawer = part(parent, Vector3.new(2.3, 0.7, 1.4), cf * CFrame.new(0, 2.1, -0.15), Color3.fromRGB(110, 92, 70), Enum.Material.WoodPlanks)
-	return body, drawer, CFrame.new(0, 0, -1)
+	local painted = math.random() < 0.5
+	local bodyColor = painted and pick(PAINTS) or pick(WOODS)
+	local front = bodyColor:Lerp(Color3.new(1, 1, 1), 0.12)
+	local mat = painted and Enum.Material.SmoothPlastic or Enum.Material.WoodPlanks
+	local body = part(parent, Vector3.new(2.8, 2.6, 1.5), cf * CFrame.new(0, 1.6, 0), bodyColor, mat)
+	part(parent, Vector3.new(3.0, 0.15, 1.65), cf * CFrame.new(0, 2.97, 0), bodyColor:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.WoodPlanks) -- top
+	for _, x in { -1.25, 1.25 } do
+		for _, z in { -0.6, 0.6 } do
+			part(parent, Vector3.new(0.2, 0.3, 0.2), cf * CFrame.new(x, 0.15, z), bodyColor:Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Wood)
+		end
+	end
+	local moving = {}
+	for i, y in { 2.45, 1.65, 0.85 } do
+		local d = part(parent, Vector3.new(2.5, 0.65, 0.12), cf * CFrame.new(0, y, -0.78), front, mat)
+		local knob = part(parent, Vector3.new(0.18, 0.18, 0.12), cf * CFrame.new(0, y, -0.88), Color3.fromRGB(196, 160, 80), Enum.Material.Metal, { Shape = Enum.PartType.Ball })
+		if i == 1 then
+			table.insert(moving, d)
+			table.insert(moving, knob)
+			-- the drawer box behind the front, seen when it slides out
+			table.insert(moving, part(parent, Vector3.new(2.3, 0.5, 1.25), cf * CFrame.new(0, y - 0.02, -0.08), bodyColor:Lerp(Color3.new(0, 0, 0), 0.2), Enum.Material.WoodPlanks))
+		end
+	end
+	return body, moving, CFrame.new(0, 0, -0.9)
 end
 
 function BUILDERS.Locker(parent, cf)
-	local body = part(parent, Vector3.new(1.8, 6, 1.6), cf * CFrame.new(0, 3, 0), Color3.fromRGB(70, 84, 88), Enum.Material.Metal)
-	local door = part(parent, Vector3.new(1.7, 5.8, 0.1), cf * CFrame.new(0, 3, -0.85), Color3.fromRGB(80, 96, 100), Enum.Material.DiamondPlate)
-	return body, door, CFrame.new(-0.85, 0, 0) * CFrame.Angles(0, math.rad(100), 0) * CFrame.new(0.85, 0, 0)
+	local color = pick({ Color3.fromRGB(70, 130, 180), Color3.fromRGB(90, 150, 110), Color3.fromRGB(200, 80, 70), Color3.fromRGB(150, 156, 160) })
+	local body = part(parent, Vector3.new(1.8, 6, 1.6), cf * CFrame.new(0, 3, 0), color, Enum.Material.Metal)
+	local door = part(parent, Vector3.new(1.7, 5.8, 0.1), cf * CFrame.new(0, 3, -0.85), color:Lerp(Color3.new(1, 1, 1), 0.12), Enum.Material.Metal)
+	local moving = { door }
+	for i = 0, 2 do
+		table.insert(moving, part(parent, Vector3.new(1.0, 0.08, 0.04), cf * CFrame.new(0, 5.2 - i * 0.25, -0.92), color:Lerp(Color3.new(0, 0, 0), 0.35), Enum.Material.Metal))
+	end
+	table.insert(moving, part(parent, Vector3.new(0.1, 0.5, 0.1), cf * CFrame.new(0.6, 3, -0.94), Color3.fromRGB(200, 200, 196), Enum.Material.Metal))
+	return body, moving, CFrame.new(-0.85, 0, 0) * CFrame.Angles(0, math.rad(100), 0) * CFrame.new(0.85, 0, 0)
 end
 
 function BUILDERS.Toolbox(parent, cf)
-	local body = part(parent, Vector3.new(2.2, 0.9, 1), cf * CFrame.new(0, 0.45, 0), Color3.fromRGB(140, 50, 40), Enum.Material.Metal)
-	local lid = part(parent, Vector3.new(2.2, 0.15, 1), cf * CFrame.new(0, 0.97, 0), Color3.fromRGB(150, 56, 44), Enum.Material.Metal)
-	return body, lid, CFrame.new(0, 0, 0.5) * CFrame.Angles(math.rad(100), 0, 0) * CFrame.new(0, 0, -0.5)
+	local color = pick({ Color3.fromRGB(200, 50, 40), Color3.fromRGB(40, 90, 170), Color3.fromRGB(230, 170, 40) })
+	local body = part(parent, Vector3.new(2.2, 0.9, 1), cf * CFrame.new(0, 0.45, 0), color, Enum.Material.Metal)
+	local lid = part(parent, Vector3.new(2.2, 0.15, 1), cf * CFrame.new(0, 0.97, 0), color:Lerp(Color3.new(1, 1, 1), 0.1), Enum.Material.Metal)
+	local handle = part(parent, Vector3.new(1.0, 0.12, 0.12), cf * CFrame.new(0, 1.2, 0), Color3.fromRGB(40, 40, 44), Enum.Material.Metal)
+	for _, x in { -0.8, 0.8 } do
+		part(parent, Vector3.new(0.2, 0.25, 0.06), cf * CFrame.new(x, 0.75, -0.52), Color3.fromRGB(200, 200, 196), Enum.Material.Metal)
+	end
+	return body, { lid, handle }, CFrame.new(0, 0, 0.5) * CFrame.Angles(math.rad(100), 0, 0) * CFrame.new(0, 0, -0.5)
 end
 
 function BUILDERS.AmmoCrate(parent, cf)
-	local body = part(parent, Vector3.new(2.6, 1.3, 1.6), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(78, 86, 58), Enum.Material.WoodPlanks)
-	local lid = part(parent, Vector3.new(2.6, 0.2, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(86, 94, 64), Enum.Material.WoodPlanks)
-	return body, lid, CFrame.new(0, 0, 0.8) * CFrame.Angles(math.rad(110), 0, 0) * CFrame.new(0, 0, -0.8)
+	local body = part(parent, Vector3.new(2.6, 1.3, 1.6), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(96, 110, 66), Enum.Material.WoodPlanks)
+	part(parent, Vector3.new(2.62, 0.3, 1.62), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(230, 200, 70), Enum.Material.SmoothPlastic) -- stencil band
+	for _, x in { -1.35, 1.35 } do
+		part(parent, Vector3.new(0.1, 0.25, 0.7), cf * CFrame.new(x, 0.9, 0), Color3.fromRGB(150, 120, 80), Enum.Material.Fabric) -- rope handles
+	end
+	local lid = part(parent, Vector3.new(2.6, 0.2, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(106, 120, 74), Enum.Material.WoodPlanks)
+	return body, { lid }, CFrame.new(0, 0, 0.8) * CFrame.Angles(math.rad(110), 0, 0) * CFrame.new(0, 0, -0.8)
 end
 
 local function container(parent, spot, rng, pall)
@@ -12459,7 +12695,12 @@ local function container(parent, spot, rng, pall)
 		end
 		searched = true
 		prompt:Destroy()
-		TweenService:Create(moving, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = moving.CFrame * openOffset }):Play()
+		-- everything that opens pivots together around the first moving part
+		local pivot = moving[1].CFrame
+		for _, m in moving do
+			local rel = pivot:ToObjectSpace(m.CFrame)
+			TweenService:Create(m, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = pivot * openOffset * rel }):Play()
+		end
 		Sfx.at(body.Position, "Search", 0.3, 30)
 		Services.PerceptionService.emitNoise(body.Position, 5, "search", player)
 		local list = LootService.roll(def.table, def.rolls, rng, pall)
@@ -12477,8 +12718,14 @@ end
 
 -- Fills an encounter with containers and loose items.
 function LootService.populate(parent, rng, pall, containerSpots, looseSpots)
-	for _, spot in containerSpots do
-		container(parent, spot, rng, pall)
+	-- a handful of containers per map, picked at random (not one in every corner)
+	local pool = table.clone(containerSpots)
+	for i = #pool, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		pool[i], pool[j] = pool[j], pool[i]
+	end
+	for i = 1, math.min(Loot.MaxContainers or 12, #pool) do
+		container(parent, pool[i], rng, pall)
 	end
 	local spots = table.clone(looseSpots)
 	for i = #spots, 2, -1 do
@@ -12868,7 +13115,7 @@ local function buildFerry(parent)
 		Services.MatchService.openCharacterSelect(player)
 	end)
 	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
-	stationSign(board, "PROJECTS", "Upgrade the Meridian", Color3.fromRGB(120, 200, 230), 3.6)
+	stationSign(board, "PROJECTS", "Spend MATERIALS: ship upgrades", Color3.fromRGB(120, 200, 230), 3.6)
 	prompt(board, "Plan projects", "The Meridian", function(player)
 		Services.MatchService.openMenu(player, "OpenRepairs")
 	end)
@@ -12891,7 +13138,7 @@ local function buildFerry(parent)
 	for i, c in { Color3.fromRGB(250, 240, 200), Color3.fromRGB(255, 220, 160), Color3.fromRGB(230, 245, 255) } do
 		block(parent, Vector3.new(1.2, 1.5, 0.05), o + Vector3.new(-19.6 + i * 1.3, 3.7 + (i % 2) * 0.3, 14.57), c, M.SmoothPlastic, { CanCollide = false })
 	end
-	stationSign(quests, "QUESTS", "Daily & weekly rewards", Color3.fromRGB(250, 210, 110), 3.8)
+	stationSign(quests, "QUESTS", "Daily jobs: earn Scrip", Color3.fromRGB(250, 210, 110), 3.8)
 	prompt(quests, "Read the board", "Quests", function(player)
 		Services.MatchService.openMenu(player, "OpenQuests")
 	end)
@@ -12900,7 +13147,7 @@ local function buildFerry(parent)
 	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(140, 100, 64), M.WoodPlanks)
 	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(200, 60, 40), M.Metal) -- vice
 	block(parent, Vector3.new(1.4, 0.5, 0.8), o + Vector3.new(-15.5, 3.25, -13.4), Color3.fromRGB(230, 170, 40), M.Metal) -- toolbox
-	stationSign(bench, "WORKBENCH", "Upgrade your guns", Color3.fromRGB(255, 170, 90), 4.2)
+	stationSign(bench, "WORKBENCH", "Spend SALVAGE: gun upgrades", Color3.fromRGB(255, 170, 90), 4.2)
 	prompt(bench, "Use workbench", "Workbench", function(player)
 		Services.MatchService.openMenu(player, "OpenWorkbench")
 	end)
@@ -12965,7 +13212,7 @@ local function buildFerry(parent)
 	boothLight.Brightness = 1.2
 	boothLight.Color = C.warm
 	boothLight.Parent = booth
-	stationSign(booth, "SHOP", "Supplies, ammo & outfits", Color3.fromRGB(255, 120, 110), 6)
+	stationSign(booth, "SHOP", "Supplies from R$5 · outfits", Color3.fromRGB(255, 120, 110), 6)
 	prompt(booth, "Open the shop", "The Purser's Office", function(player)
 		Services.MatchService.openShop(player)
 	end)
@@ -12981,7 +13228,7 @@ local function buildFerry(parent)
 	qmLight.Range = 10
 	qmLight.Color = C.warm
 	qmLight.Parent = qm
-	stationSign(qm, "QUARTERMASTER", "Unlock guns · loadout · kits", Color3.fromRGB(140, 220, 140), 6.2)
+	stationSign(qm, "QUARTERMASTER", "Spend SCRIP: new guns & kits", Color3.fromRGB(140, 220, 140), 6.2)
 	prompt(qm, "Trade", "The Quartermaster", function(player)
 		Services.MatchService.openMenu(player, "OpenQuartermaster")
 	end)
@@ -14873,15 +15120,24 @@ function PerceptionService.sightFactor(enemy, info)
 		return 0
 	end
 
-	local f = 1 - (dist / range) * 0.75
 	local stance = char:GetAttribute("Stance")
+	-- tall grass: crouched or prone in it (light off, not shooting) you can't be seen at all
+	-- unless someone is practically standing on you
+	local inGrass = Geometry.inTagged(root.Position, "TallGrass")
+	if inGrass and stance ~= "Stand" and not lit then
+		local shotRecently = (Workspace:GetServerTimeNow() - (char:GetAttribute("ShotAt") or -100)) < 2
+		if dist > 3.5 and not shotRecently then
+			return 0
+		end
+	end
+	local f = 1 - (dist / range) * 0.75
 	if stance == "Crouch" then
 		f *= 0.55
 	elseif stance == "Prone" then
 		f *= 0.3
 	end
-	if Geometry.inTagged(root.Position, "TallGrass") then
-		f *= stance == "Prone" and 0.1 or 0.35 -- flat in the grass you're almost invisible
+	if inGrass then
+		f *= 0.3 -- standing in tall grass still breaks up your outline
 	end
 	if lit then
 		f *= 1.8
@@ -15521,6 +15777,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Spin = require(Shared.Config.Spin)
+local Quartermaster = require(Shared.Config.Quartermaster)
+local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
 local SpinService = {}
@@ -15582,6 +15840,31 @@ end
 
 local function grant(player, data, prize)
 	local g = prize.grant
+	local detail
+	if g.gun then
+		-- a real gun: unlock one you don't have yet (Scrip if you own them all)
+		data.guns = data.guns or { revolver = true }
+		local locked = {}
+		for _, gun in Quartermaster.Guns do
+			if not data.guns[gun.id] then
+				table.insert(locked, gun.id)
+			end
+		end
+		if #locked > 0 then
+			local id = locked[rng:NextInteger(1, #locked)]
+			data.guns[id] = true
+			data.loadout = data.loadout or { long = "", pack = {} }
+			if data.loadout.long == "" or data.loadout.long == nil then
+				data.loadout.long = id -- holstered and ready for the next crossing
+			end
+			detail = Weapons.List[id].name .. " unlocked! Choose it at the Quartermaster."
+		else
+			Services.PlayerDataService.addScrip(player, 300)
+			detail = "You own every gun: 300 Scrip instead."
+		end
+	elseif g.kit then
+		detail = "Packed in your kit bag: you get it at the start of your next crossing."
+	end
 	if g.scrip then
 		Services.PlayerDataService.addScrip(player, g.scrip)
 	end
@@ -15601,6 +15884,7 @@ local function grant(player, data, prize)
 		end
 	end
 	Services.PlayerDataService.publish(player)
+	return detail
 end
 
 function SpinService.spin(player)
@@ -15626,10 +15910,10 @@ function SpinService.spin(player)
 	end
 	busy[player] = true
 	local index, prize = pick()
-	grant(player, data, prize)
+	local detail = grant(player, data, prize)
 	SpinService.publish(player)
 	Services.AnalyticsHelper.economy(player, "source", 0, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, "Spin_" .. prize.id)
-	Net.notify(player, "SpinResult", { index = index, free = free })
+	Net.notify(player, "SpinResult", { index = index, free = free, detail = detail })
 	task.spawn(Services.PlayerDataService.save, player)
 	task.delay(4, function()
 		busy[player] = nil
@@ -16070,6 +16354,7 @@ function WeaponService.fire(player, info, direction, aiming)
 	if now < s.nextFireAt or now < s.equipReadyAt then
 		return
 	end
+	char:SetAttribute("ShotAt", Workspace:GetServerTimeNow()) -- muzzle flash gives away a hiding spot
 	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() then
 		return
 	end
@@ -16303,7 +16588,7 @@ return WorkbenchService
 </Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX00000063"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000062"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000061"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004E"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="StarterPlayer" referent="RBX00000064"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000063"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000062"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004E"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
 --   Keyboard/mouse                     Gamepad (Xbox names; PlayStation in brackets)
@@ -16546,6 +16831,52 @@ function ActionController.start()
 			act("Torch")
 		end
 	end, Enum.KeyCode.T)
+
+	-- Interact on a controller: Cross / A presses the nearest prompt you can see, whatever else
+	-- might be listening to that button (some consoles never delivered it to the prompt).
+	local ProximityPromptService = game:GetService("ProximityPromptService")
+	local shown = {}
+	ProximityPromptService.PromptShown:Connect(function(p)
+		shown[p] = true
+	end)
+	ProximityPromptService.PromptHidden:Connect(function(p)
+		shown[p] = nil
+	end)
+	local holding = nil
+	local function nearestPrompt()
+		local root = State.root
+		if not root then
+			return nil
+		end
+		local best, bestD = nil, math.huge
+		for p in shown do
+			local part = p.Parent
+			local pos = part and (part:IsA("BasePart") and part.Position or (part:IsA("Attachment") and part.WorldPosition))
+			if pos and p.Enabled then
+				local d = (pos - root.Position).Magnitude
+				if d <= p.MaxActivationDistance + 1 and d < bestD then
+					best, bestD = p, d
+				end
+			end
+		end
+		return best
+	end
+	bind("PadInteract", function(state)
+		if State.uiOpen() then
+			return Pass -- menus: A presses the selected button
+		end
+		if state == Begin then
+			local p = nearestPrompt()
+			if not p then
+				return Pass
+			end
+			holding = p
+			p:InputHoldBegin()
+		elseif state == End and holding then
+			holding:InputHoldEnd()
+			holding = nil
+		end
+	end, Enum.KeyCode.ButtonA)
 
 	-- gamepad: buttons with a tap and a hold action
 	bindPad("PadY", Enum.KeyCode.ButtonY, function()
@@ -18589,11 +18920,41 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	elseif sprinting then
 		pose = set.sprint
 	end
-	-- recoil: back into the shoulder and up, settling fast
 	local since = now - (shotAt[char] or -10)
-	if since < 0.25 then
-		local k = (1 - since / 0.25) ^ 2
-		pose = pose * CFrame.new(0, 0.03 * k, 0.18 * k) * CFrame.Angles(0.14 * k, 0, 0)
+	-- living hands: breathing sway at rest, a bob in step with your feet when moving, a lift
+	-- as the gun comes up to aim
+	local t = now + (rig.seed or 0)
+	local moving = rig.moving or 0
+	local steady = 1 - 0.75 * a
+	local p = rig.phase or 0
+	pose = pose
+		* CFrame.new(math.sin(p) * 0.045 * moving, -math.abs(math.cos(p)) * 0.06 * moving + math.sin(t * 1.6) * 0.012 * steady, 0)
+		* CFrame.Angles(math.sin(t * 1.3) * 0.02 * steady + math.cos(p * 2) * 0.03 * moving, math.sin(t * 0.9) * 0.025 * steady + math.sin(p) * 0.05 * moving, math.sin(p) * 0.04 * moving)
+	if a > 0.05 and a < 0.95 then
+		pose = pose * CFrame.new(0, 0.1 * math.sin(a * math.pi), 0) * CFrame.Angles(0.12 * math.sin(a * math.pi), 0, 0)
+	end
+	-- weapon check: standing idle with the gun out, now and then you turn it over and look at it
+	if a < 0.05 and moving < 0.1 and not reloading and since > 6 then
+		rig.fidgetAt = rig.fidgetAt or (now + 8 + math.random() * 6)
+		local f = now - rig.fidgetAt
+		if f > 0 and f < 2.6 then
+			local k = math.sin(f / 2.6 * math.pi)
+			pose = pose * CFrame.new(-0.1 * k, 0.25 * k, 0.15 * k) * CFrame.Angles(0.25 * k, 0.35 * k, 0.95 * k)
+		elseif f >= 2.6 then
+			rig.fidgetAt = now + 10 + math.random() * 8
+		end
+	else
+		rig.fidgetAt = nil
+	end
+	-- recoil: a hard kick back into the shoulder and up, settling fast
+	local recoilLen = slot == "long" and 0.32 or 0.26
+	if since < recoilLen then
+		local k = (1 - since / recoilLen) ^ 2
+		if slot == "long" then
+			pose = pose * CFrame.new(0, 0.06 * k, 0.32 * k) * CFrame.Angles(0.24 * k, 0.03 * k, 0)
+		else
+			pose = pose * CFrame.new(0, 0.05 * k, 0.2 * k) * CFrame.Angles(0.38 * k, 0, 0.05 * k)
+		end
 	end
 	local upperCF, lowerCF = posedTorso(J)
 	-- the gun's own action: lever / pump / bolt / cylinder / bow draw, and per-gun reloads
@@ -18911,6 +19272,18 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		lEl, rEl = mix(lEl, 1.3), mix(rEl, 1.3)
 		lShZ, rShZ = mix(lShZ, -0.35), mix(rShZ, 0.35)
 	end
+
+	-- shooting moves the whole body: shoulders rock back, then settle
+	local shotK = 0
+	if armed then
+		local ss = os.clock() - (shotAt[char] or -10)
+		if ss < 0.35 then
+			shotK = (1 - ss / 0.35) ^ 2 * (longGun and 1 or 0.6)
+			waistLean -= 0.14 * shotK
+			rootY -= 0.05 * shotK
+		end
+	end
+	rig.moving = moving
 
 	-- hit flinch: the body jolts away from the hit and the head snaps, then recovers
 	local hurt = since(char, "HurtAt", serverNow)
@@ -20047,7 +20420,31 @@ end
 
 return State
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000060"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000061"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">Buttons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Button names for the player's controller: PlayStation symbols on PlayStation, Xbox letters
+-- otherwise. Used by the guide, the controls card and hints.
+local UserInputService = game:GetService("UserInputService")
+
+local Buttons = {}
+
+local PS = { ButtonA = "✕", ButtonB = "○", ButtonX = "□", ButtonY = "△", ButtonSelect = "Touchpad", ButtonL1 = "L1", ButtonR1 = "R1", ButtonL2 = "L2", ButtonR2 = "R2", ButtonL3 = "L3", ButtonR3 = "R3" }
+local XBOX = { ButtonA = "A", ButtonB = "B", ButtonX = "X", ButtonY = "Y", ButtonSelect = "View", ButtonL1 = "LB", ButtonR1 = "RB", ButtonL2 = "LT", ButtonR2 = "RT", ButtonL3 = "LS", ButtonR3 = "RS" }
+
+function Buttons.isPlayStation()
+	local ok, s = pcall(function()
+		return UserInputService:GetStringForKeyCode(Enum.KeyCode.ButtonA)
+	end)
+	return ok and type(s) == "string" and s:find("Cross") ~= nil
+end
+
+function Buttons.name(keyName)
+	local map = Buttons.isPlayStation() and PS or XBOX
+	return map[keyName] or keyName
+end
+
+return Buttons
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
 local Players = game:GetService("Players")
 
@@ -20183,7 +20580,7 @@ end
 
 return CharacterSelect
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The tide chart: choose the next encounter route (type, conditions, bonus).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20289,7 +20686,7 @@ end
 
 return Chart
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- F2 diagnostics: what the game is actually doing on your machine, so problems can be fixed
 -- from facts instead of guesses. Shows client + server warnings/errors, the animator's
 -- state, the last keys / actions received, open menus, and the asset-fitting report.
@@ -20418,7 +20815,7 @@ end
 
 return Diagnostics
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Guide</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">Guide</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- First-time help on the Meridian, so a new player knows exactly how to start:
 --   * a small "Captain's orders" card (3 steps) until you've set sail once
 --   * a gold guide line on the deck from you to the SET SAIL chart table
@@ -20430,6 +20827,10 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Game = require(Shared.Config.Game)
 local Theme = require(script.Parent.Theme)
+local Buttons = require(script.Parent.Buttons)
+local Quartermaster = require(Shared.Config.Quartermaster)
+local Projects = require(Shared.Config.Projects)
+local HttpService = game:GetService("HttpService")
 local State = require(script.Parent.Parent.State)
 
 local Guide = {}
@@ -20445,18 +20846,67 @@ local function onDeck()
 	return (s == "Ferry" or s == "Planning") and root ~= nil and (root.Position - Game.FerryOrigin).Magnitude < 140
 end
 
-local function chartTarget()
+local function stationTarget(name)
 	local world = Workspace:FindFirstChild("World")
 	local ferry = world and world:FindFirstChild("Meridian")
-	local chart = ferry and ferry:FindFirstChild("ChartTable")
-	return chart and chart:FindFirstChild("GuideTarget"), chart
+	local part = ferry and ferry:FindFirstChild(name)
+	if not part then
+		return nil, nil
+	end
+	local a = part:FindFirstChild("GuideTarget")
+	if not a then
+		a = Instance.new("Attachment")
+		a.Name = "GuideTarget"
+		a.Parent = part
+	end
+	return a, part
+end
+local function chartTarget()
+	return stationTarget("ChartTable")
+end
+
+local function decode(attr)
+	local ok, v = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute(attr) or "{}")
+	end)
+	return ok and type(v) == "table" and v or {}
+end
+
+-- What can you do with what you've earned? Returns tip text and the station to point at.
+local dismissed = {}
+local function upgradeTip()
+	local scrip = player:GetAttribute("Scrip") or 0
+	local materials = player:GetAttribute("Materials") or 0
+	local guns, repairs = decode("Guns"), decode("Repairs")
+	local armory = repairs.armory == true
+	for _, g in Quartermaster.Guns do
+		local price = math.floor(g.price * (armory and 0.85 or 1) + 0.5)
+		if not guns[g.id] and scrip >= price and not dismissed["gun" .. g.id] then
+			return ("You have %d Scrip: buy the %s at the QUARTERMASTER."):format(scrip, (require(Shared.Config.Weapons).List[g.id] or {}).name or g.id), "Quartermaster", "gun" .. g.id
+		end
+	end
+	for _, p in Projects.List do
+		if not repairs[p.id] and (not p.requires or repairs[p.requires]) and materials >= p.materials and not dismissed["proj" .. p.id] then
+			return ("You have %d Materials: build the %s at the PROJECTS board. %s"):format(materials, p.name, p.desc), "ProjectsBoard", "proj" .. p.id
+		end
+	end
+	if player:GetAttribute("FreeSpinReady") == true and not dismissed.spin then
+		return "Your free Lucky Spin is ready at the wheel.", "SpinWheelStand", "spin"
+	end
+	return nil
 end
 
 function Guide.build(gui, requestFn)
 	request = requestFn
-	card = Theme.panel({ Name = "Guide", AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 22, 0, 90), Size = UDim2.new(0, 330, 0, 132), BackgroundTransparency = 0.12, Visible = false, Parent = gui })
+	card = Theme.panel({ Name = "Guide", AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 22, 0, 90), Size = UDim2.new(0, 360, 0, 140), BackgroundTransparency = 0.12, Visible = false, Parent = gui })
 	Theme.padding(12).Parent = card
 	Theme.heading({ Text = "CAPTAIN'S ORDERS", TextSize = 18, TextColor3 = Color3.fromRGB(255, 200, 90), Size = UDim2.new(1, 0, 0, 22), Parent = card })
+	local gotIt = Theme.button({ Name = "GotIt", Text = "GOT IT", TextSize = 13, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 70, 0, 22), Visible = false, Parent = card })
+	gotIt.Activated:Connect(function()
+		if card:GetAttribute("TipKey") then
+			dismissed[card:GetAttribute("TipKey")] = true
+		end
+	end)
 	steps = {}
 	for i = 1, 3 do
 		steps[i] = Theme.label({ Position = UDim2.new(0, 0, 0, 4 + i * 30), Size = UDim2.new(1, 0, 0, 28), TextWrapped = true, TextSize = 13, Parent = card })
@@ -20471,8 +20921,8 @@ function Guide.build(gui, requestFn)
 	end)
 end
 
-local function setBeam(show)
-	local target = chartTarget()
+local function setBeam(show, target)
+	target = target or chartTarget()
 	if show and target and State.root then
 		if not beam then
 			a0 = Instance.new("Attachment")
@@ -20512,7 +20962,31 @@ function Guide.update()
 	sailButton.Visible = deck and not menus and ReplicatedStorage:GetAttribute("MatchState") ~= "Starting"
 	spinBadge.Visible = deck and not menus and player:GetAttribute("FreeSpinReady") == true
 	local showGuide = deck and newPlayer and not menus
-	card.Visible = showGuide
+	local tip, station, key
+	if deck and not newPlayer and not menus then
+		tip, station, key = upgradeTip()
+	end
+	card.Visible = showGuide or tip ~= nil
+	card.GotIt.Visible = tip ~= nil
+	card:SetAttribute("TipKey", key)
+	if tip then
+		local target = stationTarget(station)
+		setBeam(true, target)
+		card:FindFirstChildWhichIsA("TextLabel").Text = "NEXT STEP"
+		steps[1].Text = tip
+		steps[1].Size = UDim2.new(1, 0, 0, 58)
+		steps[1].TextColor3 = C.text
+		steps[2].Text = "Follow the gold line. Scrip = guns & kits (Quartermaster) · Materials = ship upgrades (Projects) · Salvage = gun parts (Workbench)"
+		steps[2].Position = UDim2.new(0, 0, 0, 92)
+		steps[2].TextSize = 11
+		steps[2].TextColor3 = C.dim
+		steps[3].Text = ""
+		return
+	end
+	steps[1].Size = UDim2.new(1, 0, 0, 28)
+	steps[2].Position = UDim2.new(0, 0, 0, 64)
+	steps[2].TextSize = 13
+	card:FindFirstChildWhichIsA("TextLabel").Text = "CAPTAIN'S ORDERS"
 	setBeam(showGuide)
 	if showGuide then
 		local hasCrew = player:GetAttribute("CharId") ~= nil
@@ -20524,13 +20998,13 @@ function Guide.update()
 		steps[1].TextColor3 = hasCrew and C.ok or C.text
 		steps[2].Text = (near and tick or "2  ") .. ("Follow the gold light to the SET SAIL table%s"):format(near and "" or ("  (" .. dist .. " studs)"))
 		steps[2].TextColor3 = near and C.ok or C.text
-		steps[3].Text = "3  " .. (State.gamepad and "Press A at the table" or "Hold E at the table (or click SET SAIL)") .. ", then pick a mission"
+		steps[3].Text = "3  " .. (State.gamepad and ("Hold " .. Buttons.name("ButtonA") .. " at the table") or "Hold E at the table (or click SET SAIL)") .. ", then pick a mission"
 	end
 end
 
 return Guide
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The HUD, designed to stay out of the way (survival-game minimal, not a Roblox overlay):
 --   top        compass bar with objective / teammate markers and distances; one-line objective
 --   bottom-right  fading cluster: segmented health, weapon + ammo pips, throwable;
@@ -20734,7 +21208,13 @@ function HUD.build(gui, onSecondWind, weaponController)
 		local y = 22 + (i - 1) * 19
 		label({ Text = row[1], Position = UDim2.new(0, 0, 0, y), Size = UDim2.new(0.36, 0, 0, 18), Font = Theme.Head, TextSize = 12, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
 		label({ Text = row[2], Position = UDim2.new(0.36, 0, 0, y), Size = UDim2.new(0.4, 0, 0, 18), TextSize = 12, ZIndex = 5, Parent = controlsPanel })
-		label({ Text = row[3], Position = UDim2.new(0.76, 0, 0, y), Size = UDim2.new(0.24, 0, 0, 18), TextSize = 11, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
+		local pad = row[3]
+		if require(script.Parent.Buttons).isPlayStation() then
+			-- PlayStation symbols instead of Xbox letters
+			pad = (" " .. pad .. " "):gsub("([%s%-])A([%s%p])", "%1✕%2"):gsub("([%s%-])B([%s%p])", "%1○%2"):gsub("([%s%-])X([%s%p])", "%1□%2"):gsub("([%s%-])Y([%s%p])", "%1△%2"):gsub("View", "Touchpad")
+			pad = pad:sub(2, -2)
+		end
+		label({ Text = pad, Position = UDim2.new(0.76, 0, 0, y), Size = UDim2.new(0.24, 0, 0, 18), TextSize = 11, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
 	end
 	controlsHint = label({ Text = "F1  CONTROLS", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -52), Size = UDim2.new(0, 200, 0, 14), Font = Theme.Head, TextSize = 11, TextColor3 = C.dim, Parent = root })
 
@@ -20955,7 +21435,7 @@ end
 
 function HUD.update(dt)
 	if controlsHint then
-		controlsHint.Text = State.gamepad and "VIEW  SATCHEL · SETTINGS · CONTROLS" or "F1  CONTROLS"
+		controlsHint.Text = State.gamepad and (require(script.Parent.Buttons).name("ButtonSelect"):upper() .. "  SATCHEL · SETTINGS · CONTROLS") or "F1  CONTROLS"
 	end
 	if not root then
 		return
@@ -21104,7 +21584,7 @@ end
 
 return HUD
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
 -- and buy kits for your next crossing. Everyone starts with only the Service Revolver.
 local HttpService = game:GetService("HttpService")
@@ -21280,7 +21760,7 @@ end
 
 return QM
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The quest board: today's three challenges and this week's two, with progress.
 -- Data comes from the server as the JSON attribute "Quests" (QuestService).
 local HttpService = game:GetService("HttpService")
@@ -21365,7 +21845,7 @@ end
 
 return Quests
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian projects board: permanent homebase upgrades built with Scrip + Materials (both
 -- earned from missions) or a Shipwright's Crew token, plus the armory once it's built.
 local HttpService = game:GetService("HttpService")
@@ -21486,7 +21966,7 @@ end
 
 return Repairs
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- End-of-encounter debrief.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -21558,7 +22038,7 @@ end
 
 return Results
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: everything you carry, throwable selection, field crafting and run aids.
 local Players = game:GetService("Players")
 
@@ -21600,8 +22080,14 @@ local function costText(recipe)
 		table.insert(parts, ("%d %s%s"):format(amount, Items.Items[itemId].name, have < amount and " ✕" or ""))
 	end
 	local mods = Stats.compute(player:GetAttribute("CharId"), player:GetAttribute("PerkId"))
-	local yield = recipe.amount + ((recipe.perkYield and mods.craftYieldBonus) or 0)
-	return table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
+	local workshop = (player:GetAttribute("Repairs") or ""):find('"workshop":true') ~= nil
+	local yield = recipe.amount + ((recipe.perkYield and mods.craftYieldBonus) or 0) + ((recipe.perkYield and workshop) and 1 or 0)
+	local space = cap(recipe.output) - inv(recipe.output)
+	local text = table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
+	if space < yield then
+		text ..= space <= 0 and "  (full)" or ("  (room for %d: use some first)"):format(space)
+	end
+	return text
 end
 
 local menuHandlers = {}
@@ -21719,7 +22205,7 @@ end
 
 return Satchel
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005C"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Settings: graphics preset (Auto / Performance / Balanced / Cinematic), look sensitivity,
 -- reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
@@ -21820,7 +22306,7 @@ end
 
 return Settings
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005C"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005D"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Purser's Office ledger: the in-world shop, in three tabs.
 --   SUPPLIES   run aids (tokens) and the one-time Starter Pack. Fixed contents, never random.
 --   WARDROBE   outfits for each crew member: equip, buy with Scrip, or buy with Robux.
@@ -22137,7 +22623,7 @@ end
 
 return Shop
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005D"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005E"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Lucky Spin screen: a prize reel that rolls to the prize the server picked.
 -- One free spin a day (00:00 UTC reset); extra spins are Spin tokens (won, or R$10 each).
 -- Every prize's odds are listed on this screen before you spin or buy (paid random items
@@ -22242,6 +22728,10 @@ function Spin.refresh()
 	status.Text = free and "Your free spin for today is ready." or ("Next free spin in %s (resets 00:00 UTC)."):format(fmtTime(wait))
 	buyOne.Visible = not restricted()
 	buyFive.Visible = not restricted()
+	local three = buyFive.Parent:FindFirstChild("BuyThree")
+	if three then
+		three.Visible = not restricted()
+	end
 end
 
 local function doSpin()
@@ -22302,7 +22792,7 @@ function Spin.result(data)
 	tween.Completed:Wait()
 	Sfx.ui("Ui_Confirm", 0.9)
 	wonLabel.TextColor3 = rgb(prize.color)
-	wonLabel.Text = "YOU WON:  " .. string.upper(prize.name)
+	wonLabel.Text = "YOU WON:  " .. string.upper(prize.name) .. (data and data.detail and ("\n" .. data.detail) or "")
 	spinning, rolling = false, false
 end
 
@@ -22341,7 +22831,7 @@ function Spin.build(gui, requestFn, promptFn)
 	end
 	fillStrip(#SpinConfig.Prizes, 4)
 
-	wonLabel = Theme.heading({ Text = "", TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 0, 0, 200), Size = UDim2.new(1, 0, 0, 30), Parent = panel })
+	wonLabel = Theme.heading({ Text = "", TextSize = 20, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 0, 0, 196), Size = UDim2.new(1, 0, 0, 42), Parent = panel })
 
 	-- left: buttons
 	local left = Theme.make("Frame", { Position = UDim2.new(0, 0, 0, 240), Size = UDim2.new(0.48, 0, 1, -240), BackgroundTransparency = 1, Parent = panel })
@@ -22352,7 +22842,11 @@ function Spin.build(gui, requestFn, promptFn)
 	buyOne.Activated:Connect(function()
 		promptProduct("LuckySpin")
 	end)
-	buyFive = Theme.button({ Text = ("BUY 5 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin5.price), Position = UDim2.new(0, 0, 0, 142), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	local buyThree = Theme.button({ Name = "BuyThree", Text = ("BUY 3 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin3.price), Position = UDim2.new(0, 0, 0, 142), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	buyThree.Activated:Connect(function()
+		promptProduct("LuckySpin3")
+	end)
+	buyFive = Theme.button({ Text = ("BUY 5 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin5.price), Position = UDim2.new(0, 0, 0, 184), Size = UDim2.new(1, 0, 0, 36), Parent = left })
 	buyFive.Activated:Connect(function()
 		promptProduct("LuckySpin5")
 	end)
@@ -22397,7 +22891,7 @@ end
 
 return Spin
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005E"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005F"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
 -- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
 local Theme = {}
@@ -22575,7 +23069,7 @@ end
 
 return Theme
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005F"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000060"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The workbench: spend Salvage (found during the crossing) on weapon parts, satchel upgrades
 -- and your character's other perks. Upgrades last for this crossing.
 local HttpService = game:GetService("HttpService")

@@ -103,15 +103,24 @@ function PerceptionService.sightFactor(enemy, info)
 		return 0
 	end
 
-	local f = 1 - (dist / range) * 0.75
 	local stance = char:GetAttribute("Stance")
+	-- tall grass: crouched or prone in it (light off, not shooting) you can't be seen at all
+	-- unless someone is practically standing on you
+	local inGrass = Geometry.inTagged(root.Position, "TallGrass")
+	if inGrass and stance ~= "Stand" and not lit then
+		local shotRecently = (Workspace:GetServerTimeNow() - (char:GetAttribute("ShotAt") or -100)) < 2
+		if dist > 3.5 and not shotRecently then
+			return 0
+		end
+	end
+	local f = 1 - (dist / range) * 0.75
 	if stance == "Crouch" then
 		f *= 0.55
 	elseif stance == "Prone" then
 		f *= 0.3
 	end
-	if Geometry.inTagged(root.Position, "TallGrass") then
-		f *= stance == "Prone" and 0.1 or 0.35 -- flat in the grass you're almost invisible
+	if inGrass then
+		f *= 0.3 -- standing in tall grass still breaks up your outline
 	end
 	if lit then
 		f *= 1.8

@@ -324,11 +324,41 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	elseif sprinting then
 		pose = set.sprint
 	end
-	-- recoil: back into the shoulder and up, settling fast
 	local since = now - (shotAt[char] or -10)
-	if since < 0.25 then
-		local k = (1 - since / 0.25) ^ 2
-		pose = pose * CFrame.new(0, 0.03 * k, 0.18 * k) * CFrame.Angles(0.14 * k, 0, 0)
+	-- living hands: breathing sway at rest, a bob in step with your feet when moving, a lift
+	-- as the gun comes up to aim
+	local t = now + (rig.seed or 0)
+	local moving = rig.moving or 0
+	local steady = 1 - 0.75 * a
+	local p = rig.phase or 0
+	pose = pose
+		* CFrame.new(math.sin(p) * 0.045 * moving, -math.abs(math.cos(p)) * 0.06 * moving + math.sin(t * 1.6) * 0.012 * steady, 0)
+		* CFrame.Angles(math.sin(t * 1.3) * 0.02 * steady + math.cos(p * 2) * 0.03 * moving, math.sin(t * 0.9) * 0.025 * steady + math.sin(p) * 0.05 * moving, math.sin(p) * 0.04 * moving)
+	if a > 0.05 and a < 0.95 then
+		pose = pose * CFrame.new(0, 0.1 * math.sin(a * math.pi), 0) * CFrame.Angles(0.12 * math.sin(a * math.pi), 0, 0)
+	end
+	-- weapon check: standing idle with the gun out, now and then you turn it over and look at it
+	if a < 0.05 and moving < 0.1 and not reloading and since > 6 then
+		rig.fidgetAt = rig.fidgetAt or (now + 8 + math.random() * 6)
+		local f = now - rig.fidgetAt
+		if f > 0 and f < 2.6 then
+			local k = math.sin(f / 2.6 * math.pi)
+			pose = pose * CFrame.new(-0.1 * k, 0.25 * k, 0.15 * k) * CFrame.Angles(0.25 * k, 0.35 * k, 0.95 * k)
+		elseif f >= 2.6 then
+			rig.fidgetAt = now + 10 + math.random() * 8
+		end
+	else
+		rig.fidgetAt = nil
+	end
+	-- recoil: a hard kick back into the shoulder and up, settling fast
+	local recoilLen = slot == "long" and 0.32 or 0.26
+	if since < recoilLen then
+		local k = (1 - since / recoilLen) ^ 2
+		if slot == "long" then
+			pose = pose * CFrame.new(0, 0.06 * k, 0.32 * k) * CFrame.Angles(0.24 * k, 0.03 * k, 0)
+		else
+			pose = pose * CFrame.new(0, 0.05 * k, 0.2 * k) * CFrame.Angles(0.38 * k, 0, 0.05 * k)
+		end
 	end
 	local upperCF, lowerCF = posedTorso(J)
 	-- the gun's own action: lever / pump / bolt / cylinder / bow draw, and per-gun reloads
@@ -646,6 +676,18 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		lEl, rEl = mix(lEl, 1.3), mix(rEl, 1.3)
 		lShZ, rShZ = mix(lShZ, -0.35), mix(rShZ, 0.35)
 	end
+
+	-- shooting moves the whole body: shoulders rock back, then settle
+	local shotK = 0
+	if armed then
+		local ss = os.clock() - (shotAt[char] or -10)
+		if ss < 0.35 then
+			shotK = (1 - ss / 0.35) ^ 2 * (longGun and 1 or 0.6)
+			waistLean -= 0.14 * shotK
+			rootY -= 0.05 * shotK
+		end
+	end
+	rig.moving = moving
 
 	-- hit flinch: the body jolts away from the hit and the head snaps, then recovers
 	local hurt = since(char, "HurtAt", serverNow)

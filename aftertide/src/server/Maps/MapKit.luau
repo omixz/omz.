@@ -621,9 +621,10 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	end
 	return {
 		doorways = { { hinge = world(doorX - doorW / 2, -0.1), width = doorW, dir = cf.RightVector } },
+		-- one container per house, against a wall, of a random kind
 		containers = {
-			{ pos = world(-W * 0.38, D * 0.85), type = "Drawer", yaw = math.deg(yaw) + 180 },
-			{ pos = world(W * 0.4, D * 0.4), type = rng:NextNumber() < 0.5 and "Locker" or "Toolbox", yaw = math.deg(yaw) - 90 },
+			rng:NextNumber() < 0.5 and { pos = world(-W * 0.38, D * 0.85), type = pick({ "Drawer", "Drawer", "AmmoCrate" }), yaw = math.deg(yaw) + 180 }
+				or { pos = world(W * 0.4, D * 0.4), type = pick({ "Locker", "Toolbox", "Drawer" }), yaw = math.deg(yaw) - 90 },
 		},
 		loot = { world(0, D * 0.3), world(-W * 0.25, D * 0.75), world(W * 0.2, D * 0.25) },
 	}

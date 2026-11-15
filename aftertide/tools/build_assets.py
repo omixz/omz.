@@ -29,10 +29,10 @@ def c(r, g, b):
 
 # Bright, distinct crew looks: faces uncovered (no dust masks), warm palettes.
 CREW = {
-    "mara": (dict(friendly=True, skin=c(214, 172, 140), top=c(36, 128, 170), pants=c(118, 104, 84), boots=c(110, 66, 40), gear=c(196, 160, 100), hat="beanie", hatColor=c(200, 60, 52), hair=c(150, 72, 40), scarf=c(246, 186, 60), iris=c(60, 120, 90)), dict(b=0.95, f=1.0, height=1.0)),
-    "tobias": (dict(friendly=True, skin=c(160, 114, 86), top=c(226, 122, 40), pants=c(44, 66, 110), boots=c(84, 56, 36), gear=c(110, 120, 80), hat="cap", hatColor=c(40, 120, 90), hair=c(40, 30, 24), toolbelt=True, kneePads=c(60, 60, 64), iris=c(90, 60, 30)), dict(b=1.12, f=0.0, height=1.03)),
-    "ines": (dict(friendly=True, skin=c(124, 86, 64), top=c(214, 64, 76), pants=c(48, 72, 120), boots=c(240, 236, 228), gear=c(236, 228, 210), hat="bun", hair=c(34, 24, 20), iris=c(70, 44, 26)), dict(b=0.98, f=1.0, height=0.97)),
-    "sefa": (dict(friendly=True, skin=c(146, 102, 72), top=c(246, 196, 48), pants=c(70, 110, 96), boots=c(40, 130, 140), gear=c(70, 90, 110), hat="hood", hatColor=c(246, 196, 48), hair=c(30, 24, 20), iris=c(50, 36, 24)), dict(b=1.05, f=0.0, height=1.0)),
+    "mara": (dict(friendly=True, headScale=0.87, skin=c(214, 172, 140), top=c(36, 128, 170), pants=c(118, 104, 84), boots=c(110, 66, 40), gear=c(196, 160, 100), hat="beanie", hatColor=c(200, 60, 52), hair=c(150, 72, 40), scarf=c(246, 186, 60), iris=c(60, 120, 90)), dict(b=0.95, f=1.0, height=1.0)),
+    "tobias": (dict(friendly=True, headScale=0.87, skin=c(160, 114, 86), top=c(226, 122, 40), pants=c(44, 66, 110), boots=c(84, 56, 36), gear=c(110, 120, 80), hat="cap", hatColor=c(40, 120, 90), hair=c(40, 30, 24), toolbelt=True, kneePads=c(60, 60, 64), iris=c(90, 60, 30)), dict(b=1.12, f=0.0, height=1.03)),
+    "ines": (dict(friendly=True, headScale=0.87, skin=c(124, 86, 64), top=c(214, 64, 76), pants=c(48, 72, 120), boots=c(240, 236, 228), gear=c(236, 228, 210), hat="bun", hair=c(34, 24, 20), iris=c(70, 44, 26)), dict(b=0.98, f=1.0, height=0.97)),
+    "sefa": (dict(friendly=True, headScale=0.87, skin=c(146, 102, 72), top=c(246, 196, 48), pants=c(70, 110, 96), boots=c(40, 130, 140), gear=c(70, 90, 110), hat="hood", hatColor=c(246, 196, 48), hair=c(30, 24, 20), iris=c(50, 36, 24)), dict(b=1.05, f=0.0, height=1.0)),
 }
 
 # Factions (original, not from any other game):
@@ -60,7 +60,7 @@ def build(only=None):
         p = Pack("Crew")
         for cid, (outfit, body) in CREW.items():
             segs, J = human.build_segments(outfit, **body)
-            p.add_rig("Crew_" + cid, segs, human.segment_bounds, human.R15_ANCHORS, J, cell=0.055, fine={"Head": 0.022, "RHand": 0.028, "LHand": 0.028}, rename=human.r15_name)
+            p.add_rig("Crew_" + cid, segs, human.segment_bounds, human.R15_ANCHORS, J, cell=0.045, fine={"Head": 0.022, "RHand": 0.028, "LHand": 0.028}, rename=human.r15_name)
         packs["Crew"] = p
     if want("Factions"):
         p = Pack("Factions")

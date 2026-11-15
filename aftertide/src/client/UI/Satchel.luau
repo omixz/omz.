@@ -40,8 +40,14 @@ local function costText(recipe)
 		table.insert(parts, ("%d %s%s"):format(amount, Items.Items[itemId].name, have < amount and " ✕" or ""))
 	end
 	local mods = Stats.compute(player:GetAttribute("CharId"), player:GetAttribute("PerkId"))
-	local yield = recipe.amount + ((recipe.perkYield and mods.craftYieldBonus) or 0)
-	return table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
+	local workshop = (player:GetAttribute("Repairs") or ""):find('"workshop":true') ~= nil
+	local yield = recipe.amount + ((recipe.perkYield and mods.craftYieldBonus) or 0) + ((recipe.perkYield and workshop) and 1 or 0)
+	local space = cap(recipe.output) - inv(recipe.output)
+	local text = table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
+	if space < yield then
+		text ..= space <= 0 and "  (full)" or ("  (room for %d: use some first)"):format(space)
+	end
+	return text
 end
 
 local menuHandlers = {}

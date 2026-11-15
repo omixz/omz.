@@ -7,6 +7,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Spin = require(Shared.Config.Spin)
+local Quartermaster = require(Shared.Config.Quartermaster)
+local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
 local SpinService = {}
@@ -68,6 +70,31 @@ end
 
 local function grant(player, data, prize)
 	local g = prize.grant
+	local detail
+	if g.gun then
+		-- a real gun: unlock one you don't have yet (Scrip if you own them all)
+		data.guns = data.guns or { revolver = true }
+		local locked = {}
+		for _, gun in Quartermaster.Guns do
+			if not data.guns[gun.id] then
+				table.insert(locked, gun.id)
+			end
+		end
+		if #locked > 0 then
+			local id = locked[rng:NextInteger(1, #locked)]
+			data.guns[id] = true
+			data.loadout = data.loadout or { long = "", pack = {} }
+			if data.loadout.long == "" or data.loadout.long == nil then
+				data.loadout.long = id -- holstered and ready for the next crossing
+			end
+			detail = Weapons.List[id].name .. " unlocked! Choose it at the Quartermaster."
+		else
+			Services.PlayerDataService.addScrip(player, 300)
+			detail = "You own every gun: 300 Scrip instead."
+		end
+	elseif g.kit then
+		detail = "Packed in your kit bag: you get it at the start of your next crossing."
+	end
 	if g.scrip then
 		Services.PlayerDataService.addScrip(player, g.scrip)
 	end
@@ -87,6 +114,7 @@ local function grant(player, data, prize)
 		end
 	end
 	Services.PlayerDataService.publish(player)
+	return detail
 end
 
 function SpinService.spin(player)
@@ -112,10 +140,10 @@ function SpinService.spin(player)
 	end
 	busy[player] = true
 	local index, prize = pick()
-	grant(player, data, prize)
+	local detail = grant(player, data, prize)
 	SpinService.publish(player)
 	Services.AnalyticsHelper.economy(player, "source", 0, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, "Spin_" .. prize.id)
-	Net.notify(player, "SpinResult", { index = index, free = free })
+	Net.notify(player, "SpinResult", { index = index, free = free, detail = detail })
 	task.spawn(Services.PlayerDataService.save, player)
 	task.delay(4, function()
 		busy[player] = nil

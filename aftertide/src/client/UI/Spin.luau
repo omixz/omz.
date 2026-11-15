@@ -103,6 +103,10 @@ function Spin.refresh()
 	status.Text = free and "Your free spin for today is ready." or ("Next free spin in %s (resets 00:00 UTC)."):format(fmtTime(wait))
 	buyOne.Visible = not restricted()
 	buyFive.Visible = not restricted()
+	local three = buyFive.Parent:FindFirstChild("BuyThree")
+	if three then
+		three.Visible = not restricted()
+	end
 end
 
 local function doSpin()
@@ -163,7 +167,7 @@ function Spin.result(data)
 	tween.Completed:Wait()
 	Sfx.ui("Ui_Confirm", 0.9)
 	wonLabel.TextColor3 = rgb(prize.color)
-	wonLabel.Text = "YOU WON:  " .. string.upper(prize.name)
+	wonLabel.Text = "YOU WON:  " .. string.upper(prize.name) .. (data and data.detail and ("\n" .. data.detail) or "")
 	spinning, rolling = false, false
 end
 
@@ -202,7 +206,7 @@ function Spin.build(gui, requestFn, promptFn)
 	end
 	fillStrip(#SpinConfig.Prizes, 4)
 
-	wonLabel = Theme.heading({ Text = "", TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 0, 0, 200), Size = UDim2.new(1, 0, 0, 30), Parent = panel })
+	wonLabel = Theme.heading({ Text = "", TextSize = 20, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 0, 0, 196), Size = UDim2.new(1, 0, 0, 42), Parent = panel })
 
 	-- left: buttons
 	local left = Theme.make("Frame", { Position = UDim2.new(0, 0, 0, 240), Size = UDim2.new(0.48, 0, 1, -240), BackgroundTransparency = 1, Parent = panel })
@@ -213,7 +217,11 @@ function Spin.build(gui, requestFn, promptFn)
 	buyOne.Activated:Connect(function()
 		promptProduct("LuckySpin")
 	end)
-	buyFive = Theme.button({ Text = ("BUY 5 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin5.price), Position = UDim2.new(0, 0, 0, 142), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	local buyThree = Theme.button({ Name = "BuyThree", Text = ("BUY 3 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin3.price), Position = UDim2.new(0, 0, 0, 142), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	buyThree.Activated:Connect(function()
+		promptProduct("LuckySpin3")
+	end)
+	buyFive = Theme.button({ Text = ("BUY 5 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin5.price), Position = UDim2.new(0, 0, 0, 184), Size = UDim2.new(1, 0, 0, 36), Parent = left })
 	buyFive.Activated:Connect(function()
 		promptProduct("LuckySpin5")
 	end)

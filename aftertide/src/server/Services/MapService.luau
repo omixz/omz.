@@ -366,7 +366,7 @@ local function buildFerry(parent)
 		Services.MatchService.openCharacterSelect(player)
 	end)
 	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
-	stationSign(board, "PROJECTS", "Upgrade the Meridian", Color3.fromRGB(120, 200, 230), 3.6)
+	stationSign(board, "PROJECTS", "Spend MATERIALS: ship upgrades", Color3.fromRGB(120, 200, 230), 3.6)
 	prompt(board, "Plan projects", "The Meridian", function(player)
 		Services.MatchService.openMenu(player, "OpenRepairs")
 	end)
@@ -389,7 +389,7 @@ local function buildFerry(parent)
 	for i, c in { Color3.fromRGB(250, 240, 200), Color3.fromRGB(255, 220, 160), Color3.fromRGB(230, 245, 255) } do
 		block(parent, Vector3.new(1.2, 1.5, 0.05), o + Vector3.new(-19.6 + i * 1.3, 3.7 + (i % 2) * 0.3, 14.57), c, M.SmoothPlastic, { CanCollide = false })
 	end
-	stationSign(quests, "QUESTS", "Daily & weekly rewards", Color3.fromRGB(250, 210, 110), 3.8)
+	stationSign(quests, "QUESTS", "Daily jobs: earn Scrip", Color3.fromRGB(250, 210, 110), 3.8)
 	prompt(quests, "Read the board", "Quests", function(player)
 		Services.MatchService.openMenu(player, "OpenQuests")
 	end)
@@ -398,7 +398,7 @@ local function buildFerry(parent)
 	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(140, 100, 64), M.WoodPlanks)
 	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(200, 60, 40), M.Metal) -- vice
 	block(parent, Vector3.new(1.4, 0.5, 0.8), o + Vector3.new(-15.5, 3.25, -13.4), Color3.fromRGB(230, 170, 40), M.Metal) -- toolbox
-	stationSign(bench, "WORKBENCH", "Upgrade your guns", Color3.fromRGB(255, 170, 90), 4.2)
+	stationSign(bench, "WORKBENCH", "Spend SALVAGE: gun upgrades", Color3.fromRGB(255, 170, 90), 4.2)
 	prompt(bench, "Use workbench", "Workbench", function(player)
 		Services.MatchService.openMenu(player, "OpenWorkbench")
 	end)
@@ -463,7 +463,7 @@ local function buildFerry(parent)
 	boothLight.Brightness = 1.2
 	boothLight.Color = C.warm
 	boothLight.Parent = booth
-	stationSign(booth, "SHOP", "Supplies, ammo & outfits", Color3.fromRGB(255, 120, 110), 6)
+	stationSign(booth, "SHOP", "Supplies from R$5 · outfits", Color3.fromRGB(255, 120, 110), 6)
 	prompt(booth, "Open the shop", "The Purser's Office", function(player)
 		Services.MatchService.openShop(player)
 	end)
@@ -479,7 +479,7 @@ local function buildFerry(parent)
 	qmLight.Range = 10
 	qmLight.Color = C.warm
 	qmLight.Parent = qm
-	stationSign(qm, "QUARTERMASTER", "Unlock guns · loadout · kits", Color3.fromRGB(140, 220, 140), 6.2)
+	stationSign(qm, "QUARTERMASTER", "Spend SCRIP: new guns & kits", Color3.fromRGB(140, 220, 140), 6.2)
 	prompt(qm, "Trade", "The Quartermaster", function(player)
 		Services.MatchService.openMenu(player, "OpenQuartermaster")
 	end)

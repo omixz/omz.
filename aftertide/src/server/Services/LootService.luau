@@ -125,28 +125,71 @@ LootService.settle = settle
 -- Container models: { body, moving part, open transform }
 local BUILDERS = {}
 
+-- Each builder returns: the body (holds the prompt), the parts that open (list), and the opening
+-- offset. Painted, detailed furniture: drawers with knobs and legs, lockers with vents.
+local WOODS = { Color3.fromRGB(150, 104, 66), Color3.fromRGB(120, 84, 56), Color3.fromRGB(176, 136, 96) }
+local PAINTS = { Color3.fromRGB(236, 230, 214), Color3.fromRGB(150, 196, 214), Color3.fromRGB(196, 214, 170), Color3.fromRGB(230, 190, 120), Color3.fromRGB(210, 150, 140) }
+local function pick(list)
+	return list[math.random(1, #list)]
+end
+
 function BUILDERS.Drawer(parent, cf)
-	local body = part(parent, Vector3.new(2.6, 2.8, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(96, 80, 62), Enum.Material.WoodPlanks)
-	local drawer = part(parent, Vector3.new(2.3, 0.7, 1.4), cf * CFrame.new(0, 2.1, -0.15), Color3.fromRGB(110, 92, 70), Enum.Material.WoodPlanks)
-	return body, drawer, CFrame.new(0, 0, -1)
+	local painted = math.random() < 0.5
+	local bodyColor = painted and pick(PAINTS) or pick(WOODS)
+	local front = bodyColor:Lerp(Color3.new(1, 1, 1), 0.12)
+	local mat = painted and Enum.Material.SmoothPlastic or Enum.Material.WoodPlanks
+	local body = part(parent, Vector3.new(2.8, 2.6, 1.5), cf * CFrame.new(0, 1.6, 0), bodyColor, mat)
+	part(parent, Vector3.new(3.0, 0.15, 1.65), cf * CFrame.new(0, 2.97, 0), bodyColor:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.WoodPlanks) -- top
+	for _, x in { -1.25, 1.25 } do
+		for _, z in { -0.6, 0.6 } do
+			part(parent, Vector3.new(0.2, 0.3, 0.2), cf * CFrame.new(x, 0.15, z), bodyColor:Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Wood)
+		end
+	end
+	local moving = {}
+	for i, y in { 2.45, 1.65, 0.85 } do
+		local d = part(parent, Vector3.new(2.5, 0.65, 0.12), cf * CFrame.new(0, y, -0.78), front, mat)
+		local knob = part(parent, Vector3.new(0.18, 0.18, 0.12), cf * CFrame.new(0, y, -0.88), Color3.fromRGB(196, 160, 80), Enum.Material.Metal, { Shape = Enum.PartType.Ball })
+		if i == 1 then
+			table.insert(moving, d)
+			table.insert(moving, knob)
+			-- the drawer box behind the front, seen when it slides out
+			table.insert(moving, part(parent, Vector3.new(2.3, 0.5, 1.25), cf * CFrame.new(0, y - 0.02, -0.08), bodyColor:Lerp(Color3.new(0, 0, 0), 0.2), Enum.Material.WoodPlanks))
+		end
+	end
+	return body, moving, CFrame.new(0, 0, -0.9)
 end
 
 function BUILDERS.Locker(parent, cf)
-	local body = part(parent, Vector3.new(1.8, 6, 1.6), cf * CFrame.new(0, 3, 0), Color3.fromRGB(70, 84, 88), Enum.Material.Metal)
-	local door = part(parent, Vector3.new(1.7, 5.8, 0.1), cf * CFrame.new(0, 3, -0.85), Color3.fromRGB(80, 96, 100), Enum.Material.DiamondPlate)
-	return body, door, CFrame.new(-0.85, 0, 0) * CFrame.Angles(0, math.rad(100), 0) * CFrame.new(0.85, 0, 0)
+	local color = pick({ Color3.fromRGB(70, 130, 180), Color3.fromRGB(90, 150, 110), Color3.fromRGB(200, 80, 70), Color3.fromRGB(150, 156, 160) })
+	local body = part(parent, Vector3.new(1.8, 6, 1.6), cf * CFrame.new(0, 3, 0), color, Enum.Material.Metal)
+	local door = part(parent, Vector3.new(1.7, 5.8, 0.1), cf * CFrame.new(0, 3, -0.85), color:Lerp(Color3.new(1, 1, 1), 0.12), Enum.Material.Metal)
+	local moving = { door }
+	for i = 0, 2 do
+		table.insert(moving, part(parent, Vector3.new(1.0, 0.08, 0.04), cf * CFrame.new(0, 5.2 - i * 0.25, -0.92), color:Lerp(Color3.new(0, 0, 0), 0.35), Enum.Material.Metal))
+	end
+	table.insert(moving, part(parent, Vector3.new(0.1, 0.5, 0.1), cf * CFrame.new(0.6, 3, -0.94), Color3.fromRGB(200, 200, 196), Enum.Material.Metal))
+	return body, moving, CFrame.new(-0.85, 0, 0) * CFrame.Angles(0, math.rad(100), 0) * CFrame.new(0.85, 0, 0)
 end
 
 function BUILDERS.Toolbox(parent, cf)
-	local body = part(parent, Vector3.new(2.2, 0.9, 1), cf * CFrame.new(0, 0.45, 0), Color3.fromRGB(140, 50, 40), Enum.Material.Metal)
-	local lid = part(parent, Vector3.new(2.2, 0.15, 1), cf * CFrame.new(0, 0.97, 0), Color3.fromRGB(150, 56, 44), Enum.Material.Metal)
-	return body, lid, CFrame.new(0, 0, 0.5) * CFrame.Angles(math.rad(100), 0, 0) * CFrame.new(0, 0, -0.5)
+	local color = pick({ Color3.fromRGB(200, 50, 40), Color3.fromRGB(40, 90, 170), Color3.fromRGB(230, 170, 40) })
+	local body = part(parent, Vector3.new(2.2, 0.9, 1), cf * CFrame.new(0, 0.45, 0), color, Enum.Material.Metal)
+	local lid = part(parent, Vector3.new(2.2, 0.15, 1), cf * CFrame.new(0, 0.97, 0), color:Lerp(Color3.new(1, 1, 1), 0.1), Enum.Material.Metal)
+	local handle = part(parent, Vector3.new(1.0, 0.12, 0.12), cf * CFrame.new(0, 1.2, 0), Color3.fromRGB(40, 40, 44), Enum.Material.Metal)
+	for _, x in { -0.8, 0.8 } do
+		part(parent, Vector3.new(0.2, 0.25, 0.06), cf * CFrame.new(x, 0.75, -0.52), Color3.fromRGB(200, 200, 196), Enum.Material.Metal)
+	end
+	return body, { lid, handle }, CFrame.new(0, 0, 0.5) * CFrame.Angles(math.rad(100), 0, 0) * CFrame.new(0, 0, -0.5)
 end
 
 function BUILDERS.AmmoCrate(parent, cf)
-	local body = part(parent, Vector3.new(2.6, 1.3, 1.6), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(78, 86, 58), Enum.Material.WoodPlanks)
-	local lid = part(parent, Vector3.new(2.6, 0.2, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(86, 94, 64), Enum.Material.WoodPlanks)
-	return body, lid, CFrame.new(0, 0, 0.8) * CFrame.Angles(math.rad(110), 0, 0) * CFrame.new(0, 0, -0.8)
+	local body = part(parent, Vector3.new(2.6, 1.3, 1.6), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(96, 110, 66), Enum.Material.WoodPlanks)
+	part(parent, Vector3.new(2.62, 0.3, 1.62), cf * CFrame.new(0, 0.65, 0), Color3.fromRGB(230, 200, 70), Enum.Material.SmoothPlastic) -- stencil band
+	for _, x in { -1.35, 1.35 } do
+		part(parent, Vector3.new(0.1, 0.25, 0.7), cf * CFrame.new(x, 0.9, 0), Color3.fromRGB(150, 120, 80), Enum.Material.Fabric) -- rope handles
+	end
+	local lid = part(parent, Vector3.new(2.6, 0.2, 1.6), cf * CFrame.new(0, 1.4, 0), Color3.fromRGB(106, 120, 74), Enum.Material.WoodPlanks)
+	return body, { lid }, CFrame.new(0, 0, 0.8) * CFrame.Angles(math.rad(110), 0, 0) * CFrame.new(0, 0, -0.8)
 end
 
 local function container(parent, spot, rng, pall)
@@ -177,7 +220,12 @@ local function container(parent, spot, rng, pall)
 		end
 		searched = true
 		prompt:Destroy()
-		TweenService:Create(moving, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = moving.CFrame * openOffset }):Play()
+		-- everything that opens pivots together around the first moving part
+		local pivot = moving[1].CFrame
+		for _, m in moving do
+			local rel = pivot:ToObjectSpace(m.CFrame)
+			TweenService:Create(m, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = pivot * openOffset * rel }):Play()
+		end
 		Sfx.at(body.Position, "Search", 0.3, 30)
 		Services.PerceptionService.emitNoise(body.Position, 5, "search", player)
 		local list = LootService.roll(def.table, def.rolls, rng, pall)
@@ -195,8 +243,14 @@ end
 
 -- Fills an encounter with containers and loose items.
 function LootService.populate(parent, rng, pall, containerSpots, looseSpots)
-	for _, spot in containerSpots do
-		container(parent, spot, rng, pall)
+	-- a handful of containers per map, picked at random (not one in every corner)
+	local pool = table.clone(containerSpots)
+	for i = #pool, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		pool[i], pool[j] = pool[j], pool[i]
+	end
+	for i = 1, math.min(Loot.MaxContainers or 12, #pool) do
+		container(parent, pool[i], rng, pall)
 	end
 	local spots = table.clone(looseSpots)
 	for i = #spots, 2, -1 do

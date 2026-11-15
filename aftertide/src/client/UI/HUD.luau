@@ -202,7 +202,13 @@ function HUD.build(gui, onSecondWind, weaponController)
 		local y = 22 + (i - 1) * 19
 		label({ Text = row[1], Position = UDim2.new(0, 0, 0, y), Size = UDim2.new(0.36, 0, 0, 18), Font = Theme.Head, TextSize = 12, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
 		label({ Text = row[2], Position = UDim2.new(0.36, 0, 0, y), Size = UDim2.new(0.4, 0, 0, 18), TextSize = 12, ZIndex = 5, Parent = controlsPanel })
-		label({ Text = row[3], Position = UDim2.new(0.76, 0, 0, y), Size = UDim2.new(0.24, 0, 0, 18), TextSize = 11, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
+		local pad = row[3]
+		if require(script.Parent.Buttons).isPlayStation() then
+			-- PlayStation symbols instead of Xbox letters
+			pad = (" " .. pad .. " "):gsub("([%s%-])A([%s%p])", "%1✕%2"):gsub("([%s%-])B([%s%p])", "%1○%2"):gsub("([%s%-])X([%s%p])", "%1□%2"):gsub("([%s%-])Y([%s%p])", "%1△%2"):gsub("View", "Touchpad")
+			pad = pad:sub(2, -2)
+		end
+		label({ Text = pad, Position = UDim2.new(0.76, 0, 0, y), Size = UDim2.new(0.24, 0, 0, 18), TextSize = 11, TextColor3 = C.dim, ZIndex = 5, Parent = controlsPanel })
 	end
 	controlsHint = label({ Text = "F1  CONTROLS", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -52), Size = UDim2.new(0, 200, 0, 14), Font = Theme.Head, TextSize = 11, TextColor3 = C.dim, Parent = root })
 
@@ -423,7 +429,7 @@ end
 
 function HUD.update(dt)
 	if controlsHint then
-		controlsHint.Text = State.gamepad and "VIEW  SATCHEL · SETTINGS · CONTROLS" or "F1  CONTROLS"
+		controlsHint.Text = State.gamepad and (require(script.Parent.Buttons).name("ButtonSelect"):upper() .. "  SATCHEL · SETTINGS · CONTROLS") or "F1  CONTROLS"
 	end
 	if not root then
 		return

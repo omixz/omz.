@@ -50,6 +50,9 @@ local function processReceipt(receipt)
 		data_.kit[kitId] = (data_.kit[kitId] or 0) + amount
 		Services.PlayerDataService.publish(player)
 	end
+	if grant.scrip then
+		Services.PlayerDataService.addScrip(player, grant.scrip)
+	end
 	if grant.outfit then
 		Services.PlayerDataService.ownOutfit(player, grant.outfit)
 	end

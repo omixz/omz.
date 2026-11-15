@@ -399,6 +399,7 @@ function WeaponService.fire(player, info, direction, aiming)
 	if now < s.nextFireAt or now < s.equipReadyAt then
 		return
 	end
+	char:SetAttribute("ShotAt", Workspace:GetServerTimeNow()) -- muzzle flash gives away a hiding spot
 	if (char:GetAttribute("ReloadUntil") or 0) > Workspace:GetServerTimeNow() then
 		return
 	end

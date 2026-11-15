@@ -242,6 +242,52 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.T)
 
+	-- Interact on a controller: Cross / A presses the nearest prompt you can see, whatever else
+	-- might be listening to that button (some consoles never delivered it to the prompt).
+	local ProximityPromptService = game:GetService("ProximityPromptService")
+	local shown = {}
+	ProximityPromptService.PromptShown:Connect(function(p)
+		shown[p] = true
+	end)
+	ProximityPromptService.PromptHidden:Connect(function(p)
+		shown[p] = nil
+	end)
+	local holding = nil
+	local function nearestPrompt()
+		local root = State.root
+		if not root then
+			return nil
+		end
+		local best, bestD = nil, math.huge
+		for p in shown do
+			local part = p.Parent
+			local pos = part and (part:IsA("BasePart") and part.Position or (part:IsA("Attachment") and part.WorldPosition))
+			if pos and p.Enabled then
+				local d = (pos - root.Position).Magnitude
+				if d <= p.MaxActivationDistance + 1 and d < bestD then
+					best, bestD = p, d
+				end
+			end
+		end
+		return best
+	end
+	bind("PadInteract", function(state)
+		if State.uiOpen() then
+			return Pass -- menus: A presses the selected button
+		end
+		if state == Begin then
+			local p = nearestPrompt()
+			if not p then
+				return Pass
+			end
+			holding = p
+			p:InputHoldBegin()
+		elseif state == End and holding then
+			holding:InputHoldEnd()
+			holding = nil
+		end
+	end, Enum.KeyCode.ButtonA)
+
 	-- gamepad: buttons with a tap and a hold action
 	bindPad("PadY", Enum.KeyCode.ButtonY, function()
 		if canAct() then

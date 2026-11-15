@@ -8,7 +8,7 @@
 -- odds are shown before buying and which aren't sold where paid random items are restricted); every run aid has a per-crossing
 -- or per-encounter limit and can also be earned free by playing; cosmetics never change stats.
 --
--- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   outfit = "<Cosmetics outfit id>"
+-- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   scrip = n   outfit = "<Cosmetics outfit id>"
 --               outfits = { ids }   oneTime = true (can only be bought once per account)
 return {
 	Products = {
@@ -98,6 +98,63 @@ return {
 			grant = { tokens = { spin = 5 } },
 			randomItem = true,
 		},
+		PocketRounds = {
+			productId = 3732039191,
+			name = "Pocket Rounds",
+			price = 5,
+			desc = "+5 revolver rounds, packed for your next crossing.",
+			grant = { kit = { pocketrounds = 1 } },
+		},
+		Bandage = {
+			productId = 3732039195,
+			name = "Bandage Roll",
+			price = 5,
+			desc = "+1 Field Dressing, packed for your next crossing.",
+			grant = { kit = { bandage = 1 } },
+		},
+		ScripPouch = {
+			productId = 3732039202,
+			name = "Scrip Pouch",
+			price = 9,
+			desc = "+120 Scrip to spend at the Quartermaster or the Wardrobe.",
+			grant = { scrip = 120 },
+		},
+		LuckySpin3 = {
+			productId = 3732039205,
+			name = "Lucky Spin x3",
+			price = 25,
+			desc = "Three extra spins of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 3 } },
+			randomItem = true,
+		},
+		Outfit_mara_sunset = {
+			productId = 3732039210,
+			name = "Mara: Sunset Sail",
+			price = 19,
+			desc = "Peach jacket, cream trousers, purple beanie. Cosmetic.",
+			grant = { outfit = "mara_sunset" },
+		},
+		Outfit_tobias_sunset = {
+			productId = 3732039215,
+			name = "Tobias: Lifeguard",
+			price = 19,
+			desc = "Red and yellow lifeguard colours. Cosmetic.",
+			grant = { outfit = "tobias_sunset" },
+		},
+		Outfit_ines_sunset = {
+			productId = 3732039218,
+			name = "Ines: Mint Medic",
+			price = 19,
+			desc = "Mint jacket, white trousers, pink kit bag. Cosmetic.",
+			grant = { outfit = "ines_sunset" },
+		},
+		Outfit_sefa_sunset = {
+			productId = 3732039225,
+			name = "Sefa: Coral Reefer",
+			price = 19,
+			desc = "Coral raincoat, ocean-blue trousers, sunny boots. Cosmetic.",
+			grant = { outfit = "sefa_sunset" },
+		},
 		Outfit_mara_pilot = {
 			productId = 3731795745,
 			name = "Mara: Night Pilot",
@@ -128,7 +185,7 @@ return {
 		},
 	},
 	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
-	Order = { "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
+	Order = { "PocketRounds", "Bandage", "ScripPouch", "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
 
 	-- Game passes (permanent). Created by tools/create_products.py like the products above.
 	Passes = {

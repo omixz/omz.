@@ -214,8 +214,12 @@ function InventoryService.canCraft(player, recipeId)
 	if not recipe or not inv then
 		return false, "Unknown recipe"
 	end
-	if inv.items[recipe.output] >= InventoryService.cap(player, recipe.output) then
-		return false, Items.Items[recipe.output].name .. ": satchel full"
+	-- the whole batch must fit: never charge the full price for a partial yield
+	local space = InventoryService.cap(player, recipe.output) - inv.items[recipe.output]
+	local yield = InventoryService.recipeYield(player, recipe)
+	if space < yield then
+		return false, space <= 0 and (Items.Items[recipe.output].name .. ": satchel full")
+			or ("Room for only %d %s: this makes %d. Use some first."):format(space, Items.Items[recipe.output].name, yield)
 	end
 	for itemId, amount in recipe.cost do
 		if inv.items[itemId] < amount then

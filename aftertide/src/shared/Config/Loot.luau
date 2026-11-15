@@ -29,5 +29,6 @@ return {
 		},
 	},
 	LooseItems = 14, -- per encounter
+	MaxContainers = 11, -- searchable containers per encounter (random subset of the map's spots)
 	PallBonusRolls = 0.15, -- extra roll chance per Pall level
 }

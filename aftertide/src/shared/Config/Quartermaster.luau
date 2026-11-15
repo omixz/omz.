@@ -17,6 +17,8 @@ return {
 		{ id = "medkit", name = "Field kit", desc = "+1 Field Dressing, +1 Cloth", price = 30, items = { dressing = 1, cloth = 1 } },
 		-- Robux only (Ammo Crate products); not listed at the Quartermaster
 		{ id = "ammocrate", robux = true, name = "Ammo Crate", desc = "+8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows", price = 0, items = { pistolAmmo = 8, rifleAmmo = 4, shells = 4, arrows = 6 } },
+		{ id = "pocketrounds", robux = true, name = "Pocket Rounds", desc = "+5 revolver rounds", price = 0, items = { pistolAmmo = 5 } },
+		{ id = "bandage", robux = true, name = "Bandage Roll", desc = "+1 Field Dressing", price = 0, items = { dressing = 1 } },
 		{ id = "throwables", name = "Throwables", desc = "+1 Bottle, +1 Flare Pot", price = 35, items = { bottle = 1, flarePot = 1 } },
 	},
 	MaxKitsEach = 2,

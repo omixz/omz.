@@ -95,7 +95,7 @@ def skin_chest(P, J, b, f):
     traps = S.union(*[S.capsule(P, J["neck"] + [sx * 0.12, -0.08, 0.05], J[side + "shoulder"] + [-sx * 0.12, 0.02, 0.03], 0.1 * b) for sx, side in ((1, "R"), (-1, "L"))])
     d = S.smooth_union(0.15, chest, ribs, belly, traps)
     for side in "RL":
-        d = S.smooth_union(0.16, d, S.ellipsoid(P, J[side + "shoulder"] + [(-0.04 if side == "R" else 0.04), -0.02, 0], [0.13 * b, 0.11 * b, 0.13 * b]))
+        d = S.smooth_union(0.12, d, S.ellipsoid(P, J[side + "shoulder"] + [(-0.06 if side == "R" else 0.06), -0.04, 0], [0.11 * b, 0.1 * b, 0.12 * b]))
     if f > 0:
         for sx in (1, -1):
             d = S.smooth_union(0.08, d, S.sphere(P, w + [sx * 0.22, 0.78, -0.28], 0.17 * f))
@@ -237,6 +237,8 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
     if o.get("facePaint"):
         # ash-grey tide lines painted across the eyes (Tidebound)
         head_layers.append(("Paint", lambda P: S.intersect(skin_head(P, J, b, f) - 0.012, S.rbox(P, hc + [0, 0.04, -0.4], [0.3, 0.045, 0.12], 0.02)), "SmoothPlastic", o["facePaint"]))
+    # hair reads as hair, not a helmet: fine strand grooves running back from the face
+    head_layers = [(n_, (lambda fn_=fn_: lambda P: fn_(P) + 0.006 * np.sin(P[:, 0] * 95 + np.sin(P[:, 1] * 9) * 2.0))() if n_ == "Hair" else fn_, m_, c_) for n_, fn_, m_, c_ in head_layers]
     hs = o.get("headScale", 0.96)
     hc_ = J["head"] + [0, -0.3, 0]  # scale about the jaw so the neck still meets the torso
 
@@ -257,7 +259,9 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
             collar = S.subtract(S.round_cone(P, J["neck"] + [0, -0.08, 0.02], J["neck"] + [0, 0.12, 0.04], 0.27, 0.24), S.round_cone(P, J["neck"] + [0, -0.2, 0.02], J["neck"] + [0, 0.3, 0.04], 0.19, 0.19))
             zip_ = S.intersect(S.shell(skin_chest(P, J, b, f) - 0.065, 0.02), S.rbox(P, w + [0, 0.62, -0.4], [0.045, 0.75, 0.3], 0.01))
             pockets = S.union(S.rbox(P, w + [0.25, 0.05, -0.36 * b], [0.14, 0.12, 0.05], 0.03), S.rbox(P, w + [-0.25, 0.05, -0.36 * b], [0.14, 0.12, 0.05], 0.03))
-            return S.smooth_union(0.03, d, collar, zip_, pockets)
+            # shoulder yoke seam (a shallow groove across the chest and back)
+            seam = S.intersect(S.shell(skin_chest(P, J, b, f) - 0.05, 0.008), S.intersect(above(P, J["neck"][1] - 0.42), below(P, J["neck"][1] - 0.39)))
+            return S.subtract(S.smooth_union(0.03, d, collar, zip_, pockets), seam, 0.004)
         ut.append(("Jacket", jacket_full, "Fabric", top))
         if o.get("vest"):
             ut.append(("Vest", lambda P: S.smooth_union(0.03, S.intersect(cloth(skin_chest(P, J, b, f), 0.13, P, (0, 1, 0), 3, 0.004, 2), S.intersect(above(P, w[1] - 0.05), below(P, J["neck"][1] - 0.15))), S.union(*[S.rbox(P, w + [x, 0.25, -0.5 * b], [0.09, 0.13, 0.07], 0.03) for x in (-0.3, -0.1, 0.1, 0.3)])), "Fabric", o["vest"]))
@@ -307,6 +311,9 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
         seg[s + "UpperArm"] = [("Sleeve", (lambda s=s: lambda P: cloth(skin_upper_arm(P, J, s, b), 0.04 if style != "robe" else 0.06, P, J[s + "elbow"] - J[s + "shoulder"], 6, 0.014, 20))(), "Fabric", sleeve_color)]
         la = [("Sleeve", (lambda s=s: lambda P: cloth(S.intersect(skin_lower_arm(P, J, s, b), above(P, J[s + "wrist"][1] + (0.12 if style != "robe" else 0.25))), 0.04 if style != "robe" else 0.07, P, J[s + "wrist"] - J[s + "elbow"], 7, 0.012, 21))(), "Fabric", sleeve_color)]
         la.append(("Skin", (lambda s=s: lambda P: S.intersect(skin_lower_arm(P, J, s, b), below(P, J[s + "wrist"][1] + 0.2)))(), "SmoothPlastic", skin))
+        if style != "robe":
+            # knitted cuff where the sleeve ends
+            la.append(("Cuff", (lambda s=s: lambda P: S.intersect(S.shell(skin_lower_arm(P, J, s, b) - 0.045, 0.022), S.intersect(above(P, J[s + "wrist"][1] + 0.1), below(P, J[s + "wrist"][1] + 0.2))) - S.knit(P, (0, 1, 0), 30, 0.003))(), "Fabric", tuple(np.clip(np.array(top) * 0.8, 0, 1))))
         if style == "robe":
             la.append(("Wraps", (lambda s=s: lambda P: S.intersect(S.shell(skin_lower_arm(P, J, s, b) - 0.015, 0.012), S.intersect(below(P, J[s + "wrist"][1] + 0.3), above(P, J[s + "wrist"][1] - 0.02))))(), "Fabric", (0.6, 0.56, 0.48)))
         seg[s + "LowerArm"] = la
@@ -322,6 +329,9 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
             ("Pants", (lambda s=s: lambda P: cloth(S.intersect(skin_lower_leg(P, J, s, b), above(P, J[s + "ankle"][1] + 0.5)), 0.045, P, J[s + "ankle"] - J[s + "knee"], 6, 0.014, 23))(), "Fabric", pants if style != "robe" else (0.42, 0.38, 0.32)),
             ("Boot", (lambda s=s: lambda P: cloth(S.intersect(skin_lower_leg(P, J, s, b), below(P, J[s + "ankle"][1] + 0.55)), 0.06, P, (0, 1, 0), 9, 0.006, 24))(), "Leather", boots),
         ]
+        if style != "robe":
+            # laces up the front of the boot
+            seg[s + "LowerLeg"].append(("Laces", (lambda s=s: lambda P: S.union(*[S.capsule(P, J[s + "ankle"] + [-0.07, 0.1 + i * 0.1, -0.2], J[s + "ankle"] + [0.07, 0.14 + i * 0.1, -0.2], 0.014) for i in range(4)]))(), "Fabric", (0.85, 0.82, 0.75)))
         seg[s + "Foot"] = [("Boot", (lambda s=s: lambda P: S.smooth_union(0.03, skin_foot(P, J, s, b) - 0.06, S.rbox(P, (J[s + "ankle"] + J[s + "toe"]) / 2 + [0, -0.17, -0.05], [0.15, 0.04, 0.42], 0.03)))(), "Leather", boots)]
     return seg, J
 
