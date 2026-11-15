@@ -264,14 +264,33 @@ function InventoryService.grantList(player, list)
 	return found, leftovers
 end
 
+-- Taking a loose item. It must vanish the instant it is taken: the prompt is switched off and the
+-- item hidden before anything else, so a second press (or a controller button that fires the
+-- prompt twice) can never take it again, and nothing is left floating behind.
+local taking = setmetatable({}, { __mode = "k" })
+local function vanish(pickupPart)
+	for _, d in pickupPart:GetDescendants() do
+		if d:IsA("ProximityPrompt") then
+			d.Enabled = false
+		elseif d:IsA("ParticleEmitter") then
+			d.Enabled = false
+		elseif d:IsA("Light") then
+			d.Enabled = false
+		end
+	end
+	pickupPart.Transparency = 1
+	pickupPart.CanTouch = false
+end
+
 function InventoryService.pickup(player, pickupPart, itemId, amount)
-	if not pickupPart.Parent then
+	if not pickupPart.Parent or taking[pickupPart] then
 		return
 	end
 	local info = Services.MatchService.getActiveInfo(player)
 	if not info or (info.root.Position - pickupPart.Position).Magnitude > 12 then
 		return
 	end
+	taking[pickupPart] = true
 	amount = pickupPart:GetAttribute("Amount") or amount
 	local added = InventoryService.add(player, itemId, amount)
 	if added > 0 then
@@ -279,11 +298,18 @@ function InventoryService.pickup(player, pickupPart, itemId, amount)
 		local remaining = amount - added
 		if remaining > 0 then
 			pickupPart:SetAttribute("Amount", remaining)
+			local prompt = pickupPart:FindFirstChildOfClass("ProximityPrompt")
+			if prompt then
+				prompt.ObjectText = ("%s (%d left: satchel full)"):format(itemName(itemId), remaining)
+			end
+			taking[pickupPart] = nil
 		else
+			vanish(pickupPart)
 			pickupPart:Destroy()
 		end
 		Net.notify(player, "Toast", { text = "+" .. added .. " " .. itemName(itemId) })
 	else
+		taking[pickupPart] = nil
 		Net.notify(player, "Toast", { text = itemName(itemId) .. ": satchel full" })
 	end
 end

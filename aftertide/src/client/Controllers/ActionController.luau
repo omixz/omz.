@@ -8,7 +8,7 @@
 --   RMB aim, LMB fire                  L2 aim, R2 fire (aim assist while aiming)
 --   R reload (Second Wind if downed)   R1 reload (Second Wind if downed)
 --   F Quieting / grab / melee          X [Square] (reloads when nobody is in reach)
---   Space dodge (dive when sprinting)  L1 dodge
+--   Space jump / vault, Alt dodge      A jump / vault (or interact), L1 dodge
 --   G throw, Q ability                 Y [Triangle] tap: throw · hold: ability
 --   1 long gun, 2 sidearm, 3 holster   D-pad right tap: next weapon · hold: holster
 --   Z next throwable, 4 backpack gun   D-pad down tap: next throwable · hold: backpack gun
@@ -65,6 +65,7 @@ local touchLayout = {
 	Heal = { title = "Heal", pos = UDim2.new(1, -320, 1, -230) },
 	Satchel = { title = "Bag", pos = UDim2.new(1, -320, 1, -300) },
 	Dodge = { title = "Dodge", pos = UDim2.new(1, -320, 1, -160) },
+	Jump = { title = "Jump", pos = UDim2.new(1, -395, 1, -230) },
 }
 
 local function bind(name, handler, ...)
@@ -224,7 +225,12 @@ function ActionController.start()
 		if state == Begin and canAct() then
 			Movement.dodge()
 		end
-	end, Enum.KeyCode.Space, Enum.KeyCode.ButtonL1)
+	end, Enum.KeyCode.LeftAlt, Enum.KeyCode.ButtonL1)
+	bind("Jump", function(state)
+		if state == Begin and canAct() then
+			Movement.jumpOrVault()
+		end
+	end, Enum.KeyCode.Space)
 
 	bind("Ability", function(state)
 		if state == Begin and canAct() then
@@ -253,6 +259,7 @@ function ActionController.start()
 		shown[p] = nil
 	end)
 	local holding = nil
+	local lastTap = setmetatable({}, { __mode = "k" })
 	local function nearestPrompt()
 		local root = State.root
 		if not root then
@@ -278,7 +285,22 @@ function ActionController.start()
 		if state == Begin then
 			local p = nearestPrompt()
 			if not p then
-				return Pass
+				if canAct() then
+					Movement.jumpOrVault() -- A with nothing to interact with: jump / vault
+				end
+				return Sink
+			end
+			if p.HoldDuration <= 0 then
+				-- a tap prompt: fire it once (never twice in a row: that is how an item
+				-- could be taken twice)
+				if os.clock() - (lastTap[p] or -1) > 0.4 then
+					lastTap[p] = os.clock()
+					p:InputHoldBegin()
+					task.defer(function()
+						p:InputHoldEnd()
+					end)
+				end
+				return Sink
 			end
 			holding = p
 			p:InputHoldBegin()
@@ -388,7 +410,38 @@ function ActionController.start()
 		if state == Begin then
 			State.shoulder = -State.shoulder
 		end
-	end, Enum.KeyCode.X, Enum.KeyCode.ButtonR3)
+	end, Enum.KeyCode.X)
+
+	-- Listen: hold L (keyboard) or hold R3 (controller; a quick tap still swaps shoulder)
+	local Listen = Controllers.ListenController
+	bind("Listen", function(state)
+		if state == Begin and canAct() then
+			Listen.set(true)
+		elseif state == End then
+			Listen.set(false)
+		end
+	end, Enum.KeyCode.L)
+	local r3Down, r3Press = 0, 0
+	bind("PadR3", function(state)
+		if state == Begin then
+			r3Down = os.clock()
+			r3Press += 1
+			local mine = r3Press
+			task.delay(0.3, function()
+				if mine == r3Press and r3Down > 0 and canAct() then
+					Listen.set(true)
+				end
+			end)
+		elseif state == End then
+			local held = os.clock() - r3Down
+			r3Down = 0
+			if State.listening then
+				Listen.set(false)
+			elseif held < 0.3 then
+				State.shoulder = -State.shoulder
+			end
+		end
+	end, Enum.KeyCode.ButtonR3)
 
 	bind("Resupply", function(state)
 		if state == Begin and canAct() then

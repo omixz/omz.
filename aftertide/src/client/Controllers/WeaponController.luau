@@ -10,6 +10,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Items = require(Shared.Config.Items)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
+local Sfx = require(Shared.Util.Sfx)
 local State = require(script.Parent.Parent.State)
 
 local WeaponController = {}
@@ -140,7 +141,7 @@ local function muzzleFlash(slot)
 end
 
 function WeaponController.fire()
-	if not State.character or State.downed or State.uiOpen() then
+	if not State.character or State.downed or State.uiOpen() or State.listening or State.vaulting then
 		return
 	end
 	local slot, id, stat = WeaponController.current()
@@ -199,6 +200,11 @@ function WeaponController.ejectShell(slot, isShell)
 	casing.CanTouch = false
 	casing.CFrame = grip.CFrame * CFrame.new(0.2, 0.35, -0.3)
 	casing.Parent = Workspace
+	task.delay(0.35, function()
+		if Sfx.has("ShellDrop") then
+			Sfx.at(casing.Position, "ShellDrop", isShell and 0.8 or 0.5, 40, 0.1)
+		end
+	end)
 	casing.AssemblyLinearVelocity = grip.CFrame.RightVector * 12 + Vector3.new(0, 8, 0)
 	casing.AssemblyAngularVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
 	game:GetService("Debris"):AddItem(casing, 6)

@@ -689,6 +689,36 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	end
 	rig.moving = moving
 
+	-- in the air: a hop tucks the legs and lifts the arms; landing is soft in the knees
+	local vy = v.Y
+	local air = rig.humanoid.FloorMaterial == Enum.Material.Air and math.abs(vy) > 1 and not downed and (rig.prone or 0) < 0.2
+	rig.air = approach(rig.air or 0, air and 1 or 0, air and 16 or 10, dt)
+	local ak = rig.air
+	if ak > 0.01 then
+		local up = math.clamp(vy / 22, -1, 1)
+		lHip += (0.9 - 0.3 * up) * ak
+		rHip += (-0.15 + 0.2 * up) * ak
+		lKnee -= (1.1 - 0.3 * up) * ak
+		rKnee -= (0.4 + 0.2 * up) * ak
+		lAnk += 0.3 * ak
+		lSh += (0.45 + 0.2 * up) * ak
+		rSh += (0.45 + 0.2 * up) * ak
+		waistLean -= 0.08 * ak
+	end
+	-- vaulting: hands plant on the obstacle, one knee drives over, the body folds forward
+	local vaultT = since(char, "VaultAt", serverNow)
+	if vaultT < 0.8 then
+		local k = math.sin(math.min(1, vaultT / 0.8) * math.pi)
+		lSh, rSh = lSh + (1.5 - lSh) * k, rSh + (1.45 - rSh) * k -- reaching forward and down onto the edge
+		lEl, rEl = lEl + (0.45 - lEl) * k, rEl + (0.5 - rEl) * k
+		lShZ, rShZ = lShZ + (-0.15 - lShZ) * k, rShZ + (0.15 - rShZ) * k
+		lHip += 1.5 * k
+		lKnee -= 1.7 * k
+		rHip += 0.45 * k
+		rKnee -= 0.7 * k
+		rootX -= 0.55 * k
+	end
+
 	-- hit flinch: the body jolts away from the hit and the head snaps, then recovers
 	local hurt = since(char, "HurtAt", serverNow)
 	local hurtNeck = 0
@@ -724,7 +754,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	J.rw.Transform = ang(a * 0.1, 0, 0)
 
 	-- the gun in your hands: pose it against the chest and put both hands on it
-	local busyHands = melee < 0.45 or throw < 0.5 or takedown < 1.2 or heal < 2.2 or dodge < dodgeLen
+	local busyHands = melee < 0.45 or throw < 0.5 or takedown < 1.2 or heal < 2.2 or dodge < dodgeLen or vaultT < 0.8
 	local reloading = (reloadUntil > serverNow) or char:GetAttribute("Reloading") == true
 	local drawK = math.clamp((os.clock() - (rig.drawAt or -10)) / 0.4, 0, 1)
 	if armed and not downed and not busyHands and rig.healHolstered then

@@ -244,7 +244,12 @@ local function setupCharacter(player, char, session, isCustomRig)
 	end
 	humanoid.RequiresNeck = false -- health is ours; a joint change must never kill the Humanoid
 	humanoid.UseJumpPower = true
-	humanoid.JumpPower = 0 -- grounded movement; vaulting comes in Stage 5
+	humanoid.JumpPower = 34 -- a short hop (about 3 studs); taller obstacles are vaulted
+	-- never fall over or ragdoll from physics: that is the "randomly tipped over" jank
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+	humanoid.MaxSlopeAngle = 55
 	humanoid.BreakJointsOnDeath = false
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.NameDisplayDistance = 60

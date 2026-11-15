@@ -145,6 +145,46 @@ local function dodge(player, info, direction)
 	Services.PerceptionService.emitNoise(info.root.Position, dive and 14 or 8, "dodge", player)
 end
 
+-- Moving over the world: hop, vault, land. The client does the movement (it owns its character);
+-- here we only add the noise, a short anti-cheat grace for the displacement, and the pose cue.
+local function jump(player, info)
+	local session = info.session
+	local now = os.clock()
+	if now < (session.jumpAt or 0) + 0.5 then
+		return
+	end
+	session.jumpAt = now
+	Services.CharacterService.setGrace(player, 0.8)
+	cue(info, "JumpAt")
+	Services.PerceptionService.emitNoise(info.root.Position, 7, "jump", player)
+end
+
+local function vault(player, info, payload)
+	local session = info.session
+	local now = os.clock()
+	if now < (session.vaultAt or 0) + 0.7 or type(payload) ~= "table" then
+		return
+	end
+	local target = payload.target
+	if typeof(target) ~= "Vector3" or not Geometry.isSaneVector(target - info.root.Position, 24) or (target - info.root.Position).Magnitude > 14 then
+		return
+	end
+	session.vaultAt = now
+	Services.CharacterService.setGrace(player, 1.6)
+	cue(info, "VaultAt")
+	Services.PerceptionService.emitNoise(info.root.Position, 9, "vault", player)
+end
+
+local function land(player, info, speed)
+	if type(speed) ~= "number" or speed ~= speed then
+		return
+	end
+	speed = math.clamp(speed, 0, 120)
+	if speed > 16 then
+		Services.PerceptionService.emitNoise(info.root.Position, math.min(8 + speed * 0.5, 34), "land", player)
+	end
+end
+
 local function quietEnemy(player, info, e, duration)
 	Services.EnemyService.stun(e, duration + 5, nil, "Quieted")
 	setBusy(info, duration)
@@ -733,10 +773,13 @@ local HANDLERS = {
 		dodge(player, info, direction)
 	end,
 	SwapPack = swapPack,
+	Jump = jump,
+	Vault = vault,
+	Land = land,
 }
 
 -- Actions allowed on the Meridian (no encounter running).
-local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true, SwapPack = true }
+local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true, SwapPack = true, Jump = true, Vault = true, Land = true }
 
 function ActionService.init(registry)
 	Services = registry

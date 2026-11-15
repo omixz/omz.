@@ -21,6 +21,8 @@ local GROUP_OF = {
 	Amb_Wind = "Ambience", Amb_Sea = "Ambience", Amb_Drone = "Ambience", FireLoop = "SFX",
 	Music_Tension = "Music", Stinger_Spotted = "Music", Stinger_Clear = "Music",
 	Ui_Tick = "UI", Ui_Confirm = "UI",
+	Listen_On = "UI", Listen_Off = "UI", Listen_Loop = "UI", Listen_Ping = "UI",
+	Amb_Birds = "Ambience", Amb_Gulls = "Ambience",
 }
 
 local groups = {}

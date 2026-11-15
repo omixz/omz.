@@ -24,6 +24,27 @@ local SENS_PAD = 3.0
 local SENS_TOUCH = 0.0065
 local PITCH_MIN, PITCH_MAX = -1.2, 0.95
 
+local bobPhase, landDip = 0, 0
+local fpHidden = false
+local fpNext = 0
+
+-- First person hides the head, torso and legs (and anything worn on them) but keeps the arms and
+-- the gun, so you see your own hands. Switched back when you leave first person.
+local function setFirstPersonVisible(on)
+	local char = State.character
+	if not char then
+		return
+	end
+	for _, d in char:GetDescendants() do
+		if d:IsA("BasePart") then
+			local weapon = d:FindFirstAncestorWhichIsA("Model") and d:FindFirstAncestorWhichIsA("Model").Name:sub(1, 7) == "Weapon_"
+			local keep = weapon or d.Name:find("Arm") or d.Name:find("Hand")
+			d.LocalTransparencyModifier = (on and not keep) and 1 or 0
+		end
+	end
+	fpHidden = on
+end
+
 local yaw, pitch = 0, -0.12
 local padLook = Vector2.zero
 local touchInput, lastTouchPos = nil, nil
@@ -210,6 +231,13 @@ local function update(dt)
 	State.pitch = pitch
 
 	local takedown = os.clock() < State.takedownUntil
+	local firstPerson = State.firstPerson == true and not State.downed and not takedown
+	if firstPerson ~= fpHidden then
+		setFirstPersonVisible(firstPerson)
+	elseif firstPerson and os.clock() > fpNext then
+		fpNext = os.clock() + 0.5
+		setFirstPersonVisible(true) -- parts added later (gun swaps) stay correct
+	end
 	local s = State.shoulder
 	local height, offset, fov
 	-- over-the-shoulder framing: character on the left third, tight when aiming
@@ -302,8 +330,42 @@ local function update(dt)
 		local k = shake * 0.03
 		rot = rot * CFrame.Angles((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
 	end
-	camera.CFrame = CFrame.new(position) * rot
+	-- walking weight: a little vertical bob in step with your feet, a dip when you land
+	local flatSpeed = Vector3.new(root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z).Magnitude
+	local run = math.clamp(flatSpeed / 20, 0, 1)
+	local grounded = State.humanoid and State.humanoid.FloorMaterial ~= Enum.Material.Air
+	bobPhase += dt * (5 + flatSpeed * 0.55)
+	local bobScale = (reduce or not grounded) and 0 or (State.aiming and 0.2 or 1) * run
+	if State.landKick then
+		landDip = math.max(landDip, State.landKick)
+		State.landKick = nil
+	end
+	landDip -= landDip * math.min(1, dt * 7)
+	local bobY = math.sin(bobPhase) * 0.045 * bobScale - landDip
+	local bobX = math.cos(bobPhase * 0.5) * 0.03 * bobScale
+	if firstPerson then
+		-- eyes: just in front of the head, looking where the camera looks
+		local head = State.character and State.character:FindFirstChild("Head")
+		if head then
+			local eye = head.Position + rot.LookVector * 0.3 + Vector3.new(0, 0.12, 0)
+			camera.CFrame = CFrame.new(eye + Vector3.new(bobX, bobY * 1.2, 0)) * rot
+			camera.Focus = CFrame.new(eye)
+			local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
+			local want = weaponFov and (weaponFov + 6) or (State.sprinting and 84 or 78)
+			camera.FieldOfView += (want - camera.FieldOfView) * math.min(1, dt * 10)
+			return
+		end
+	end
+	camera.CFrame = CFrame.new(position + Vector3.new(0, bobY, 0) + rot.RightVector * bobX) * rot
 	camera.Focus = CFrame.new(focus)
+end
+
+function CameraController.toggleFirstPerson(on)
+	if on == nil then
+		on = not State.firstPerson
+	end
+	State.firstPerson = on
+	player:SetAttribute("FirstPerson", on)
 end
 
 function CameraController.init(registry)

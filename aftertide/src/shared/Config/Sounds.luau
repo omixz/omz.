@@ -54,6 +54,22 @@ local IDS = {
 	Music_Tension = "rbxassetid://124082186264097",
 	Stinger_Spotted = "rbxassetid://120754538435575",
 	Stinger_Clear = "rbxassetid://121168486280613",
+	-- round 4: voices, movement, listening, ambience
+	Voice_A = "rbxassetid://93992041891670",
+	Voice_B = "rbxassetid://121975714721496",
+	Voice_C = "rbxassetid://119244749168715",
+	Land = "rbxassetid://92798889873778",
+	Vault = "rbxassetid://130582866628980",
+	Jump = "rbxassetid://86695053997612",
+	Listen_On = "rbxassetid://121575637405085",
+	Listen_Off = "rbxassetid://73042838451574",
+	Listen_Loop = "rbxassetid://111352797348693",
+	Listen_Ping = "rbxassetid://124282827676070",
+	Amb_Birds = "rbxassetid://81453256883344",
+	Amb_Gulls = "rbxassetid://101380433515222",
+	ShellDrop = "rbxassetid://132563956846175",
+	Breath_Heavy = "rbxassetid://129405311830441",
+	Cloth = "rbxassetid://114522137736035",
 	-- interface
 	Ui_Tick = "rbxassetid://97844955766987",
 	Ui_Confirm = "rbxassetid://125630457998944",
@@ -81,6 +97,8 @@ local VOLUME = {
 	Amb_Wind = 0.7, Amb_Sea = 0.45, Amb_Drone = 0.6, Music_Tension = 0.8,
 	Step = 0.35, StepWater = 0.45, Hushed_Breath = 0.6, Heartbeat = 0.6,
 	Ui_Tick = 0.3, Ui_Confirm = 0.4,
+	Voice_A = 0.9, Voice_B = 0.9, Voice_C = 0.9, Land = 0.8, Vault = 0.7, Jump = 0.5,
+	Amb_Birds = 0.8, Amb_Gulls = 0.7, ShellDrop = 0.5, Breath_Heavy = 0.7, Listen_Loop = 0.5,
 }
 
 local Sounds = {}

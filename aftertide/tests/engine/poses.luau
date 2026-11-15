@@ -52,6 +52,8 @@ local SCEN = SCENARIOS or {
 	{ name = "heal", slot = "sidearm", attrs = { HealAt = now - 1.0 } },
 	{ name = "prone_sidearm", slot = "sidearm", prone = true },
 	{ name = "crouch_long", slot = "long", crouch = true },
+	{ name = "vault", slot = "sidearm", attrs = { VaultAt = now - 0.4 } },
+	{ name = "jump_up", slot = "long", vel = Vector3.new(0, 14, 0) },
 }
 if ACTION_TEST then
 	-- each gun mid-action: just fired (lever / pump / bolt / cylinder), and half-way through a reload
@@ -64,7 +66,8 @@ if ACTION_TEST then
 end
 local out = { scenarios = {} }
 for _, sc in SCEN do
-	for _, a in { "ReloadUntil", "HealAt", "ReloadDur" } do
+	rig.HumanoidRootPart.AssemblyLinearVelocity = sc.vel or Vector3.zero
+	for _, a in { "ReloadUntil", "HealAt", "ReloadDur", "VaultAt" } do
 		rig:SetAttribute(a, nil)
 	end
 	for k, v in sc.attrs or {} do

@@ -22,6 +22,7 @@ local stillTime = 0
 local lastSent = ""
 local lastLookSent, lastLookAt = 0, 0
 local dodgeReadyAt = 0
+local sprintTime = 0
 
 local function send()
 	local stance = State.prone and "Prone" or (State.crouched and "Crouch" or "Stand")
@@ -137,6 +138,161 @@ function MovementController.dodge()
 	end
 end
 
+-- Jump and vault ---------------------------------------------------------------------------------
+
+local probeParams = RaycastParams.new()
+probeParams.FilterType = Enum.RaycastFilterType.Exclude
+probeParams.IgnoreWater = true
+local jumpReadyAt = 0
+
+-- Looks for something waist- to chest-high in front of you that you can go over, and for open
+-- ground beyond it. Returns the vault (start, apex, landing) or nil.
+local function probeVault(dir)
+	local root, humanoid = State.root, State.humanoid
+	local enemies = Workspace:FindFirstChild("Enemies")
+	probeParams.FilterDescendantsInstances = { State.character, enemies }
+	local feet = root.Position.Y - (root.Size.Y / 2 + humanoid.HipHeight)
+	local hit
+	for _, h in { 1.2, 2.4 } do -- knee and waist
+		local r = Workspace:Raycast(Vector3.new(root.Position.X, feet + h, root.Position.Z), dir * 3.6, probeParams)
+		if r and r.Instance.CanCollide and r.Instance.Transparency < 1 then
+			hit = r
+			break
+		end
+	end
+	if not hit then
+		return nil, "no obstacle in front"
+	end
+	local into = hit.Position + dir * 0.7
+	local top = Workspace:Raycast(Vector3.new(into.X, feet + 5.4, into.Z), Vector3.new(0, -5.4, 0), probeParams)
+	if not top or top.Normal.Y < 0.6 then
+		return nil, "no flat top"
+	end
+	local h = top.Position.Y - feet
+	if h < 1.1 or h > 4.6 then
+		return nil, "height " .. tostring(h)
+	end
+	if Workspace:Raycast(Vector3.new(into.X, top.Position.Y + 0.15, into.Z), Vector3.new(0, 3.4, 0), probeParams) then
+		return nil, "no headroom"
+	end
+	local base = Vector3.new(hit.Position.X, top.Position.Y, hit.Position.Z)
+	local lastWhy = "none"
+	for d = 1.1, 9, 0.8 do
+		local pt = base + dir * d
+		local floor = Workspace:Raycast(pt + Vector3.new(0, 3.2, 0), Vector3.new(0, -(h + 9), 0), probeParams)
+		if not floor then
+			lastWhy = ("d=%.1f: no floor"):format(d)
+		elseif not (floor.Position.Y < feet + 0.9 and floor.Normal.Y > 0.7) then
+			lastWhy = ("d=%.1f: floor at %.2f (%s) feet %.2f"):format(d, floor.Position.Y, floor.Instance.Name, feet)
+		else
+			local clear = not Workspace:Raycast(base + Vector3.new(0, 1.4, 0), dir * d, probeParams)
+			local room = not Workspace:Raycast(Vector3.new(pt.X, floor.Position.Y + 0.6, pt.Z), Vector3.new(0, 4.2, 0), probeParams)
+			if not (clear and room) then
+				lastWhy = ("d=%.1f: clear=%s room=%s"):format(d, tostring(clear), tostring(room))
+			end
+			if clear and room then
+				local stand = root.Size.Y / 2 + humanoid.HipHeight
+				return { top = top.Position.Y, height = h, dir = dir, target = Vector3.new(pt.X, floor.Position.Y + stand, pt.Z), stand = stand }
+			end
+		end
+	end
+	return nil, "no landing: " .. lastWhy
+end
+
+local function runVault(v)
+	local root, humanoid = State.root, State.humanoid
+	State.vaulting = true
+	State.sprinting = false
+	Net.event("Action"):FireServer("Vault", { target = v.target })
+	if Sfx.has("Vault") then
+		Sfx.at(root.Position, "Vault", 0.8, 60, 0.05)
+	end
+	local start = root.Position
+	local rest = Geometry.flat(v.dir)
+	local apexY = math.max(start.Y, v.top + v.stand + 0.5)
+	local control = (start + v.target) / 2
+	control = Vector3.new(control.X, 2 * apexY - (start.Y + v.target.Y) / 2, control.Z)
+	local duration = 0.42 + 0.06 * v.height + 0.025 * (v.target - start).Magnitude
+	local t0 = os.clock()
+	root.Anchored = true
+	local conn
+	local function finish()
+		if conn then
+			conn:Disconnect()
+			conn = nil
+		end
+		if root.Parent then
+			root.Anchored = false
+			root.AssemblyLinearVelocity = rest * 7
+		end
+		State.vaulting = false
+	end
+	conn = RunService.RenderStepped:Connect(function()
+		if not root.Parent or State.downed then
+			finish()
+			return
+		end
+		local k = math.clamp((os.clock() - t0) / duration, 0, 1)
+		local e = k * k * (3 - 2 * k)
+		local pos = start * (1 - e) ^ 2 + control * (2 * (1 - e) * e) + v.target * (e * e)
+		root.CFrame = CFrame.lookAt(pos, pos + rest)
+		root.AssemblyLinearVelocity = Vector3.zero
+		if k >= 1 then
+			finish()
+		end
+	end)
+	task.delay(duration + 0.5, finish) -- never stay frozen
+end
+
+-- Test hook: what would a vault from the current character in direction `dir` do? (engine tests)
+function MovementController.debugProbe(dir)
+	local v, why = probeVault(Geometry.flat(dir).Unit)
+	if not v then
+		return { fail = why }
+	end
+	return { top = v.top, height = v.height, target = { v.target.X, v.target.Y, v.target.Z } }
+end
+
+-- Space / A: vault whatever is in front of you if you can; otherwise a short hop.
+function MovementController.jumpOrVault()
+	local root, humanoid = State.root, State.humanoid
+	if not root or not humanoid or State.downed or State.uiOpen() or State.vaulting or State.prone or State.listening then
+		return
+	end
+	local now = os.clock()
+	if now < jumpReadyAt then
+		return
+	end
+	local dir = humanoid.MoveDirection
+	if dir.Magnitude < 0.1 then
+		dir = root.CFrame.LookVector
+	end
+	dir = Geometry.flat(dir).Unit
+	local v = probeVault(dir)
+	if v then
+		jumpReadyAt = now + 0.9
+		if State.crouched then
+			State.crouched = false
+			send()
+		end
+		runVault(v)
+		return
+	end
+	if State.aiming or humanoid.FloorMaterial == Enum.Material.Air then
+		return
+	end
+	jumpReadyAt = now + 0.75
+	if State.crouched then
+		State.crouched = false
+		send()
+	end
+	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	Net.event("Action"):FireServer("Jump")
+	if Sfx.has("Jump") then
+		Sfx.at(root.Position, "Jump", 0.6, 50, 0.08)
+	end
+end
+
 function MovementController.onCharacter()
 	currentSpeed = 0
 	lastSent = ""
@@ -165,6 +321,25 @@ local function step(dt)
 		send()
 	end
 
+	-- landing: the dip, the thud, and the noise other things can hear
+	local airborne = humanoid.FloorMaterial == Enum.Material.Air
+	if airborne then
+		State.fallSpeed = math.max(State.fallSpeed or 0, -root.AssemblyLinearVelocity.Y)
+	elseif State.wasAirborne then
+		local fs = State.fallSpeed or 0
+		if fs > 14 and not State.vaulting then
+			State.landKick = math.clamp((fs - 10) * 0.012, 0.05, 0.4)
+			if Sfx.has("Land") then
+				Sfx.at(root.Position - Vector3.new(0, 2.5, 0), "Land", math.clamp(fs / 40, 0.3, 1), 70, 0.1)
+			else
+				Sfx.at(root.Position - Vector3.new(0, 2.5, 0), "Step", math.clamp(fs / 30, 0.4, 1), 70, 0.2)
+			end
+			Net.event("Action"):FireServer("Land", fs)
+		end
+		State.fallSpeed = 0
+	end
+	State.wasAirborne = airborne
+
 	local busy = (char:GetAttribute("BusyUntil") or 0) > Workspace:GetServerTimeNow()
 	local moving = humanoid.MoveDirection.Magnitude > 0.05
 	local S = Movement.Speeds
@@ -173,10 +348,14 @@ local function step(dt)
 		target = 0
 	elseif State.downed then
 		target = S.Downed
+	elseif State.vaulting then
+		target = 0
 	elseif busy then
 		target = 1.5
 	elseif char:GetAttribute("Grabbing") then
 		target = 5 -- dragging someone
+	elseif State.listening then
+		target = S.Crouch * 0.7 -- listening: you creep (and you can't shoot)
 	elseif State.prone then
 		target = State.aiming and S.Prone * 0.5 or S.Prone
 	elseif State.aiming then
@@ -202,7 +381,7 @@ local function step(dt)
 	humanoid.WalkSpeed = currentSpeed
 
 	-- aiming: the body faces the camera so you strafe around your target
-	if State.aiming and not State.downed then
+	if (State.aiming or State.firstPerson or State.listening) and not State.downed and not State.vaulting then
 		humanoid.AutoRotate = false
 		local yaw = Controllers.CameraController.getYaw()
 		local _, current = root.CFrame:ToEulerAnglesYXZ()
@@ -210,6 +389,16 @@ local function step(dt)
 		root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, current + diff * math.min(1, dt * 18), 0)
 	else
 		humanoid.AutoRotate = true
+	end
+
+	-- out of breath after a long sprint
+	if State.sprinting then
+		sprintTime += dt
+	else
+		if sprintTime > 4 and Sfx.has("Breath_Heavy") then
+			Sfx.ui("Breath_Heavy", 0.45)
+		end
+		sprintTime = 0
 	end
 
 	stillTime = moving and 0 or stillTime + dt

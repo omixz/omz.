@@ -157,6 +157,8 @@ function SoundController.start()
 	amb.wind = loop("Amb_Wind")
 	amb.sea = loop("Amb_Sea")
 	amb.drone = loop("Amb_Drone")
+	amb.birds = loop("Amb_Birds")
+	amb.gulls = loop("Amb_Gulls")
 	music = loop("Music_Tension")
 	heartbeat = loop("Heartbeat")
 
@@ -210,6 +212,11 @@ function SoundController.start()
 		fade(amb.wind, inEncounter and 0.45 or 0.3)
 		fade(amb.sea, inEncounter and 0.08 or 0.3)
 		fade(amb.drone, inEncounter and (0.25 + threat * 0.15) or 0.05)
+		-- daytime life: birds in the trees, gulls over the water (quiet when something hunts you)
+		local clock = game:GetService("Lighting").ClockTime
+		local day = clock > 6 and clock < 18.5
+		fade(amb.birds, day and (1 - threat * 0.9) * (inEncounter and 0.5 or 0.25) or 0, 1)
+		fade(amb.gulls, day and (inEncounter and 0.18 or 0.45) or 0, 1)
 		musicLevel += ((inEncounter and threat or 0) - musicLevel) * math.min(1, dt * (threat > musicLevel and 2.5 or 0.4))
 		fade(music, musicLevel * 0.45, 4)
 		local char = State.character

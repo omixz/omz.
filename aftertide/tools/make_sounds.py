@@ -450,6 +450,124 @@ def ui_confirm():
 
 
 # ---------------------------------------------------------------- export
+# ---------------------------------------------------------------- round 4: voices, movement, listening
+def voice_blip(f0=120, formants=((650, 1100), (420, 2000)), seconds=0.55, rasp=0.25, fall=0.28):
+    """A short human-ish shout ("hey!"): a glottal saw with a falling pitch, run through two
+    formant bands that glide from one vowel to the next. Not words, but it reads as a voice."""
+    x = t(seconds)
+    pitch = lambda q: f0 * (1 + 0.10 * np.sin(2 * np.pi * 5 * q)) * (1 - fall * np.clip(q / seconds, 0, 1))
+    glottal = tone(pitch, seconds, "saw")
+    glottal = np.tanh(glottal * 1.6) + rasp * noise(seconds) * 0.5
+    a1, a2 = formants[0]
+    b1, b2 = formants[1]
+    f1 = sweep_filter(glottal, a1, b1, 0.18)
+    f2 = sweep_filter(glottal, a2, b2, 0.22)
+    out = f1 + 0.55 * f2
+    out *= env(len(x), 0.015, seconds * 0.55) * (0.6 + 0.4 * np.sin(np.pi * np.clip(x / seconds, 0, 1)))
+    return normalise(reverb(out, 0.5, 0.18, 3500), 0.8)
+
+
+def land_thud():
+    s = 0.45
+    body = tone(lambda q: 95 * np.exp(-q * 9) + 38, s) * env(int(SR * s), 0.001, 0.09)
+    scuff = fft_filter(noise(s), low=200, high=3000) * env(int(SR * s), 0.002, 0.05) * 0.5
+    grit = fft_filter(noise(s), low=2500, high=9000) * env(int(SR * s), 0.001, 0.02) * 0.2
+    return normalise(mix(body, scuff, grit), 0.85)
+
+
+def vault_sound():
+    s = 0.7
+    cloth = sweep_filter(noise(s), 500, 2600, 0.7) * env(int(SR * s), 0.12, 0.25) * 0.7
+    grunt = voice_blip(105, ((520, 900), (420, 1500)), 0.28, 0.5, 0.15)
+    slap = at(fft_filter(noise(0.12), low=150, high=1800) * env(int(SR * 0.12), 0.001, 0.025), 0.3, s)
+    touch = at(land_thud()[: int(SR * 0.3)] * 0.5, 0.52, s)
+    return normalise(mix(cloth, at(grunt * 0.55, 0.05, s), slap, touch), 0.8)
+
+
+def jump_sound():
+    s = 0.3
+    return normalise(mix(sweep_filter(noise(s), 400, 2400, 0.6) * env(int(SR * s), 0.08, 0.1) * 0.6, at(footstep("concrete")[: int(SR * 0.15)] * 0.8, 0.0, s)), 0.75)
+
+
+def listen_on():
+    s = 0.9
+    rise = sweep_filter(noise(s), 120, 1400, 0.5) * env(int(SR * s), 0.4, 0.35) * 0.7
+    low = tone(lambda q: 55 + 40 * q / s, s) * env(int(SR * s), 0.3, 0.4) * 0.7
+    ring = tone(5200, s) * env(int(SR * s), 0.5, 0.25) * 0.05
+    return normalise(reverb(mix(rise, low, ring), 0.8, 0.25, 3000), 0.8)
+
+
+def listen_off():
+    s = 0.5
+    fall = sweep_filter(noise(s), 1400, 150, 0.5) * env(int(SR * s), 0.03, 0.14) * 0.8
+    thump = tone(70, s) * env(int(SR * s), 0.002, 0.12) * 0.6
+    return normalise(mix(fall, thump), 0.75)
+
+
+def listen_loop(seconds=8.0):
+    x = t(seconds)
+    drone = tone(110, seconds) * 0.3 * lfo(seconds, 0.17, 0.4) + tone(165.4, seconds) * 0.15
+    air = fft_filter(noise(seconds), low=80, high=700) * 0.25 * lfo(seconds, 0.11, 0.5)
+    ring = tone(6100, seconds) * 0.012 * lfo(seconds, 0.3, 0.6)
+    out = drone + air + ring
+    _ = x
+    return normalise(loopable(out, 0.6), 0.6)
+
+
+def listen_ping():
+    s = 0.5
+    ping = tone(lambda q: 920 - 260 * np.clip(q / 0.2, 0, 1), s) * env(int(SR * s), 0.002, 0.07)
+    echo = at(ping * 0.35, 0.16, s)
+    return normalise(reverb(mix(ping, echo), 0.5, 0.3, 4000), 0.65)
+
+
+def amb_birds(seconds=24.0):
+    out = np.zeros(int(SR * seconds))
+    pos = rng.uniform(0.5, 2.0)
+    while pos < seconds - 1.5:
+        base = rng.uniform(2200, 4200)
+        for k in range(rng.integers(2, 6)):
+            d = rng.uniform(0.07, 0.16)
+            chirp = tone(lambda q, b=base: b * (1 + rng.uniform(0.15, 0.4) * np.sin(2 * np.pi * rng.uniform(8, 16) * q) * 0 + 0.3 * q / d) , d) * env(int(SR * d), 0.005, d * 0.45)
+            out += at(chirp * rng.uniform(0.15, 0.4), pos + k * (d + rng.uniform(0.03, 0.08)), seconds)
+        pos += rng.uniform(2.5, 7.0)
+    out = fft_filter(out, low=1500, high=9000)
+    return normalise(loopable(reverb(out[: int(SR * seconds)], 1.0, 0.3, 6000)[: int(SR * seconds)], 0.5), 0.5)
+
+
+def amb_gulls(seconds=24.0):
+    out = np.zeros(int(SR * seconds))
+    pos = rng.uniform(1, 4)
+    while pos < seconds - 2:
+        d = rng.uniform(0.5, 0.9)
+        f = lambda q: 1500 + 700 * np.sin(np.pi * np.clip(q / d, 0, 1)) - 200 * np.clip(q / d, 0, 1)
+        cry = np.tanh(tone(f, d, "saw") * 2) * 0.7 + noise(d) * 0.15
+        cry = sweep_filter(cry, 1300, 2100, 0.3) * env(int(SR * d), 0.06, d * 0.5)
+        out += at(cry * rng.uniform(0.4, 0.8), pos, seconds)
+        if rng.random() < 0.5:
+            out += at(cry * 0.5, pos + d + 0.15, seconds)
+        pos += rng.uniform(5, 12)
+    return normalise(loopable(reverb(out, 1.4, 0.4, 3000)[: int(SR * seconds)], 0.5), 0.5)
+
+
+def shell_drop():
+    s = 0.5
+    out = np.zeros(int(SR * s))
+    for i, (when, amp) in enumerate([(0.0, 1.0), (0.09, 0.55), (0.16, 0.3)]):
+        out += at(tone(3300 + i * 260, 0.25) * env(int(SR * 0.25), 0.0003, 0.03) * amp * 0.5, when, s)
+    return normalise(out, 0.6)
+
+
+def breath_heavy():
+    return breath_loop(140, 0.18, 3.5)
+
+
+def cloth_rustle():
+    s = 0.35
+    return normalise(sweep_filter(noise(s), 700, 3200, 0.7) * env(int(SR * s), 0.05, 0.1) * (0.6 + 0.4 * np.abs(np.sin(2 * np.pi * 14 * t(s)))), 0.55)
+
+
+
 SOUNDS = {
     "Gun_revolver": lambda: gunshot(95, 9000, 0.06, 1.4),
     "Gun_carbine": lambda: gunshot(85, 10000, 0.07, 1.6),
@@ -495,6 +613,22 @@ SOUNDS = {
     "Bell_Strike": bell_strike,
     "Ui_Tick": ui_tick,
     "Ui_Confirm": ui_confirm,
+    # round 4
+    "Voice_A": lambda: voice_blip(112, ((660, 1050), (430, 2050)), 0.5, 0.25, 0.25),
+    "Voice_B": lambda: voice_blip(96, ((600, 980), (400, 1850)), 0.6, 0.35, 0.3),
+    "Voice_C": lambda: voice_blip(205, ((780, 1250), (480, 2300)), 0.5, 0.2, 0.22),
+    "Land": land_thud,
+    "Vault": vault_sound,
+    "Jump": jump_sound,
+    "Listen_On": listen_on,
+    "Listen_Off": listen_off,
+    "Listen_Loop": listen_loop,
+    "Listen_Ping": listen_ping,
+    "Amb_Birds": amb_birds,
+    "Amb_Gulls": amb_gulls,
+    "ShellDrop": shell_drop,
+    "Breath_Heavy": breath_heavy,
+    "Cloth": cloth_rustle,
 }
 
 
@@ -513,8 +647,12 @@ def write_ogg(name, data):
 
 
 def main():
+    import sys
+    only = set(sys.argv[1:])
     os.makedirs(OUT, exist_ok=True)
     for name, fn in SOUNDS.items():
+        if only and name not in only:
+            continue
         write_ogg(name, fn())
         print("wrote", name)
 

@@ -226,6 +226,92 @@ local function buildModel(position, typeName, cfg)
 	return model, humanoid, root, head
 end
 
+-- Callouts ----------------------------------------------------------------------------------
+-- The Harbour Watch and the Tidebound talk to each other like people: they have names, call out
+-- what they see, order a flank, react when a friend goes down. Clients show a bubble over the
+-- speaker and a subtitle; the voice blip is played by the sound system.
+local NAME_POOL = {
+	Watch = { "Dale", "Rook", "Imogen", "Hobbs", "Wren", "Cutter", "Marlow", "Pike", "Okoye", "Lena", "Garrick", "Teague" },
+	Tidebound = { "Ash", "Wake", "Tern", "Kelp", "Brine", "Gull", "Reed", "Marrow", "Silt", "Wrack" },
+}
+local LINES = {
+	Watch = {
+		spotted = { "Contact!", "I see them!", "There! Over there!", "Found one!", "Hostile! Hostile!" },
+		lost = { "Where'd they go?", "Lost them. Spread out!", "Check the corners.", "They can't have gone far.", "Sweep left!" },
+		flank = { "%s, flank them!", "%s, get round the side!", "%s, go wide!", "Push left, %s!", "%s, cut them off!" },
+		ack = { "Moving!", "On it!", "Going round!", "Got it!" },
+		down = { "%s is down!", "No! %s!", "Man down!", "They got %s!" },
+		heard = { "What was that?", "Did you hear that?", "Check it out.", "Stay sharp.", "Something's out there." },
+		hostage = { "Let them go!", "I can't get a clean shot!", "Hold your fire!" },
+		idle = { "All quiet.", "I hate this fog.", "Keep your eyes open.", "My boots are killing me.", "Smell that? Salt." },
+		hurt = { "I'm hit!", "Argh!", "Cover me!" },
+	},
+	Tidebound = {
+		spotted = { "The Pall sees you!", "Unclean!", "Ring the bell!", "They walk the tide line!" },
+		lost = { "The tide takes them.", "Be still... listen...", "They hide in the grass." },
+		flank = { "Brother %s, circle them.", "%s, along the water!", "%s, cut them off!" },
+		ack = { "The tide guides me.", "Yes, brother.", "Hush..." },
+		down = { "%s has gone to the deep!", "Not %s!", "The tide takes %s." },
+		heard = { "Something stirs...", "Quiet. Listen.", "The Pall whispers." },
+		hostage = { "Spare them!", "Let go of my brother!" },
+		idle = { "Be still.", "The tide turns.", "Hush, hush." },
+		hurt = { "It burns!", "The deep calls..." },
+	},
+}
+local usedNames = {}
+
+local function assignIdentity(e)
+	local faction = e.cfg.faction or "Watch"
+	local pool = NAME_POOL[faction] or NAME_POOL.Watch
+	local name
+	for _ = 1, 8 do
+		name = pool[rng:NextInteger(1, #pool)]
+		if not usedNames[name] then
+			break
+		end
+	end
+	usedNames[name] = true
+	e.name = name
+	e.voice = ({ "A", "B", "C" })[rng:NextInteger(1, 3)]
+	e.model:SetAttribute("CalloutName", name)
+end
+
+-- kind: spotted / lost / flank / ack / down / heard / hostage / idle / hurt
+function EnemyService.say(e, kind, arg)
+	if e.dead or not e.cfg.human or not e.name then
+		return
+	end
+	local now = os.clock()
+	if now < (e.sayAt or 0) and kind ~= "down" and kind ~= "flank" and kind ~= "ack" then
+		return
+	end
+	local pool = (LINES[e.cfg.faction or "Watch"] or LINES.Watch)[kind]
+	if not pool then
+		return
+	end
+	local line = pool[rng:NextInteger(1, #pool)]
+	if line:find("%%s") then
+		line = line:format(arg or "friend")
+	end
+	e.sayAt = now + 2.4
+	Net.notifyAll("Callout", { model = e.model, name = e.name, text = line, kind = kind, faction = e.cfg.faction or "Watch" })
+	Sfx.at(e.root.Position, "Voice_" .. e.voice, 0.8, 90, 0.07)
+end
+
+-- Another person of this faction who is also after the same player (for flank orders).
+local function chaseMate(e)
+	local best, bestD
+	for _, o in enemies do
+		if o ~= e and not o.dead and o.cfg.human and o.state == "Chase" and o.target == e.target and not o.flankUntil then
+			local d = (o.root.Position - e.root.Position).Magnitude
+			if d < 70 and (not bestD or d < bestD) then
+				best, bestD = o, d
+			end
+		end
+	end
+	return best
+end
+
 -- Helpers ---------------------------------------------------------------------------------
 
 local function setState(e, newState)
@@ -366,8 +452,43 @@ local function humanAttack(e, info, dist, seen, now)
 		e.suspicion[e.target] = 0.6
 		e.target = nil
 		e.searchOrigin = e.lastKnown
+		e.flankUntil = nil
 		setState(e, "Search")
+		EnemyService.say(e, "lost")
 		return
+	end
+	-- teamwork: with two of them on one player, the farther one is ordered round the side
+	if atk.kind ~= "melee" and now > (e.nextOrder or 0) then
+		e.nextOrder = now + 9 + rng:NextNumber() * 5
+		local mate = e.target and chaseMate(e)
+		if mate and not e.flankUntil and rng:NextNumber() < 0.75 then
+			local mateD = (mate.root.Position - info.root.Position).Magnitude
+			local flanker, leader = e, mate
+			if mateD > dist then
+				flanker, leader = mate, e
+			end
+			EnemyService.say(leader, "flank", flanker.name)
+			flanker.flankUntil = now + 8
+			flanker.flankSide = rng:NextNumber() < 0.5 and -1 or 1
+			task.delay(1.1, function()
+				EnemyService.say(flanker, "ack")
+			end)
+		end
+	end
+	if e.flankUntil and now < e.flankUntil and atk.kind ~= "melee" then
+		-- circling to the side while the other keeps them busy
+		local toT = Geometry.flat(info.root.Position - e.root.Position)
+		if toT.Magnitude > 4 then
+			local right = Vector3.new(-toT.Unit.Z, 0, toT.Unit.X)
+			local point = info.root.Position - toT.Unit * math.min(dist * 0.4, atk.range * 0.45) + right * e.flankSide * 15
+			e.model:SetAttribute("Aiming", false)
+			if moveTo(e, point, cfg.chaseSpeed) then
+				e.flankUntil = nil
+			end
+			return
+		end
+	elseif e.flankUntil then
+		e.flankUntil = nil
 	end
 	if atk.kind == "melee" then
 		if dist <= atk.range then
@@ -423,7 +544,7 @@ local function humanAttack(e, info, dist, seen, now)
 					e.model:SetAttribute("Aiming", false)
 					if now > (e.nextHoldFire or 0) then
 						e.nextHoldFire = now + 6
-						Sfx.at(e.root.Position, cfg.callout or "Radio_Callout", 0.7, 90)
+						EnemyService.say(e, "hostage")
 					end
 					return
 				end
@@ -507,6 +628,7 @@ local function update(e, dt, now, active)
 		e.lastSeen[bestPlayer] = e.lastSeen[bestPlayer] or now
 		setState(e, "Chase")
 		Services.MatchService.onSpotted(bestPlayer, e)
+		EnemyService.say(e, "spotted")
 		if cfg.callout and now > (e.nextCallout or 0) then
 			-- radio / bell: everyone nearby converges on the spotted player
 			e.nextCallout = now + 10
@@ -591,6 +713,10 @@ local function update(e, dt, now, active)
 			face(e, e.root.Position + e.root.CFrame.RightVector * (rng:NextNumber() < 0.5 and -4 or 4))
 		end
 	else -- Patrol (or objective)
+		if cfg.human and now > (e.nextIdle or math.huge) then
+			e.nextIdle = now + 22 + rng:NextNumber() * 30
+			EnemyService.say(e, "idle")
+		end
 		if bestPlayer and bestSus >= cfg.noticeThreshold then
 			stop(e)
 			face(e, findInfo(active, bestPlayer).root.Position)
@@ -690,6 +816,10 @@ function EnemyService.spawn(typeName, position, opts)
 	setState(e, "Patrol")
 	table.insert(enemies, e)
 	byModel[model] = e
+	if cfg.human then
+		assignIdentity(e)
+		e.nextIdle = os.clock() + 14 + rng:NextNumber() * 24
+	end
 	return e
 end
 
@@ -717,6 +847,7 @@ function EnemyService.clear()
 	table.clear(enemies)
 	table.clear(byModel)
 	table.clear(fireZones)
+	table.clear(usedNames)
 end
 
 function EnemyService.count()
@@ -885,6 +1016,12 @@ function EnemyService.disperse(e, byPlayer)
 		e.model:SetAttribute("State", "Ragdoll")
 		Services.CharacterService.setFlashlight(e.model, false)
 		Services.MatchService.onEnemyKilled(byPlayer, e)
+		for _, w in enemies do
+			if w ~= e and not w.dead and w.cfg.human and (w.root.Position - e.root.Position).Magnitude < 45 and rng:NextNumber() < 0.8 then
+				EnemyService.say(w, "down", e.name)
+				break
+			end
+		end
 		-- sometimes they drop a few rounds of whatever they carried
 		local drop = ({ rifle = "rifleAmmo", revolver = "pistolAmmo", bow = "arrows" })[e.cfg.attack and e.cfg.attack.weapon or ""]
 		if drop and rng:NextNumber() < 0.55 then
@@ -1017,6 +1154,10 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 		EnemyService.disperse(e, byPlayer)
 		return true
 	end
+	if e.cfg.human and os.clock() > (e.nextHurtSay or 0) and rng:NextNumber() < 0.6 then
+		e.nextHurtSay = os.clock() + 4
+		EnemyService.say(e, "hurt")
+	end
 	-- stagger, and being shot always alerts it to the shooter
 	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
 	if hit then
@@ -1104,6 +1245,10 @@ function EnemyService.onNoise(event)
 					end
 					e.investigatePos = event.position
 					e.heardAt = os.clock()
+					if e.cfg.human and event.kind ~= "footstep" and loud > 0.1 and os.clock() > (e.nextHeardSay or 0) then
+						e.nextHeardSay = os.clock() + 9
+						EnemyService.say(e, "heard")
+					end
 					if loud > 0.15 and event.kind ~= "footstep" then
 						e.model:SetAttribute("Heard", Workspace:GetServerTimeNow()) -- clients show a "?" and turn the head
 					end

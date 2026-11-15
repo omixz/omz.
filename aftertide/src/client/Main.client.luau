@@ -23,7 +23,7 @@ task.spawn(function()
 	end
 end)
 
-local ORDER = { "CameraController", "WeaponController", "MovementController", "ActionController", "EffectsController", "GraphicsController", "AnimationController", "PlayerAnimator", "EnemyAnimator", "SoundController", "UIController" }
+local ORDER = { "CameraController", "WeaponController", "MovementController", "ListenController", "ActionController", "EffectsController", "GraphicsController", "AnimationController", "PlayerAnimator", "EnemyAnimator", "SoundController", "UIController" }
 local controllers = {}
 for _, name in ORDER do
 	controllers[name] = require(Controllers:WaitForChild(name))
@@ -50,6 +50,8 @@ local function bindCharacter(char)
 	State.sprinting = false
 	State.aiming = false
 	State.downed = false
+	State.vaulting = false
+	State.listening = false
 	for _, name in ORDER do
 		if controllers[name].onCharacter then
 			task.spawn(controllers[name].onCharacter, char)

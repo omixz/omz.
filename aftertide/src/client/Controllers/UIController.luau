@@ -24,6 +24,7 @@ local Quartermaster = require(UI:WaitForChild("Quartermaster"))
 local Spin = require(UI:WaitForChild("Spin"))
 local Guide = require(UI:WaitForChild("Guide"))
 local Logbook = require(UI:WaitForChild("Logbook"))
+local Callouts = require(UI:WaitForChild("Callouts"))
 
 local UIController = {}
 local Controllers
@@ -133,6 +134,9 @@ function UIController.start()
 	build("Quartermaster", function()
 		Quartermaster.build(gui, request)
 	end)
+	build("Callouts", function()
+		Callouts.build(gui)
+	end)
 	build("Logbook", function()
 		Logbook.build(gui)
 	end)
@@ -157,6 +161,10 @@ function UIController.start()
 		end,
 		logbook = function()
 			Logbook.open()
+		end,
+		view = function()
+			Controllers.CameraController.toggleFirstPerson()
+			HUD.toast(State.firstPerson and "First person" or "Third person")
 		end,
 		shop = function()
 			Shop.open()
@@ -219,6 +227,9 @@ function UIController.start()
 			closeMenus()
 			Settings.close()
 			Results.close()
+		elseif key == Enum.KeyCode.K and State.character then
+			Controllers.CameraController.toggleFirstPerson()
+			HUD.toast(State.firstPerson and "First person" or "Third person")
 		elseif key == Enum.KeyCode.F1 then
 			Diagnostics.noteInput("key F1 -> controls")
 			HUD.toggleControls()
@@ -255,6 +266,8 @@ function UIController.start()
 			Quests.open()
 		elseif kind == "OpenQuartermaster" then
 			Quartermaster.open()
+		elseif kind == "Callout" then
+			Callouts.show(data)
 		elseif kind == "DailyReward" then
 			Logbook.showDaily(data.day, data.text)
 		elseif kind == "OpenSpin" then

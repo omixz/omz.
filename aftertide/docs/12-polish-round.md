@@ -80,3 +80,24 @@ button automatically.
 - **Signature guns:** Mara lever carbine, Tobias recurve bow, Ines pump shotgun, Sefa bolt rifle,
   each with only a few spare rounds. A gun chosen at the Quartermaster takes the holster and your
   signature gun goes in the backpack if there is a free slot.
+
+# Round 4
+- **Movement:** Space jumps (a short hop) or **vaults** any wall, crate or ledge between about
+  1 and 4.5 studs high when you face it (engine-tested on the real maps: finds low walls and
+  crates, lands on the far side, refuses open ground and tall walls). Dodge moved to Left Alt
+  (L1 on a controller); A on a controller jumps/vaults when there is nothing to interact with.
+  Landing thud + camera dip, walking head-bob, hop and vault poses. Characters can no longer be
+  tipped over or ragdolled by physics.
+- **First person:** K (or Satchel > FIRST/THIRD PERSON): camera at the eyes, head and torso
+  hidden, arms and gun kept.
+- **Listen mode:** hold L (hold R3 on a controller; a quick tap still swaps shoulder). The screen
+  greys, you creep and cannot shoot, and enemies within about 46 studs show as silhouettes
+  through walls (pale = Hushed, amber = people, red = hunting you) with a ping that speeds up as
+  they get closer.
+- **Callouts:** the Watch and the Tidebound have names and talk: "Contact!", "Where'd they go?",
+  "Wren, flank them!" (and the one ordered really circles round), "No! Dale!", "What was that?".
+  A bubble over the speaker plus a subtitle with a direction arrow. Voice blips are synthesised.
+- **More sounds:** voices, landing, vault, jump, listen on/off/loop/ping, birds, gulls, brass
+  tinks, heavy breathing after a long sprint.
+- **Pickups:** a taken item switches off its prompt and vanishes in the same instant; a second
+  press can never take it twice. A partly taken stack says how many are left.
