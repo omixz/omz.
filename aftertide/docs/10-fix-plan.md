@@ -52,3 +52,18 @@ Key permissions (Creator Hub > Open Cloud > API Keys > your key > add, for this 
 6. V2 test harness and tests, ready to run as soon as the place is published.
 7. With the Place ID and permissions: publish, run the tests, fix from real numbers, then hand
    you a build that has passed the engine tests.
+
+## Round G results (run in the real engine on the published place)
+
+| Test | Result |
+|---|---|
+| Joints (`tests/engine/joints.luau`) | Root cause found: Roblox R15 rigs now ship **AnimationConstraint** joints, not Motor6D, so our animator never ran ("joint missing: UpperTorso.Waist"). `MeshKit.ensureMotors` converts them. |
+| Body fit (`assets.luau`) | 31 pieces on 16 bones, body fully assembled and attached (importer's 180° turn solved exactly). |
+| Poses (`poses.luau`) | Aim (rifle and revolver), ready, reload, crouch, heal, prone and holsters rendered from engine data. Fixed: prone hands were 0.4 studs underground (IK now uses this frame's pose), healing now holsters the gun with hands at the stomach, hip holster sits against the leg. |
+| Maps (`maps.luau`) | Was: 16 props lodged in houses and barricades and 70+ trees/rocks buried in hills (terrain wasn't queryable yet when props were placed). Now: 0 floating, 0 lodged on all three maps (`MapKit.tidy`). |
+| Meridian | 0 overlaps, with no projects built and with all of them. |
+| Skies (`sky.luau`) | All 5 skies resolve to real image IDs. |
+| Robux | 12 developer products and the Supporter pass created on the experience; IDs in `Config/Commerce.luau`. |
+
+Not testable in Open Cloud: physics doesn't simulate in execution sessions, and there's no
+client, so input (satchel, prone key) and deaths/clipping still rely on F2 diagnostics in play.
