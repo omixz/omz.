@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Upgrades = require(Shared.Config.Upgrades)
+local Projects = require(Shared.Config.Projects)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
@@ -53,32 +54,45 @@ end
 
 function HomebaseService.refreshVisuals()
 	local owned = {}
-	for _, r in Upgrades.Repairs do
+	for _, r in Projects.List do
 		owned[r.id] = HomebaseService.anyoneHas(r.id)
 	end
 	Services.MapService.setFerryRepairs(owned)
 end
 
-local function repair(player, repairId)
-	if type(repairId) ~= "string" then
+-- Builds a Meridian project: Scrip + Materials, or one Shipwright's Crew token (useToken).
+local function repair(player, repairId, useToken)
+	local p = type(repairId) == "string" and Projects.get(repairId)
+	if not p then
 		return
 	end
-	for _, r in Upgrades.Repairs do
-		if r.id == repairId then
-			if Services.PlayerDataService.hasRepair(player, repairId) then
-				return
-			end
-			if not Services.PlayerDataService.spendScrip(player, r.cost) then
-				toast(player, ("Need %d Scrip. Earn it by clearing encounters."):format(r.cost))
-				return
-			end
-			Services.PlayerDataService.addRepair(player, repairId)
-			task.spawn(Services.PlayerDataService.save, player)
-			toast(player, "Repaired: " .. r.name)
-			HomebaseService.refreshVisuals()
+	local data = Services.PlayerDataService
+	if data.hasRepair(player, p.id) then
+		return
+	end
+	if p.requires and not data.hasRepair(player, p.requires) then
+		toast(player, ("Build the %s first."):format(Projects.get(p.requires).name))
+		return
+	end
+	if useToken == true then
+		if not data.useToken(player, "build") then
+			Net.notify(player, "NeedProduct", { productKey = "ShipwrightCrew" })
 			return
 		end
+	else
+		local d = data.get(player)
+		if not d or d.scrip < p.scrip or (d.materials or 0) < p.materials then
+			toast(player, ("Need %d Scrip and %d Materials. Both come from missions."):format(p.scrip, p.materials))
+			return
+		end
+		data.spendScrip(player, p.scrip)
+		data.spendMaterials(player, p.materials)
+		Services.AnalyticsHelper.economy(player, "sink", p.scrip, Enum.AnalyticsEconomyTransactionType.Shop.Name, "Project_" .. p.id)
 	end
+	data.addRepair(player, p.id)
+	task.spawn(data.save, player)
+	Net.notifyAll("Toast", { text = ("%s built the %s."):format(player.DisplayName, p.name) })
+	HomebaseService.refreshVisuals()
 end
 
 local function setLongGun(player, weaponId)
@@ -131,6 +145,9 @@ function HomebaseService.start()
 			Services.WorkbenchService.buyPerk(player, a)
 		end,
 		Repair = repair,
+		OpenProjects = function(player)
+			Net.notify(player, "OpenRepairs", {})
+		end,
 		SetLongGun = setLongGun,
 		SaveSettings = saveSettings,
 		BuyOutfit = function(player, a)

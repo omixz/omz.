@@ -19,7 +19,7 @@ Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 **Controls:** WASD move · Shift sprint · C crouch (hold C: prone) · Space dodge (dive while sprinting) ·
 RMB aim (Shift while aiming = hold breath) · LMB fire · R reload · 1/2/3 long gun / sidearm /
 holster · F Quieting / melee · G throw, Z next throwable · Q ability · H heal · T flashlight ·
-V Ammo Cache · B Resupply · I / Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
+V Ammo Cache · B Resupply · F2 diagnostics · I / Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
 
 **Before publishing:** play a full crossing in Studio (with *Game Settings > Security >
 Enable Studio Access to API Services* on to test saving), then follow doc 3 to create the
@@ -37,6 +37,7 @@ Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-p
 | 6 | [Play, publish & grow for $0](docs/06-publishing.md) | Studio setup, publishing, maturity form, developer products, free assets, launch checklist |
 | 7 | [Realistic characters & graphics](docs/07-characters-and-graphics.md) | Free pipeline for realistic crew models, Cinematic/Balanced/Performance presets, PlayStation/Xbox |
 | 8 | [Audio](docs/08-audio.md) | The original synthesised sound pack (44 sounds) and how to upload it |
+| 10 | [Fix plan & testing](docs/10-fix-plan.md) | How fixes get proven in the real engine; new missions, projects, quests, leaderboard |
 | 9 | [Models, factions & maps](docs/09-models-factions-maps.md) | The generated 3D model packs, uploading them (Open Cloud), Harbour Watch & Tidebound, the three maps |
 
 ## Code layout

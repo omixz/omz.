@@ -47,13 +47,7 @@ Upgrades.General = {
 
 Upgrades.PerkCost = 30 -- buy each of your character's other perks during a run
 
-Upgrades.Repairs = {
-	{ id = "lights", name = "Deck lights", desc = "String the Meridian with lights again. (Cosmetic)", cost = 40 },
-	{ id = "generator", name = "Generator", desc = "Start every crossing with +15 Salvage.", cost = 60 },
-	{ id = "sickbay", name = "Sick bay", desc = "Start every crossing with an extra Field Dressing.", cost = 80 },
-	{ id = "workshop", name = "Workshop tools", desc = "Workbench upgrades cost 15% less.", cost = 100 },
-	{ id = "radio", name = "Radio mast", desc = "The tide chart offers 3 routes instead of 2.", cost = 120 },
-	{ id = "armory", name = "Armory rack", desc = "Choose any long gun before a crossing.", cost = 150 },
-}
+-- Meridian repairs are now Projects (Config/Projects.luau).
+Upgrades.Repairs = require(script.Parent.Projects).List
 
 return Upgrades

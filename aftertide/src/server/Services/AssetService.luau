@@ -13,6 +13,15 @@ local MeshKit = require(Shared.MeshKit)
 local AssetService = {}
 
 local parts = {} -- [meshName] = MeshPart template
+local fitReport = {} -- [pack] = { rotation, scale, error, pieces, mode } (engine tests / F2)
+
+function AssetService.report()
+	local count = 0
+	for _ in parts do
+		count += 1
+	end
+	return { meshes = count, packs = fitReport }
+end
 local loaded = false
 
 -- Every mesh name the game asks for (from MeshMeta), longest first, so an importer that
@@ -148,6 +157,7 @@ local function solveImport(name, templates)
 				end
 			end
 		end
+		fitReport[name] = { mode = "shape", error = bestErr, pieces = fixed }
 		warn(("[AssetService] %s: positions didn't survive import (fit error %.3f); matched %d pieces by shape"):format(name, bestErr, fixed))
 		return
 	end
@@ -157,6 +167,7 @@ local function solveImport(name, templates)
 		part:SetAttribute("FitScale", 1 / bestK)
 	end
 	local rx, ry, rz = best:ToEulerAnglesXYZ()
+	fitReport[name] = { mode = "positions", rotation = { math.deg(rx), math.deg(ry), math.deg(rz) }, scale = bestK, error = bestErr, pieces = #A }
 	print(("[AssetService] %s: importer turned the scene (%d, %d, %d) deg, scale %.3f, fit error %.4f, %d pieces"):format(
 		name, math.round(math.deg(rx)), math.round(math.deg(ry)), math.round(math.deg(rz)), bestK, bestErr, #A))
 end

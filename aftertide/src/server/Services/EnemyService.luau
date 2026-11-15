@@ -968,6 +968,7 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 end
 
 function EnemyService.explode(position, radius, damage, byPlayer)
+	Services.MatchService.damageNestsNear(position, radius, damage, byPlayer)
 	for _, entry in EnemyService.findNear(position, radius) do
 		local falloff = 1 - (entry.distance / radius) * 0.6
 		local e = entry.enemy
@@ -1035,6 +1036,8 @@ local function tickFire(dt, now)
 			for _, entry in EnemyService.findNear(zone.position, zone.radius) do
 				EnemyService.damage(entry.enemy, zone.dps * dt, zone.player, false)
 			end
+			-- fire is what nests fear most
+			Services.MatchService.damageNestsNear(zone.position, zone.radius + 1, zone.dps * dt * 3, zone.player)
 		end
 	end
 end

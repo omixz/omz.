@@ -55,6 +55,7 @@ local CONTROLS = {
 	{ "SATCHEL", "I or Tab", "View / Back" },
 	{ "SWAP SHOULDER", "X", "R3" },
 	{ "SETTINGS · CONTROLS", "P · F1", "" },
+	{ "DIAGNOSTICS", "F2", "" },
 	{ "INTERACT", "E (hold)", "A" },
 }
 
@@ -278,8 +279,10 @@ local function objectiveTargets()
 	if R:GetAttribute("MatchState") == "Encounter" and player:GetAttribute("InCrossing") then
 		if encounter then
 			for _, p in encounter:GetChildren() do
-				if p.Name == "SupplyCrate" then
+				if p.Name == "SupplyCrate" or p.Name == "MedCache" or (p.Name == "Relay" and p:FindFirstChildWhichIsA("ProximityPrompt", true)) then
 					table.insert(list, { pos = p.Position, color = C.lantern, text = "◆" })
+				elseif p.Name == "Nest" and p:IsA("Model") and p.PrimaryPart then
+					table.insert(list, { pos = p.PrimaryPart.Position, color = C.danger, text = "✕" })
 				elseif p.Name == "Flare" and R:GetAttribute("ExtractionOpen") then
 					table.insert(list, { pos = p.Position, color = C.danger, text = "▼", label = "FLARE" })
 				elseif p.Name == "SignalLantern" then
@@ -386,9 +389,10 @@ local function objectiveText(matchState, inEncounter)
 		local kind = R:GetAttribute("EncounterType")
 		local left = (R:GetAttribute("EndsAt") or 0) - Workspace:GetServerTimeNow()
 		local name = string.upper(R:GetAttribute("EncounterName") or "")
-		if kind == "Salvage" then
+		local noun = ({ Salvage = "CRATES", Medicine = "CACHES", Relay = "RELAYS", Nests = "NESTS" })[kind]
+		if noun then
 			return R:GetAttribute("ExtractionOpen") and (name .. "  ·  REACH THE FLARE")
-				or ("%s  ·  CRATES %d / %d"):format(name, R:GetAttribute("Crates") or 0, R:GetAttribute("CratesRequired") or 0)
+				or ("%s  ·  %s %d / %d"):format(name, noun, R:GetAttribute("Crates") or 0, R:GetAttribute("CratesRequired") or 0)
 		elseif kind == "LanternWatch" then
 			local hp, max = R:GetAttribute("LanternHP") or 0, math.max(1, R:GetAttribute("LanternMax") or 1)
 			return ("%s  ·  LANTERN %d%%  ·  WAVE %d / %d  ·  %s"):format(name, math.floor(hp / max * 100), R:GetAttribute("Wave") or 0, R:GetAttribute("Waves") or 0, clock(left))
@@ -422,7 +426,7 @@ function HUD.update(dt)
 	if inEncounter then
 		locationLabel.Text = ("%s\n%s · PALL %d"):format(string.upper(Workspace:GetAttribute("MapName") or ""), string.upper(R:GetAttribute("ModifierName") or ""), R:GetAttribute("Pall") or 1)
 	elseif char then
-		locationLabel.Text = R:GetAttribute("RunActive") and player:GetAttribute("InCrossing") and ("THE MERIDIAN\nSTOP %d OF %d · SALVAGE %d"):format(R:GetAttribute("RunIndex") or 1, R:GetAttribute("RunLength") or 4, player:GetAttribute("Salvage") or 0) or ("THE MERIDIAN\nSCRIP %d"):format(player:GetAttribute("Scrip") or 0)
+		locationLabel.Text = R:GetAttribute("RunActive") and player:GetAttribute("InCrossing") and ("THE MERIDIAN\nSTOP %d OF %d · SALVAGE %d · MATERIALS %d"):format(R:GetAttribute("RunIndex") or 1, R:GetAttribute("RunLength") or 4, player:GetAttribute("Salvage") or 0, player:GetAttribute("Materials") or 0) or ("THE MERIDIAN\nSCRIP %d · MATERIALS %d"):format(player:GetAttribute("Scrip") or 0, player:GetAttribute("Materials") or 0)
 	else
 		locationLabel.Text = ""
 	end

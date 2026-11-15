@@ -24,6 +24,12 @@ local PlayerAnimator = {}
 local player = Players.LocalPlayer
 local rigs = setmetatable({}, { __mode = "k" })
 
+-- What the animator is doing, for the F2 diagnostics panel.
+local diag = { setupFail = "not started", lastError = nil, animatedLastFrame = 0, frames = 0, animatorsRemoved = 0 }
+function PlayerAnimator.status()
+	return diag
+end
+
 local JOINTS = {
 	root = { "LowerTorso", "Root" },
 	waist = { "UpperTorso", "Waist" },
@@ -44,6 +50,7 @@ local JOINTS = {
 
 local function setup(char)
 	if not char:GetAttribute("Procedural") then
+		diag.setupFail = "waiting for the server to mark the character (Procedural attribute)"
 		return nil
 	end
 	local rig = { joints = {}, phase = 0, crouch = 0, aim = 0, ready = 0, lastSlot = "none", drawAt = -10, seed = math.random() * 10 }
@@ -51,6 +58,7 @@ local function setup(char)
 		local part = char:FindFirstChild(path[1])
 		local motor = part and part:FindFirstChild(path[2])
 		if not (motor and motor:IsA("Motor6D")) then
+			diag.setupFail = ("joint missing: %s.%s"):format(path[1], path[2])
 			return nil
 		end
 		rig.joints[key] = motor
@@ -64,6 +72,7 @@ local function setup(char)
 	-- (the server removes it too; this covers one created locally before that replicated)
 	local function kill(child)
 		if child:IsA("Animator") then
+			diag.animatorsRemoved += 1
 			pcall(function()
 				for _, track in child:GetPlayingAnimationTracks() do
 					track:Stop(0)
@@ -78,6 +87,7 @@ local function setup(char)
 		kill(child)
 	end
 	rig.humanoid.ChildAdded:Connect(kill)
+	diag.setupFail = nil
 	return rig
 end
 
@@ -512,6 +522,16 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	end
 end
 
+-- Test hook: run one animation frame on a rig (used by the engine tests) and report errors.
+function PlayerAnimator.debugAnimate(char, isLocal)
+	local rig = setup(char)
+	if not rig then
+		return false, "setup failed: " .. tostring(diag.setupFail)
+	end
+	local ok, err = pcall(animate, char, rig, 1 / 60, Workspace:GetServerTimeNow(), isLocal == true)
+	return ok, err, rig
+end
+
 function PlayerAnimator.start()
 	local Net = require(Shared.Net)
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
@@ -523,6 +543,8 @@ function PlayerAnimator.start()
 	RunService.Stepped:Connect(function(_, dt)
 		local serverNow = Workspace:GetServerTimeNow()
 		local camPos = Workspace.CurrentCamera.CFrame.Position
+		diag.frames += 1
+		local animated = 0
 		for _, p in Players:GetPlayers() do
 			local char = p.Character
 			if char then
@@ -533,6 +555,11 @@ function PlayerAnimator.start()
 				end
 				if rig and rig.root.Parent and (rig.root.Position - camPos).Magnitude < 220 then
 					local ok, err = pcall(animate, char, rig, dt, serverNow, p == player)
+					if ok then
+						animated += 1
+					else
+						diag.lastError = tostring(err)
+					end
 					if not ok then
 						-- report once, fall back to Roblox's own animation, try again shortly
 						if not rig.reported then
@@ -549,6 +576,7 @@ function PlayerAnimator.start()
 				end
 			end
 		end
+		diag.animatedLastFrame = animated
 	end)
 end
 

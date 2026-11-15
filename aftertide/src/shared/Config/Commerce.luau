@@ -53,6 +53,20 @@ return {
 			desc = "One time only: 2 Second Wind, 2 Resupply, 3 Ammo Cache and the Deckhand outfit for all four crew.",
 			grant = { oneTime = true, tokens = { secondWind = 2, resupply = 2, ammo = 3 }, outfits = { "mara_deckhand", "tobias_deckhand", "ines_deckhand", "sefa_deckhand" } },
 		},
+		ShipwrightCrew = {
+			productId = 0,
+			name = "Shipwright's Crew",
+			price = 49,
+			desc = "Finish any one Meridian project instantly, without the Materials.",
+			grant = { tokens = { build = 1 } },
+		},
+		ShipwrightCrew3 = {
+			productId = 0,
+			name = "Shipwright's Crew x3",
+			price = 129,
+			desc = "Three Shipwright's Crew tokens: finish three Meridian projects instantly.",
+			grant = { tokens = { build = 3 } },
+		},
 		Outfit_mara_pilot = {
 			productId = 0,
 			name = "Mara: Night Pilot",
@@ -83,7 +97,7 @@ return {
 		},
 	},
 	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
-	Order = { "StarterPack", "SecondWind", "SecondWind3", "Resupply", "AmmoCache", "AmmoCache5" },
+	Order = { "StarterPack", "SecondWind", "SecondWind3", "Resupply", "AmmoCache", "AmmoCache5", "ShipwrightCrew", "ShipwrightCrew3" },
 
 	-- Game passes (permanent). Created by tools/create_products.py like the products above.
 	Passes = {

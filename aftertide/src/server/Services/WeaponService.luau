@@ -240,6 +240,11 @@ local function applyHit(player, def, mods, result, distance, direction)
 	end
 	local e = Services.EnemyService.fromInstance(result.Instance)
 	if not e then
+		local nest = result.Instance:FindFirstAncestor("Nest")
+		if nest and nest:GetAttribute("NestHP") then
+			local destroyed = Services.MatchService.damageNest(nest, def.damage * mods.damageMult, player)
+			return "enemy", false, destroyed
+		end
 		return "world"
 	end
 	local zone = Services.EnemyService.zoneOf(result.Instance)

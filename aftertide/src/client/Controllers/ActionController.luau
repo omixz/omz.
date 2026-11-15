@@ -42,6 +42,13 @@ local function canAct()
 end
 
 local bindUnsafe
+local function noteInput(what)
+	State.inputLog = State.inputLog or {}
+	table.insert(State.inputLog, ("%s action %s"):format(os.date("%H:%M:%S"), what))
+	while #State.inputLog > 12 do
+		table.remove(State.inputLog, 1)
+	end
+end
 
 local touchLayout = {
 	Fire = { title = "Fire", pos = UDim2.new(1, -95, 1, -230) },
@@ -74,6 +81,9 @@ bindUnsafe = function(name, handler, ...)
 	-- above Roblox's own scripts (default camera input grabs right-click, the player list
 	-- grabs Tab), otherwise aiming and the satchel never receive their keys
 	ContextActionService:BindActionAtPriority(name, function(_, inputState, input)
+		if inputState == Begin then
+			noteInput(name .. (input and input.KeyCode ~= Enum.KeyCode.Unknown and (" (" .. input.KeyCode.Name .. ")") or (input and (" (" .. input.UserInputType.Name .. ")") or "")))
+		end
 		return handler(inputState, input) or Sink
 	end, touch, Enum.ContextActionPriority.High.Value + 100, ...)
 	if touch then
@@ -264,12 +274,6 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.X, Enum.KeyCode.ButtonR3)
 
-	bind("Satchel", function(state)
-		if state == Begin and State.character then
-			Controllers.UIController.toggleSatchel()
-		end
-	end, Enum.KeyCode.Tab, Enum.KeyCode.I, Enum.KeyCode.ButtonSelect)
-
 	bind("Resupply", function(state)
 		if state == Begin and canAct() then
 			act("Resupply")
@@ -281,18 +285,6 @@ function ActionController.start()
 			act("AmmoCache")
 		end
 	end, Enum.KeyCode.V)
-
-	bind("Controls", function(state)
-		if state == Begin then
-			Controllers.UIController.toggleControls()
-		end
-	end, Enum.KeyCode.F1)
-
-	bind("Settings", function(state)
-		if state == Begin then
-			Controllers.UIController.toggleSettings()
-		end
-	end, Enum.KeyCode.P)
 end
 
 function ActionController.sendAction(name, payload)

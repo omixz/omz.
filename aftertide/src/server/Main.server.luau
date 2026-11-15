@@ -23,6 +23,8 @@ local ORDER = {
 	"WorkbenchService",
 	"HomebaseService",
 	"CommerceService",
+	"QuestService",
+	"LeaderboardService",
 	"MatchService",
 	"AntiCheatService",
 }
@@ -43,5 +45,23 @@ for _, name in ORDER do
 		task.spawn(service.start)
 	end
 end
+
+-- Forward server warnings / errors (and our own [Tagged] prints) to players' F2 diagnostics.
+local LogService = game:GetService("LogService")
+local Net = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Net)
+local sentThisMinute, minuteStart = 0, os.clock()
+LogService.MessageOut:Connect(function(message, messageType)
+	local kind = (messageType == Enum.MessageType.MessageError and "error") or (messageType == Enum.MessageType.MessageWarning and "warning") or nil
+	if not kind and message:sub(1, 1) ~= "[" then
+		return
+	end
+	if os.clock() - minuteStart > 60 then
+		sentThisMinute, minuteStart = 0, os.clock()
+	end
+	if sentThisMinute < 80 then
+		sentThisMinute += 1
+		pcall(Net.notifyAll, "Diag", { k = kind or "info", m = message:sub(1, 400) })
+	end
+end)
 
 print("[AFTERTIDE] server ready")

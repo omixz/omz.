@@ -9,6 +9,8 @@ local Net = require(Shared.Net)
 local Sfx = require(Shared.Util.Sfx)
 local UI = script.Parent.Parent:WaitForChild("UI")
 local HUD = require(UI:WaitForChild("HUD"))
+local Diagnostics = require(UI:WaitForChild("Diagnostics"))
+local State = require(script.Parent.Parent.State)
 local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
 local Satchel = require(UI:WaitForChild("Satchel"))
 local Shop = require(UI:WaitForChild("Shop"))
@@ -17,6 +19,7 @@ local Chart = require(UI:WaitForChild("Chart"))
 local Workbench = require(UI:WaitForChild("Workbench"))
 local Repairs = require(UI:WaitForChild("Repairs"))
 local Settings = require(UI:WaitForChild("Settings"))
+local Quests = require(UI:WaitForChild("Quests"))
 
 local UIController = {}
 local Controllers
@@ -56,6 +59,7 @@ local function closeMenus()
 	Shop.close()
 	Satchel.close()
 	CharacterSelect.close()
+	Quests.close()
 end
 
 function UIController.init(registry)
@@ -112,10 +116,80 @@ function UIController.start()
 	build("Settings", function()
 		Settings.build(gui, request)
 	end)
+	build("Quests", function()
+		Quests.build(gui)
+	end)
+	build("Diagnostics", function()
+		local dgui = Instance.new("ScreenGui")
+		dgui.Name = "AftertideDiagnostics"
+		dgui.ResetOnSpawn = false
+		dgui.DisplayOrder = 100
+		dgui.IgnoreGuiInset = true
+		dgui.Parent = player:WaitForChild("PlayerGui")
+		Diagnostics.build(dgui)
+	end)
+	Diagnostics.setStatusProvider(function()
+		local out = {}
+		local anim = Controllers.PlayerAnimator.status()
+		table.insert(out, ("animator: %d character(s) animated last frame, %d frames; setup: %s"):format(anim.animatedLastFrame, anim.frames, anim.setupFail or "ok"))
+		table.insert(out, "animator last error: " .. tostring(anim.lastError or "none"))
+		table.insert(out, ("Roblox Animators removed: %d"):format(anim.animatorsRemoved))
+		local char = State.character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		table.insert(out, ("character: %s · procedural=%s · Animator present=%s · HipHeight=%.2f (base %s)"):format(
+			char and char.Name or "none", tostring(char and char:GetAttribute("Procedural")), tostring(hum and hum:FindFirstChildOfClass("Animator") ~= nil),
+			hum and hum.HipHeight or -1, tostring(char and char:GetAttribute("BaseHipHeight"))))
+		local meshes = 0
+		if char then
+			for _, d in char:GetChildren() do
+				if d:IsA("MeshPart") and d.Name:sub(1, 5) == "Mesh_" then
+					meshes += 1
+				end
+			end
+		end
+		table.insert(out, ("sculpted body pieces on character: %d"):format(meshes))
+		table.insert(out, ("stance: %s · crouched=%s prone=%s aiming=%s sprinting=%s downed=%s"):format(
+			tostring(char and char:GetAttribute("Stance")), tostring(State.crouched), tostring(State.prone), tostring(State.aiming), tostring(State.sprinting), tostring(State.downed)))
+		local open = {}
+		for name in State.modals do
+			table.insert(open, name)
+		end
+		table.insert(out, "open menus: " .. (#open > 0 and table.concat(open, ", ") or "none"))
+		table.insert(out, ("equipped: %s (%s)"):format(tostring(char and char:GetAttribute("Equipped")), tostring(char and char:GetAttribute("EquippedSlot"))))
+		local sky = game:GetService("Lighting"):FindFirstChildOfClass("Sky")
+		table.insert(out, "sky: " .. (sky and ("Bk=" .. sky.SkyboxBk .. " Up=" .. sky.SkyboxUp) or "no Sky object"))
+		return out
+	end)
+
+	-- Menu keys go through a direct input listener. Roblox's own scripts (player list on Tab,
+	-- default camera on right-click) can take keys before ContextActionService sees them.
+	local UserInputService = game:GetService("UserInputService")
+	UserInputService.InputBegan:Connect(function(input)
+		if UserInputService:GetFocusedTextBox() then
+			return
+		end
+		local key = input.KeyCode
+		if key == Enum.KeyCode.Tab or key == Enum.KeyCode.I or key == Enum.KeyCode.ButtonSelect then
+			Diagnostics.noteInput("key " .. key.Name .. " -> satchel")
+			if State.character then
+				Satchel.toggle()
+			end
+		elseif key == Enum.KeyCode.F1 then
+			Diagnostics.noteInput("key F1 -> controls")
+			HUD.toggleControls()
+		elseif key == Enum.KeyCode.F2 then
+			Diagnostics.toggle()
+		elseif key == Enum.KeyCode.P then
+			Diagnostics.noteInput("key P -> settings")
+			UIController.toggleSettings()
+		end
+	end)
 
 	Net.event("Notify").OnClientEvent:Connect(function(kind, data)
 		data = data or {}
-		if kind == "Toast" then
+		if kind == "Diag" then
+			Diagnostics.serverLine(data.k, data.m)
+		elseif kind == "Toast" then
 			HUD.toast(tostring(data.text or ""))
 		elseif kind == "OpenCharacterSelect" then
 			CharacterSelect.open()
@@ -132,6 +206,8 @@ function UIController.start()
 			Workbench.open()
 		elseif kind == "OpenRepairs" then
 			Repairs.open()
+		elseif kind == "OpenQuests" then
+			Quests.open()
 		elseif kind == "CloseMenus" then
 			closeMenus()
 		elseif kind == "Hit" then

@@ -98,163 +98,336 @@ end
 
 -- The Meridian (hideout) ------------------------------------------------------------------
 
+-- Layout check: every solid fixture registers its box; overlaps are reported (Output / F2),
+-- so nothing ends up lodged in the bridge or another fixture again.
+local layoutBoxes = {}
+local function register(name, cf, size)
+	local half = size / 2
+	local corners = {}
+	for _, sx in { -1, 1 } do
+		for _, sy in { -1, 1 } do
+			for _, sz in { -1, 1 } do
+				table.insert(corners, (typeof(cf) == "CFrame" and cf or CFrame.new(cf)) * Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+			end
+		end
+	end
+	local lo, hi = corners[1], corners[1]
+	for _, c in corners do
+		lo = lo:Min(c)
+		hi = hi:Max(c)
+	end
+	table.insert(layoutBoxes, { name = name, lo = lo, hi = hi })
+end
+
+function MapService.getLeaderboardPart()
+	return MapService.leaderboardPart
+end
+
+function MapService.checkLayout(label)
+	local problems = 0
+	local EPS = 0.05
+	for i = 1, #layoutBoxes do
+		for j = i + 1, #layoutBoxes do
+			local a, b = layoutBoxes[i], layoutBoxes[j]
+			if a.lo.X < b.hi.X - EPS and b.lo.X < a.hi.X - EPS and a.lo.Y < b.hi.Y - EPS and b.lo.Y < a.hi.Y - EPS and a.lo.Z < b.hi.Z - EPS and b.lo.Z < a.hi.Z - EPS then
+				problems += 1
+				warn(("[Layout] %s: %s overlaps %s"):format(label, a.name, b.name))
+			end
+		end
+	end
+	print(("[Layout] %s: %d fixtures, %d overlaps"):format(label, #layoutBoxes, problems))
+	return problems
+end
+
+local function fixture(parent, name, size, position, color, material, props)
+	local cf = typeof(position) == "CFrame" and position or CFrame.new(position)
+	register(name, cf, size)
+	local part = block(parent, size, cf, color, material, props)
+	part.Name = name
+	return part
+end
+
+local function prompt(parent, action, object, onTriggered, hold)
+	local p = Instance.new("ProximityPrompt")
+	p.ActionText = action
+	p.ObjectText = object
+	p.HoldDuration = hold or 0
+	p.MaxActivationDistance = 9
+	p.RequiresLineOfSight = false
+	p.GamepadKeyCode = Enum.KeyCode.ButtonA
+	p.Parent = parent
+	p.Triggered:Connect(onTriggered)
+	return p
+end
+
+-- The Meridian: a beached car ferry, 96 x 32 studs of deck, bridge at the stern (-X).
+-- Deck plan (x along the ship, z across; o = FerryOrigin):
+--   x -47..-31  bridge (cabins door, projects board, leaderboard on its front face)
+--   x -28..-9   aft deck: lockers, quest board, generator, workshop (+ workbench)
+--   x  -6.. 6   midships: chart table, spawn line
+--   x   8..25   infirmary (port) / chart room (starboard)
+--   x  26..46   Purser's Office, cargo, armory, lookout tower at the bow
 local function buildFerry(parent)
+	table.clear(layoutBoxes)
 	local o = Game.FerryOrigin
 	local deckColor = Color3.fromRGB(70, 66, 60)
 	local hull = Color3.fromRGB(176, 176, 166)
-	-- sea + sandbar
-	block(parent, Vector3.new(700, 1, 700), o + Vector3.new(0, -7, 0), Color3.fromRGB(30, 40, 44), Enum.Material.Glass, { Reflectance = 0.12, CanQuery = false })
-	block(parent, Vector3.new(120, 4, 60), o + Vector3.new(0, -6, 0), Color3.fromRGB(120, 112, 96), Enum.Material.Sand)
-	-- deck and railings
-	block(parent, Vector3.new(64, 2, 28), o + Vector3.new(0, -1, 0), deckColor, Enum.Material.DiamondPlate)
-	block(parent, Vector3.new(64, 3.5, 0.5), o + Vector3.new(0, 1.75, -14), C.metal, Enum.Material.Metal)
-	block(parent, Vector3.new(64, 3.5, 0.5), o + Vector3.new(0, 1.75, 14), C.metal, Enum.Material.Metal)
-	block(parent, Vector3.new(0.5, 3.5, 28), o + Vector3.new(32, 1.75, 0), C.metal, Enum.Material.Metal)
-	block(parent, Vector3.new(0.5, 3.5, 28), o + Vector3.new(-32, 1.75, 0), C.metal, Enum.Material.Metal)
-	-- bridge superstructure + hull flank
-	block(parent, Vector3.new(14, 12, 20), o + Vector3.new(-23, 6, 0), hull, Enum.Material.CorrodedMetal)
-	block(parent, Vector3.new(16, 1, 22), o + Vector3.new(-23, 12.5, 0), C.metal, Enum.Material.Metal)
-	block(parent, Vector3.new(64, 8, 1), o + Vector3.new(0, -5, 14.5), hull, Enum.Material.CorrodedMetal)
-	block(parent, Vector3.new(64, 8, 1), o + Vector3.new(0, -5, -14.5), hull, Enum.Material.CorrodedMetal)
-	-- containers on deck
-	block(parent, Vector3.new(16, 8.6, 7), o + Vector3.new(16, 4.3, -9), C.containers[2], Enum.Material.CorrodedMetal)
-	block(parent, Vector3.new(7, 8.6, 7), o + Vector3.new(26, 4.3, 9), C.containers[1], Enum.Material.CorrodedMetal)
-	-- string lights
-	for i = 0, 7 do
-		local x = -14 + i * 6
-		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 3.5) * 0.25, 0), C.warm, Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, Name = "DeckBulb" })
+	local M = Enum.Material
+	-- sea, sandbar, hull, deck, railings
+	block(parent, Vector3.new(900, 1, 900), o + Vector3.new(0, -7, 0), Color3.fromRGB(30, 40, 44), M.Glass, { Reflectance = 0.12, CanQuery = false })
+	block(parent, Vector3.new(170, 4, 70), o + Vector3.new(0, -6, 0), Color3.fromRGB(120, 112, 96), M.Sand)
+	block(parent, Vector3.new(96, 2, 32), o + Vector3.new(0, -1, 0), deckColor, M.DiamondPlate)
+	for _, z in { -16.5, 16.5 } do
+		block(parent, Vector3.new(97, 8, 1), o + Vector3.new(0, -5, z), hull, M.CorrodedMetal)
+		block(parent, Vector3.new(96, 3.5, 0.5), o + Vector3.new(0, 1.75, z * 0.97), C.metal, M.Metal)
+	end
+	for _, x in { -48.25, 48.25 } do
+		block(parent, Vector3.new(0.5, 3.5, 32), o + Vector3.new(x, 1.75, 0), C.metal, M.Metal)
+		block(parent, Vector3.new(1, 8, 33), o + Vector3.new(x * 1.01, -5, 0), hull, M.CorrodedMetal)
+	end
+
+	-- bridge superstructure
+	fixture(parent, "Bridge", Vector3.new(16, 12, 22), o + Vector3.new(-39, 6, 0), hull, M.CorrodedMetal)
+	block(parent, Vector3.new(18, 1, 24), o + Vector3.new(-39, 12.5, 0), C.metal, M.Metal)
+	block(parent, Vector3.new(0.3, 2.4, 18), o + Vector3.new(-30.9, 9, 0), Color3.fromRGB(40, 48, 52), M.Glass, { Transparency = 0.3 })
+
+	-- on the bridge's front face (x = -31)
+	local cabin = fixture(parent, "CabinDoor", Vector3.new(0.6, 8, 4), o + Vector3.new(-30.65, 4, 6), Color3.fromRGB(90, 96, 92), M.Metal)
+	prompt(cabin, "Change crew member", "Crew cabins", function(player)
+		Services.MatchService.openCharacterSelect(player)
+	end)
+	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(120, 100, 76), M.WoodPlanks)
+	prompt(board, "Plan projects", "The Meridian", function(player)
+		Services.MatchService.openMenu(player, "OpenRepairs")
+	end)
+	local leaderboard = fixture(parent, "Leaderboard", Vector3.new(0.3, 5, 6), o + Vector3.new(-30.8, 4.5, -7.8), Color3.fromRGB(46, 52, 56), M.Slate)
+	MapService.leaderboardPart = leaderboard
+
+	-- aft deck
+	local lockers = fixture(parent, "CrewLockers", Vector3.new(4, 7, 1.4), o + Vector3.new(-26, 3.5, 14.6), Color3.fromRGB(72, 80, 78), M.DiamondPlate)
+	prompt(lockers, "Open wardrobe", "Crew lockers", function(player)
+		Services.MatchService.openShop(player, "Wardrobe")
+	end)
+	local quests = fixture(parent, "QuestBoard", Vector3.new(5, 4, 0.4), o + Vector3.new(-18, 3.6, 14.8), Color3.fromRGB(130, 108, 80), M.WoodPlanks)
+	for _, x in { -20.75, -15.25 } do
+		fixture(parent, "QuestBoardPost", Vector3.new(0.4, 5.6, 0.4), o + Vector3.new(x, 2.8, 14.8), Color3.fromRGB(86, 70, 54), M.Wood)
+	end
+	prompt(quests, "Read the board", "Quests", function(player)
+		Services.MatchService.openMenu(player, "OpenQuests")
+	end)
+	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(86, 66, 46), M.WoodPlanks)
+	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(110, 40, 30), M.Metal) -- vice
+	prompt(bench, "Use workbench", "Workbench", function(player)
+		Services.MatchService.openMenu(player, "OpenWorkbench")
+	end)
+
+	-- midships: the tide chart
+	local chart = fixture(parent, "ChartTable", Vector3.new(5, 3, 3), o + Vector3.new(0, 1.5, -2), Color3.fromRGB(96, 70, 48), M.WoodPlanks)
+	block(parent, Vector3.new(4.4, 0.1, 2.4), o + Vector3.new(0, 3.05, -2), Color3.fromRGB(214, 204, 176), M.SmoothPlastic)
+	local chartPrompt = prompt(chart, "Read the tide chart", "Tide chart", function(player)
+		Services.MatchService.requestChart(player)
+	end, 0.8)
+	chartPrompt.Name = "ChartPrompt"
+
+	-- the Purser's Office (shop)
+	local booth = fixture(parent, "PursersOffice", Vector3.new(7, 8, 5), o + Vector3.new(30, 4, -12.5), Color3.fromRGB(150, 146, 134), M.CorrodedMetal)
+	local boothLight = Instance.new("PointLight")
+	boothLight.Range = 10
+	boothLight.Brightness = 1
+	boothLight.Color = C.warm
+	boothLight.Parent = booth
+	prompt(booth, "Open the ledger", "The Purser's Office", function(player)
+		Services.MatchService.openShop(player)
+	end)
+
+	-- cargo
+	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), C.containers[2], M.CorrodedMetal)
+
+	-- string lights (lit by the Deck Lights project)
+	for i = 0, 9 do
+		local x = -27 + i * 6
+		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 4.5) * 0.2, 2), C.warm, M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, Name = "DeckBulb" })
 		local light = Instance.new("PointLight")
 		light.Range = 12
 		light.Brightness = 0.9
 		light.Color = C.warm
 		light.Parent = bulb
 	end
-	block(parent, Vector3.new(44, 0.15, 0.15), o + Vector3.new(7, 7.6, 0), C.metal, Enum.Material.Metal, { CanCollide = false })
+	block(parent, Vector3.new(56, 0.15, 0.15), o + Vector3.new(0, 7.6, 2), C.metal, M.Metal, { CanCollide = false })
 
-	-- Chart table: starts the crossing
-	local chart = block(parent, Vector3.new(5, 3, 3), o + Vector3.new(4, 1.5, -4), Color3.fromRGB(96, 70, 48), Enum.Material.WoodPlanks, { Name = "ChartTable" })
-	block(parent, Vector3.new(4.4, 0.1, 2.4), o + Vector3.new(4, 3.05, -4), Color3.fromRGB(214, 204, 176), Enum.Material.SmoothPlastic)
-	local chartPrompt = Instance.new("ProximityPrompt")
-	chartPrompt.Name = "ChartPrompt"
-	chartPrompt.ActionText = "Begin the Crossing"
-	chartPrompt.ObjectText = "Tide chart"
-	chartPrompt.HoldDuration = 0.8
-	chartPrompt.MaxActivationDistance = 9
-	chartPrompt.RequiresLineOfSight = false
-	chartPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	chartPrompt.Parent = chart
-	chartPrompt.ActionText = "Read the tide chart"
-	chartPrompt.Triggered:Connect(function(player)
-		Services.MatchService.requestChart(player)
-	end)
+	local rooms = Instance.new("Folder")
+	rooms.Name = "Rooms"
+	rooms.Parent = parent
+	MapService.checkLayout("Meridian")
+end
 
-	-- Crew cabin door: change character
-	local cabin = block(parent, Vector3.new(4, 8, 0.6), o + Vector3.new(-15.8, 4, 6), Color3.fromRGB(90, 96, 92), Enum.Material.Metal, { Name = "CabinDoor" })
-	local cabinPrompt = Instance.new("ProximityPrompt")
-	cabinPrompt.ActionText = "Change crew member"
-	cabinPrompt.ObjectText = "Crew cabins"
-	cabinPrompt.MaxActivationDistance = 9
-	cabinPrompt.RequiresLineOfSight = false
-	cabinPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	cabinPrompt.Parent = cabin
-	cabinPrompt.Triggered:Connect(function(player)
-		Services.MatchService.openCharacterSelect(player)
-	end)
-
-	-- Crew lockers: the wardrobe (outfits)
-	local lockers = block(parent, Vector3.new(4, 7, 1.4), o + Vector3.new(-15.3, 3.5, 10.5), Color3.fromRGB(72, 80, 78), Enum.Material.DiamondPlate, { Name = "CrewLockers" })
-	for i = -1, 1 do
-		block(parent, Vector3.new(0.08, 6.4, 0.08), o + Vector3.new(-15.3 + i * 1.3 + 0.65, 3.5, 9.75), C.metal, Enum.Material.Metal, { CanCollide = false })
+-- Project rooms: built when anyone in the server owns the project, scaffolding otherwise.
+local ROOMS = {}
+local function shell(parent, name, lo, hi, color, doorSide)
+	-- a simple room: walls with a door gap, a roof, one light
+	local o = Game.FerryOrigin
+	local M = Enum.Material
+	local h = hi.Y - lo.Y
+	local cx, cz = (lo.X + hi.X) / 2, (lo.Z + hi.Z) / 2
+	local w, d = hi.X - lo.X, hi.Z - lo.Z
+	register(name, CFrame.new(o + Vector3.new(cx, lo.Y + h / 2, cz)), Vector3.new(w, h, d))
+	for _, side in { "N", "S", "E", "W" } do
+		local alongX = side == "N" or side == "S"
+		local len = alongX and w or d
+		local pos = side == "N" and Vector3.new(cx, 0, hi.Z) or side == "S" and Vector3.new(cx, 0, lo.Z) or side == "E" and Vector3.new(hi.X, 0, cz) or Vector3.new(lo.X, 0, cz)
+		if side == doorSide then
+			local seg = (len - 4) / 2
+			for _, sgn in { -1, 1 } do
+				local off = (2 + seg / 2) * sgn
+				local p2 = pos + (alongX and Vector3.new(off, 0, 0) or Vector3.new(0, 0, off))
+				block(parent, alongX and Vector3.new(seg, h, 0.4) or Vector3.new(0.4, h, seg), o + p2 + Vector3.new(0, lo.Y + h / 2, 0), color, M.CorrodedMetal)
+			end
+			block(parent, alongX and Vector3.new(4, h - 7.5, 0.4) or Vector3.new(0.4, h - 7.5, 4), o + pos + Vector3.new(0, lo.Y + 7.5 + (h - 7.5) / 2, 0), color, M.CorrodedMetal)
+		else
+			block(parent, alongX and Vector3.new(len, h, 0.4) or Vector3.new(0.4, h, len), o + pos + Vector3.new(0, lo.Y + h / 2, 0), color, M.CorrodedMetal)
+		end
 	end
-	local lockerPrompt = Instance.new("ProximityPrompt")
-	lockerPrompt.ActionText = "Open wardrobe"
-	lockerPrompt.ObjectText = "Crew lockers"
-	lockerPrompt.MaxActivationDistance = 9
-	lockerPrompt.RequiresLineOfSight = false
-	lockerPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	lockerPrompt.Parent = lockers
-	lockerPrompt.Triggered:Connect(function(player)
-		Services.MatchService.openShop(player, "Wardrobe")
-	end)
+	block(parent, Vector3.new(w + 0.6, 0.5, d + 0.6), o + Vector3.new(cx, hi.Y + 0.25, cz), C.metal, M.Metal)
+	MapKit.bulb(parent, o + Vector3.new(cx, hi.Y - 1, cz), 14)
+end
 
-	-- Workbench: per-crossing upgrades
-	local bench = block(parent, Vector3.new(6, 3, 2.6), o + Vector3.new(-6, 1.5, -10.5), Color3.fromRGB(86, 66, 46), Enum.Material.WoodPlanks, { Name = "Workbench" })
-	block(parent, Vector3.new(5, 0.2, 0.2), o + Vector3.new(-6, 5.5, -11.6), C.metal, Enum.Material.Metal)
+ROOMS.lights = { lo = nil } -- the string lights themselves
+ROOMS.generator = { lo = Vector3.new(-28.5, 0, -15.2), hi = Vector3.new(-23.5, 4, -11), build = function(parent, r)
+	local o = Game.FerryOrigin
+	local g = block(parent, Vector3.new(5, 3.4, 4), o + Vector3.new(-26, 1.7, -13.1), Color3.fromRGB(90, 80, 40), Enum.Material.Metal, { Name = "generator" })
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(140, 255, 120)
+	light.Range = 8
+	light.Parent = g
+	block(parent, Vector3.new(0.5, 6, 0.5), o + Vector3.new(-24.2, 6.4, -14.6), C.metal, Enum.Material.Metal) -- exhaust
+	assert(r)
+end }
+ROOMS.workshop = { lo = Vector3.new(-19.5, 0, -15.6), hi = Vector3.new(-8.5, 9, -10), build = function(parent, r)
+	local o = Game.FerryOrigin
+	-- an open-fronted shed over the workbench: side walls, back wall, roof, tool rack
+	for _, x in { r.lo.X, r.hi.X } do
+		block(parent, Vector3.new(0.4, 9, r.hi.Z - r.lo.Z), o + Vector3.new(x, 4.5, (r.lo.Z + r.hi.Z) / 2), Color3.fromRGB(120, 104, 80), Enum.Material.WoodPlanks)
+	end
+	block(parent, Vector3.new(r.hi.X - r.lo.X, 9, 0.4), o + Vector3.new((r.lo.X + r.hi.X) / 2, 4.5, r.lo.Z), Color3.fromRGB(120, 104, 80), Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(r.hi.X - r.lo.X + 1, 0.5, r.hi.Z - r.lo.Z + 1), o + Vector3.new((r.lo.X + r.hi.X) / 2, 9.25, (r.lo.Z + r.hi.Z) / 2), C.roof, Enum.Material.CorrodedMetal)
 	for i = -2, 2 do
-		block(parent, Vector3.new(0.15, 0.9, 0.15), o + Vector3.new(-6 + i, 4.9, -11.6), C.metal, Enum.Material.Metal, { CanCollide = false }) -- hanging tools
+		block(parent, Vector3.new(0.15, 1, 0.15), o + Vector3.new(-14 + i, 5, r.lo.Z + 0.4), C.metal, Enum.Material.Metal, { CanCollide = false })
 	end
-	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-4.2, 3.3, -10.5), Color3.fromRGB(110, 40, 30), Enum.Material.Metal) -- vice
-	local benchLight = Instance.new("PointLight")
-	benchLight.Range = 12
-	benchLight.Brightness = 1.4
-	benchLight.Color = C.warm
-	benchLight.Shadows = true
-	benchLight.Parent = block(parent, Vector3.new(0.6, 0.4, 0.6), o + Vector3.new(-6, 7, -10.5), C.warm, Enum.Material.Neon, { CanCollide = false })
-	local benchPrompt = Instance.new("ProximityPrompt")
-	benchPrompt.ActionText = "Use workbench"
-	benchPrompt.ObjectText = "Workbench"
-	benchPrompt.MaxActivationDistance = 9
-	benchPrompt.RequiresLineOfSight = false
-	benchPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	benchPrompt.Parent = bench
-	benchPrompt.Triggered:Connect(function(player)
-		Services.MatchService.openMenu(player, "OpenWorkbench")
-	end)
-
-	-- Repairs board: permanent homebase upgrades
-	local board = block(parent, Vector3.new(4, 3, 0.3), o + Vector3.new(-15.9, 4, -4), Color3.fromRGB(120, 100, 76), Enum.Material.WoodPlanks, { Name = "RepairsBoard" })
-	local boardPrompt = Instance.new("ProximityPrompt")
-	boardPrompt.ActionText = "Plan repairs"
-	boardPrompt.ObjectText = "The Meridian"
-	boardPrompt.MaxActivationDistance = 9
-	boardPrompt.RequiresLineOfSight = false
-	boardPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	boardPrompt.Parent = board
-	boardPrompt.Triggered:Connect(function(player)
-		Services.MatchService.openMenu(player, "OpenRepairs")
-	end)
-
-	-- Repairable stations (visuals toggled by setFerryRepairs)
-	local stations = Instance.new("Folder")
-	stations.Name = "Stations"
-	stations.Parent = parent
-	local gen = block(stations, Vector3.new(3, 2.4, 2), o + Vector3.new(-26, 1.2, 9), Color3.fromRGB(90, 80, 40), Enum.Material.Metal, { Name = "generator" })
-	local genLight = Instance.new("PointLight")
-	genLight.Name = "On"
-	genLight.Color = Color3.fromRGB(140, 255, 120)
-	genLight.Range = 6
-	genLight.Enabled = false
-	genLight.Parent = gen
-	local mast = block(stations, Vector3.new(0.4, 14, 0.4), o + Vector3.new(-23, 19.5, 0), C.metal, Enum.Material.Metal, { Name = "radio" })
-	local mastLight = Instance.new("PointLight")
-	mastLight.Name = "On"
-	mastLight.Color = Color3.fromRGB(255, 60, 50)
-	mastLight.Range = 10
-	mastLight.Enabled = false
-	mastLight.Parent = block(stations, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(-23, 26.7, 0), Color3.fromRGB(255, 60, 50), Enum.Material.Neon, { Name = "radioBeacon" })
-	block(stations, Vector3.new(6, 1.2, 2.6), o + Vector3.new(10, 0.6, 11), Color3.fromRGB(200, 196, 186), Enum.Material.Fabric, { Name = "sickbay", Transparency = 0.7 })
-	block(stations, Vector3.new(5, 5, 0.6), o + Vector3.new(29, 2.5, -9), Color3.fromRGB(80, 64, 48), Enum.Material.WoodPlanks, { Name = "armory", Transparency = 0.7 })
-
-	-- The Purser's Office: the in-world shop
-	local booth = block(parent, Vector3.new(7, 8, 5), o + Vector3.new(24, 4, -1), Color3.fromRGB(150, 146, 134), Enum.Material.CorrodedMetal, { Name = "PursersOffice" })
-	for i = -2, 2 do
-		block(parent, Vector3.new(0.15, 3, 0.15), o + Vector3.new(24 + i * 0.7, 4.5, 1.6), C.metal, Enum.Material.Metal, { CanCollide = false })
+	MapKit.bulb(parent, o + Vector3.new(-14, 8, -12.8), 14)
+end, noRegister = true }
+ROOMS.sickbay = { lo = Vector3.new(8, 0, 9), hi = Vector3.new(20, 9, 15.6), build = function(parent, r)
+	shell(parent, "Infirmary", r.lo, r.hi, Color3.fromRGB(200, 198, 190), "S")
+	local o = Game.FerryOrigin
+	block(parent, Vector3.new(6, 1.4, 2.6), o + Vector3.new(14, 0.7, 13.8), Color3.fromRGB(220, 216, 206), Enum.Material.Fabric) -- cot
+	block(parent, Vector3.new(1.6, 3, 1), o + Vector3.new(9.5, 1.5, 14.6), Color3.fromRGB(170, 40, 34), Enum.Material.Metal) -- red-cross cabinet
+end }
+ROOMS.radio = { lo = Vector3.new(-44, 13, -5), hi = Vector3.new(-34, 19, 5), build = function(parent, r)
+	shell(parent, "RadioRoom", r.lo, r.hi, Color3.fromRGB(150, 150, 140), "E")
+	local o = Game.FerryOrigin
+	block(parent, Vector3.new(0.4, 12, 0.4), o + Vector3.new(-39, 25.5, 0), C.metal, Enum.Material.Metal)
+	local beacon = block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-39, 31.8, 0), Color3.fromRGB(255, 60, 50), Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 60, 50)
+	light.Range = 12
+	light.Parent = beacon
+end }
+ROOMS.armory = { lo = Vector3.new(34, 0, 6), hi = Vector3.new(46, 9, 15.6), build = function(parent, r)
+	shell(parent, "Armory", r.lo, r.hi, Color3.fromRGB(96, 104, 90), "S")
+	local o = Game.FerryOrigin
+	block(parent, Vector3.new(8, 5, 0.6), o + Vector3.new(40, 2.5, 15), Color3.fromRGB(80, 64, 48), Enum.Material.WoodPlanks) -- gun rack
+end }
+ROOMS.chartroom = { lo = Vector3.new(13, 0, -15.6), hi = Vector3.new(25, 9, -9), build = function(parent, r)
+	shell(parent, "ChartRoom", r.lo, r.hi, Color3.fromRGB(140, 120, 96), "N")
+	local o = Game.FerryOrigin
+	block(parent, Vector3.new(5, 3, 3), o + Vector3.new(19, 1.5, -13), Color3.fromRGB(96, 70, 48), Enum.Material.WoodPlanks)
+end }
+ROOMS.lookout = { lo = Vector3.new(41, 0, -15.4), hi = Vector3.new(47, 22, -9.4), build = function(parent, r)
+	local o = Game.FerryOrigin
+	for _, x in { 41.5, 46.5 } do
+		for _, z in { -15, -9.8 } do
+			block(parent, Vector3.new(0.6, 18, 0.6), o + Vector3.new(x, 9, z), C.metal, Enum.Material.Metal)
+		end
 	end
-	local boothLight = Instance.new("PointLight")
-	boothLight.Range = 10
-	boothLight.Brightness = 1
-	boothLight.Color = C.warm
-	boothLight.Parent = booth
-	local shopPrompt = Instance.new("ProximityPrompt")
-	shopPrompt.ActionText = "Open the ledger"
-	shopPrompt.ObjectText = "The Purser's Office"
-	shopPrompt.MaxActivationDistance = 9
-	shopPrompt.RequiresLineOfSight = false
-	shopPrompt.GamepadKeyCode = Enum.KeyCode.ButtonA
-	shopPrompt.Parent = booth
-	shopPrompt.Triggered:Connect(function(player)
-		Services.MatchService.openShop(player)
-	end)
+	block(parent, Vector3.new(7, 0.6, 7), o + Vector3.new(44, 18.3, -12.4), C.metal, Enum.Material.DiamondPlate)
+	block(parent, Vector3.new(7, 3, 0.3), o + Vector3.new(44, 20, -15.8), C.metal, Enum.Material.Metal)
+	assert(r)
+end }
+
+-- Shows which projects are built (any player in the server owns them): rooms or scaffolding.
+function MapService.setFerryRepairs(owned)
+	local ferry = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Meridian")
+	if not ferry then
+		return
+	end
+	for _, d in ferry:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "DeckBulb" then
+			local light = d:FindFirstChildOfClass("PointLight")
+			if light then
+				light.Enabled = owned.lights == true
+			end
+			d.Material = owned.lights and Enum.Material.Neon or Enum.Material.Glass
+		end
+	end
+	local rooms = ferry:FindFirstChild("Rooms")
+	if not rooms then
+		return
+	end
+	rooms:ClearAllChildren()
+	local o = Game.FerryOrigin
+	-- re-register the static fixtures' boxes, then add rooms and check them all
+	local static = {}
+	for _, b in layoutBoxes do
+		if not b.room then
+			table.insert(static, b)
+		end
+	end
+	table.clear(layoutBoxes)
+	for _, b in static do
+		table.insert(layoutBoxes, b)
+	end
+	for id, r in ROOMS do
+		if r.lo then
+			local folder = Instance.new("Folder")
+			folder.Name = id
+			folder.Parent = rooms
+			local before = #layoutBoxes
+			if owned[id] then
+				r.build(folder, r)
+			else
+				-- scaffolding where the room will go, with a sign
+				local M = Enum.Material
+				local h = r.hi.Y - r.lo.Y
+				for _, x in { r.lo.X + 0.3, r.hi.X - 0.3 } do
+					for _, z in { r.lo.Z + 0.3, r.hi.Z - 0.3 } do
+						block(folder, Vector3.new(0.3, h, 0.3), o + Vector3.new(x, r.lo.Y + h / 2, z), Color3.fromRGB(150, 110, 60), M.Metal, { CanCollide = false })
+					end
+				end
+				block(folder, Vector3.new(r.hi.X - r.lo.X, 0.25, r.hi.Z - r.lo.Z), o + Vector3.new((r.lo.X + r.hi.X) / 2, r.hi.Y, (r.lo.Z + r.hi.Z) / 2), Color3.fromRGB(120, 140, 150), M.Fabric, { Transparency = 0.35, CanCollide = false })
+				local sign = block(folder, Vector3.new(3, 1.4, 0.2), o + Vector3.new((r.lo.X + r.hi.X) / 2, r.lo.Y + 3, (r.lo.Z + r.hi.Z) / 2), Color3.fromRGB(230, 220, 190), M.SmoothPlastic, { CanCollide = false })
+				local gui = Instance.new("SurfaceGui")
+				gui.Face = Enum.NormalId.Front
+				gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+				gui.PixelsPerStud = 40
+				gui.Parent = sign
+				local label = Instance.new("TextLabel")
+				label.Size = UDim2.fromScale(1, 1)
+				label.BackgroundTransparency = 1
+				label.Font = Enum.Font.Oswald
+				label.TextScaled = true
+				label.TextColor3 = Color3.fromRGB(40, 36, 30)
+				local p = require(Shared.Config.Projects).get(id)
+				label.Text = "PROJECT: " .. (p and string.upper(p.name) or id)
+				label.Parent = gui
+			end
+			if not r.noRegister and #layoutBoxes == before then
+				register("Room_" .. id, CFrame.new(o + (r.lo + r.hi) / 2), r.hi - r.lo)
+			end
+			for i = before + 1, #layoutBoxes do
+				layoutBoxes[i].room = true
+			end
+		end
+	end
+	MapService.checkLayout("Meridian + rooms")
 end
 
 -- Lighting --------------------------------------------------------------------------------
@@ -351,6 +524,15 @@ local function applySky(name)
 		skyObject.SkyboxUp, skyObject.SkyboxDn = up, dn
 		skyObject.StarCount = name == "night" and 2500 or 0
 	end)
+end
+
+-- Test hook: resolve every sky face (used by tests/engine/sky.luau).
+function MapService.resolveSkyTextures()
+	local out = {}
+	for name, ids in Skies do
+		out[name] = { Side = skyTexture(ids.Side), Up = skyTexture(ids.Up), Dn = skyTexture(ids.Dn) }
+	end
+	return out
 end
 
 local clouds
@@ -564,6 +746,88 @@ function MapService.resetEncounter(modifier, rng, encounterType, pall, mapId)
 		end
 	end
 
+	-- Medicine Run: medical caches, mostly indoors
+	if encounterType == "Medicine" then
+		local picks = shuffled(MapService.LootSpots, rng)
+		for i = 1, math.min(Encounters.Types.Medicine.count, #picks) do
+			local pos = Services.LootService.settle(picks[i], encounterFolder)
+			local case = block(encounterFolder, Vector3.new(2.2, 1.2, 1.5), pos + Vector3.new(0, 0.6, 0), Color3.fromRGB(226, 222, 212), Enum.Material.SmoothPlastic, { Name = "MedCache" })
+			block(case, Vector3.new(0.9, 0.25, 0.05), pos + Vector3.new(0, 0.7, -0.78), Color3.fromRGB(180, 30, 30), Enum.Material.SmoothPlastic, { CanCollide = false })
+			block(case, Vector3.new(0.25, 0.9, 0.05), pos + Vector3.new(0, 0.7, -0.78), Color3.fromRGB(180, 30, 30), Enum.Material.SmoothPlastic, { CanCollide = false })
+			local glint = Instance.new("PointLight")
+			glint.Range = 5
+			glint.Brightness = 0.4
+			glint.Color = Color3.fromRGB(255, 220, 220)
+			glint.Parent = case
+			makePrompt(case, "Take", "Medical cache", 1).Triggered:Connect(function(player)
+				Services.MatchService.onCrateSalvaged(player, case)
+			end)
+		end
+	end
+
+	-- Restore the Signal: radio relays; repairing one is loud
+	if encounterType == "Relay" then
+		local cfg = Encounters.Types.Relay
+		local picks = shuffled(MapService.SupplyCandidates, rng)
+		for i = 1, math.min(cfg.count, #picks) do
+			local pos = Services.LootService.settle(picks[i], encounterFolder)
+			local box = block(encounterFolder, Vector3.new(2, 4, 1.4), pos + Vector3.new(0, 2, 0), Color3.fromRGB(96, 100, 104), Enum.Material.Metal, { Name = "Relay" })
+			block(box, Vector3.new(0.15, 6, 0.15), pos + Vector3.new(0.6, 7, 0), C.metal, Enum.Material.Metal, { CanCollide = false })
+			local lamp = block(box, Vector3.new(0.4, 0.4, 0.4), pos + Vector3.new(0.6, 10.2, 0), Color3.fromRGB(200, 60, 50), Enum.Material.Neon, { CanCollide = false })
+			local p = makePrompt(box, "Repair relay", "Radio relay", cfg.hold)
+			local holding = {}
+			p.PromptButtonHoldBegan:Connect(function(player)
+				holding[player] = true
+				task.spawn(function()
+					while holding[player] and p.Parent do
+						Services.PerceptionService.emitNoise(box.Position, cfg.noise, "repair", player)
+						Sfx.at(box.Position, "Search", 0.6, 60)
+						task.wait(1.5)
+					end
+				end)
+			end)
+			p.PromptButtonHoldEnded:Connect(function(player)
+				holding[player] = nil
+			end)
+			p.Triggered:Connect(function(player)
+				holding[player] = nil
+				lamp.Color = Color3.fromRGB(90, 230, 120)
+				local light = Instance.new("PointLight")
+				light.Color = lamp.Color
+				light.Range = 10
+				light.Parent = lamp
+				Services.MatchService.onCrateSalvaged(player, box, true)
+			end)
+		end
+	end
+
+	-- Burn the Nests: salt crystal nests that take damage from guns, melee, fire, explosions
+	if encounterType == "Nests" then
+		local cfg = Encounters.Types.Nests
+		local picks = shuffled(MapService.SupplyCandidates, rng)
+		for i = 1, math.min(cfg.count, #picks) do
+			local pos = Services.LootService.settle(picks[i], encounterFolder)
+			local nest = Instance.new("Model")
+			nest.Name = "Nest"
+			nest:SetAttribute("NestHP", cfg.hp)
+			nest:SetAttribute("NestMax", cfg.hp)
+			local core = block(nest, Vector3.new(3.2, 2.2, 3.2), pos + Vector3.new(0, 1.1, 0), Color3.fromRGB(70, 66, 62), Enum.Material.Slate, { Name = "NestCore" })
+			for k = 1, 9 do
+				local a = k / 9 * math.pi * 2
+				local hgt = rng:NextNumber(1.6, 4.2)
+				block(nest, Vector3.new(rng:NextNumber(0.5, 0.9), hgt, rng:NextNumber(0.5, 0.9)), CFrame.new(pos + Vector3.new(math.cos(a) * 1.2, hgt / 2 + 0.6, math.sin(a) * 1.2)) * CFrame.Angles(rng:NextNumber(-0.5, 0.5), a, rng:NextNumber(-0.5, 0.5)), Color3.fromRGB(232, 228, 216), Enum.Material.Salt, { Name = "NestCrystal" })
+			end
+			local glow = Instance.new("PointLight")
+			glow.Color = Color3.fromRGB(200, 220, 230)
+			glow.Range = 9
+			glow.Brightness = 0.6
+			glow.Parent = core
+			nest.PrimaryPart = core
+			nest.Parent = encounterFolder
+			CollectionService:AddTag(nest, "SaltNest")
+		end
+	end
+
 	-- the signal lantern (Lantern Watch / finale)
 	if encounterType == "LanternWatch" then
 		local base = Services.LootService.settle(MapService.LanternPos, encounterFolder)
@@ -643,40 +907,17 @@ function MapService.cleanupEncounter()
 	extraction = nil
 end
 
--- Shows which homebase repairs are done (any player in the server owns them).
-function MapService.setFerryRepairs(owned)
-	local ferry = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Meridian")
-	if not ferry then
-		return
-	end
-	local stations = ferry:FindFirstChild("Stations")
-	for _, d in ferry:GetDescendants() do
-		if d:IsA("BasePart") and d.Name == "DeckBulb" then
-			local light = d:FindFirstChildOfClass("PointLight")
-			if light then
-				light.Enabled = owned.lights == true
-			end
-			d.Material = owned.lights and Enum.Material.Neon or Enum.Material.Glass
-		end
-	end
-	if stations then
-		for _, id in { "generator", "radio", "sickbay", "armory" } do
-			local part = stations:FindFirstChild(id)
-			if part then
-				part.Transparency = owned[id] and 0 or 0.7
-				for _, light in part:GetDescendants() do
-					if light:IsA("PointLight") then
-						light.Enabled = owned[id] == true
-					end
-				end
-			end
-		end
-		local beacon = stations:FindFirstChild("radioBeacon")
-		local beaconLight = beacon and beacon:FindFirstChild("On")
-		if beaconLight then
-			beaconLight.Enabled = owned.radio == true
-		end
-	end
+-- Test hook: build the Meridian (with rooms for `owned`) without starting the game loop.
+function MapService.buildFerryForTest(owned)
+	local world = Workspace:FindFirstChild("World") or Instance.new("Folder")
+	world.Name = "World"
+	world.Parent = Workspace
+	local ferry = Instance.new("Folder")
+	ferry.Name = "Meridian"
+	ferry.Parent = world
+	buildFerry(ferry)
+	MapService.setFerryRepairs(owned or {})
+	return ferry
 end
 
 function MapService.ferrySpawn(index)

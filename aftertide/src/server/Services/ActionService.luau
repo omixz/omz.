@@ -113,6 +113,7 @@ local function melee(player, info)
 				break
 			end
 		end
+		Services.MatchService.damageNestsNear(pos + look * 2.5, 3.5, MELEE.damage[combo], player)
 	end)
 	Services.PerceptionService.emitNoise(pos, MELEE.noise, "melee", player)
 end

@@ -14,6 +14,21 @@ return {
 			desc = "Keep the signal lantern lit until the tide turns.",
 			waves = 3, waveTime = 40, perWave = 4, lanternHP = 400, dps = 18,
 		},
+		Medicine = {
+			name = "Medicine Run",
+			desc = "Find %d medical caches (look inside buildings), then reach the Slipway flare.",
+			count = 3,
+		},
+		Relay = {
+			name = "Restore the Signal",
+			desc = "Repair %d radio relays. It's loud work: expect company. Then reach the flare.",
+			count = 3, hold = 6, noise = 50,
+		},
+		Nests = {
+			name = "Burn the Nests",
+			desc = "Destroy %d salt nests (fire and explosives work best), then reach the flare.",
+			count = 4, hp = 160,
+		},
 		Drift = {
 			name = "Drift",
 			desc = "They know you're here. Survive until the tide turns, then reach the flare.",

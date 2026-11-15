@@ -43,7 +43,8 @@ end
 
 -- How to orient and size an imported piece: the importer correction solved by AssetService
 -- (FitRot / FitScale attributes) when present, otherwise our own size and the YawFix turn.
-local function fit(mp, layerSize, scale, fallbackRot)
+local function fit(mp, layerSize, scale, fallbackRot, sourceName)
+	mp:SetAttribute("SourceName", sourceName)
 	local rot = mp:GetAttribute("FitRot")
 	local k = mp:GetAttribute("FitScale")
 	if typeof(rot) == "CFrame" and type(k) == "number" then
@@ -266,7 +267,7 @@ function MeshKit.applyRig(model, meta, getPart, format, yawFix, colorOverrides)
 				local mp = getPart(layer.part)
 				if mp then
 					mp.Name = "Mesh_" .. segName .. "_" .. layerName
-					local rot = fit(mp, v3(layer.size), s, yaw)
+					local rot = fit(mp, v3(layer.size), s, yaw, layer.part)
 					mp.Material = material(layer.material)
 					mp.Color = (colorOverrides and colorOverrides[layerName]) or Color3.new(layer.color[1], layer.color[2], layer.color[3])
 					mp.Anchored = false
@@ -316,7 +317,7 @@ function MeshKit.buildProp(meta, getPart, cframe, scale, parent)
 		local mp = getPart(layer.part)
 		if mp then
 			mp.Name = layerName
-			local rot = fit(mp, v3(layer.size), scale, MeshKit.yaw)
+			local rot = fit(mp, v3(layer.size), scale, MeshKit.yaw, layer.part)
 			mp.Material = material(layer.material)
 			mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 			mp.Anchored = true
@@ -341,7 +342,7 @@ function MeshKit.attachToGrip(meta, getPart, grip, skip)
 			local mp = getPart(layer.part)
 			if mp then
 				mp.Name = "Mesh_" .. layerName
-				local rot = fit(mp, v3(layer.size), 1, MeshKit.yaw)
+				local rot = fit(mp, v3(layer.size), 1, MeshKit.yaw, layer.part)
 				mp.Material = material(layer.material)
 				mp.Color = Color3.new(layer.color[1], layer.color[2], layer.color[3])
 				mp.Anchored = false

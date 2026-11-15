@@ -27,6 +27,9 @@ MatchService.state = "Ferry"
 MatchService.modifier = Modifiers.None
 
 local run = nil -- { id, index, pall, options, participants = { [Player] = true } }
+-- mission types where you complete N objectives and then extract
+local COLLECT = { Salvage = true, Medicine = true, Relay = true, Nests = true }
+local OBJECTIVE_NOUN = { Salvage = "Supply crate", Medicine = "Medical cache", Relay = "Relay", Nests = "Nest" }
 local enc = nil -- current encounter state
 local resultsAcknowledged = {}
 local rng = Random.new()
@@ -167,13 +170,25 @@ local function generateOptions()
 	if run.index > Encounters.RunLength then
 		table.insert(options, { type = "Finale", name = Encounters.Finale.name, modifier = rollModifier().id, bonus = 0, map = "CanneryRow", mapName = "Cannery Row", factionName = "The Hushed" })
 	else
-		local types = { "Salvage", "LanternWatch", "Drift" }
+		-- mission types and maps: the basics plus whatever the crew's Meridian projects unlock
+		local Projects = require(Shared.Config.Projects)
+		local types = table.clone(Projects.BaseMissions)
+		local maps = table.clone(Projects.BaseMaps)
+		for _, p in Projects.List do
+			if p.unlocks and anyoneHas(p.id) then
+				for _, m in p.unlocks.missions or {} do
+					table.insert(types, m)
+				end
+				for _, m in p.unlocks.maps or {} do
+					table.insert(maps, m)
+				end
+			end
+		end
 		for i = #types, 2, -1 do
 			local j = rng:NextInteger(1, i)
 			types[i], types[j] = types[j], types[i]
 		end
-		local count = anyoneHas("radio") and 3 or 2
-		local maps = table.clone(Services.MapService.MapIds)
+		local count = math.min(#types, anyoneHas("radio") and 3 or 2)
 		for i = #maps, 2, -1 do
 			local j = rng:NextInteger(1, i)
 			maps[i], maps[j] = maps[j], maps[i]
@@ -377,7 +392,7 @@ function MatchService.beginEncounter(option)
 		option = option,
 		startedAt = now(),
 		crates = 0,
-		cratesRequired = kind == "Salvage" and def.crates or 0,
+		cratesRequired = (kind == "Salvage" and def.crates) or (COLLECT[kind] and def.count) or 0,
 		extractionOpen = false,
 		wave = 0,
 		waves = def.waves or 0,
@@ -389,6 +404,8 @@ function MatchService.beginEncounter(option)
 	}
 	if kind == "Salvage" then
 		enc.objective = def.desc:format(def.crates)
+	elseif COLLECT[kind] then
+		enc.objective = def.desc:format(def.count)
 	else
 		enc.objective = def.desc
 	end
@@ -402,12 +419,16 @@ function MatchService.beginEncounter(option)
 	for player in run.participants do
 		if player.Parent then
 			i += 1
+			local session = Services.CharacterService.getSession(player)
+			if session then
+				session.stats.detectionsThisEncounter = 0
+			end
 			Services.CharacterService.spawn(player, Services.MapService.encounterSpawn(i), false)
 		end
 	end
 
 	local budget = enemyBudget()
-	if kind == "Salvage" then
+	if COLLECT[kind] then
 		spawnPatrols(budget)
 	elseif kind == "LanternWatch" then
 		spawnPatrols(math.ceil(budget * 0.4))
@@ -424,6 +445,14 @@ function MatchService.beginEncounter(option)
 
 	setState("Encounter")
 	publish()
+	if anyoneHas("lookout") then
+		task.delay(1.5, function()
+			for player in run.participants do
+				Net.notify(player, "TideSense", { radius = 90, duration = 5 })
+			end
+			Net.notifyAll("Toast", { text = "The lookout calls it: Hushed marked." })
+		end)
+	end
 	Net.notifyAll("EncounterStart", {
 		name = def.name .. " · " .. (option.mapName or ""),
 		faction = option.factionName,
@@ -434,7 +463,8 @@ function MatchService.beginEncounter(option)
 	})
 end
 
-function MatchService.onCrateSalvaged(player, crate)
+
+function MatchService.onCrateSalvaged(player, crate, keep)
 	if MatchService.state ~= "Encounter" or not enc or not crate.Parent then
 		return
 	end
@@ -442,7 +472,15 @@ function MatchService.onCrateSalvaged(player, crate)
 	if not info or (info.root.Position - crate.Position).Magnitude > 12 then
 		return
 	end
-	crate:Destroy()
+	if keep then
+		for _, d in crate:GetDescendants() do
+			if d:IsA("ProximityPrompt") then
+				d:Destroy()
+			end
+		end
+	else
+		crate:Destroy()
+	end
 	enc.crates += 1
 	info.session.stats.crates += 1
 	Services.InventoryService.add(player, "salvage", 4)
@@ -452,15 +490,62 @@ function MatchService.onCrateSalvaged(player, crate)
 		Services.MapService.activateExtraction()
 		Net.notifyAll("Toast", { text = "Quota met. The Slipway flare is lit: get everyone there." })
 	else
-		Net.notifyAll("Toast", { text = ("Supply crate %d/%d"):format(enc.crates, enc.cratesRequired) })
+		Net.notifyAll("Toast", { text = ("%s %d/%d"):format(OBJECTIVE_NOUN[enc.type] or "Objective", enc.crates, enc.cratesRequired) })
 	end
 	publish()
+end
+
+-- Salt nests (Burn the Nests): damaged by guns, melee, explosions and fire.
+function MatchService.damageNest(nest, amount, player)
+	if MatchService.state ~= "Encounter" or not enc or enc.type ~= "Nests" or not nest.Parent then
+		return false
+	end
+	local hp = (nest:GetAttribute("NestHP") or 0) - amount
+	nest:SetAttribute("NestHP", hp)
+	local core = nest.PrimaryPart
+	if core and amount >= 5 then -- a crack you can hear (fire ticks are too small to count)
+		Services.PerceptionService.emitNoise(core.Position, 20, "nest", player)
+	end
+	if hp > 0 then
+		return false
+	end
+	local at = core and core.Position or Vector3.zero
+	nest:Destroy()
+	Sfx.at(at, "Disperse", 1, 120)
+	Net.notifyAll("Explosion", { position = at, radius = 8 })
+	enc.crates += 1
+	local session = player and Services.CharacterService.getSession(player)
+	if session then
+		session.stats.crates += 1
+		Services.InventoryService.add(player, "salvage", 6)
+	end
+	-- the nest's keepers come out
+	Services.EnemyService.spawn("Drifter", at + Vector3.new(4, 0, 0), { route = { at }, alertTo = player })
+	if enc.crates >= enc.cratesRequired and not enc.extractionOpen then
+		enc.extractionOpen = true
+		Services.MapService.activateExtraction()
+		Net.notifyAll("Toast", { text = "The nests are burned. The Slipway flare is lit: get everyone there." })
+	else
+		Net.notifyAll("Toast", { text = ("Nest %d/%d destroyed"):format(enc.crates, enc.cratesRequired) })
+	end
+	publish()
+	return true
+end
+
+function MatchService.damageNestsNear(position, radius, amount, player)
+	for _, nest in game:GetService("CollectionService"):GetTagged("SaltNest") do
+		local core = nest.PrimaryPart
+		if core and (core.Position - position).Magnitude <= radius then
+			MatchService.damageNest(nest, amount, player)
+		end
+	end
 end
 
 function MatchService.onSpotted(player, enemy)
 	local session = Services.CharacterService.getSession(player)
 	if session then
 		session.stats.detections += 1
+		session.stats.detectionsThisEncounter = (session.stats.detectionsThisEncounter or 0) + 1
 	end
 	Net.notify(player, "Spotted", {})
 	Sfx.at(enemy.root.Position, "Spotted", 0.25, 40)
@@ -557,6 +642,25 @@ function MatchService.endEncounter(win)
 						end
 					end
 				end
+				-- Materials for Meridian projects (half for a failed encounter)
+				local Projects = require(Shared.Config.Projects)
+				local m = Projects.Materials
+				local mats = math.floor((m.perWin + m.perPall * run.pall + (enc.finale and m.runComplete or 0)) * (win and 1 or m.lossShare) + 0.5)
+				if runOver then
+					local leftover = player:GetAttribute("Salvage") or 0
+					mats += math.floor(leftover * m.salvageToMaterials)
+				end
+				Services.PlayerDataService.addMaterials(player, mats)
+				table.insert(rewards, ("+%d Materials"):format(mats))
+				if win and enc.finale and not data.firstFinaleWin then
+					data.firstFinaleWin = true
+					Services.PlayerDataService.addTokens(player, "build", 1)
+					table.insert(rewards, "+1 Shipwright's Crew token (first Breakwater)")
+				end
+				pcall(function()
+					Services.QuestService.onEncounterEnd(player, session.stats, win, enc, runOver)
+				end)
+				Services.LeaderboardService.refreshPlayer(player)
 				task.spawn(Services.PlayerDataService.save, player)
 			end
 			Net.notify(player, "Results", {
@@ -651,7 +755,7 @@ local function tickEncounter()
 	local t = now()
 	local def = enc.finale and Encounters.Finale or Encounters.Types[enc.type]
 
-	if enc.type == "Salvage" then
+	if COLLECT[enc.type] then
 		if enc.extractionOpen and allStandingAtExtraction() then
 			MatchService.endEncounter(true)
 		end

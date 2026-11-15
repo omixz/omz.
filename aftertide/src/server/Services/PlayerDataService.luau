@@ -23,18 +23,21 @@ local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
 local function defaultData()
 	return {
 		version = 1,
-		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo },
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo, build = 0 },
 		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
 		lastDailyWin = "",
 		scrip = 0, -- homebase currency, earned only by playing
+		materials = 0, -- Meridian projects; earned from missions
 		repairs = {}, -- [repairId] = true
 		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
 		outfits = {}, -- [outfitId] = true (bought or unlocked; defaults are implicit)
 		equipped = {}, -- [charId] = outfitId
 		oneTime = {}, -- [productKey] = true (Starter Pack)
 		spent = 0, -- Robux spent (for thank-you messaging only; never affects gameplay)
+		quests = {}, -- QuestService state (daily / weekly challenges)
+		firstFinaleWin = false,
 	}
 end
 
@@ -43,7 +46,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -63,6 +66,7 @@ local function publishTokens(player, data)
 		player:SetAttribute("Tokens_" .. kind, amount)
 	end
 	player:SetAttribute("Scrip", data.scrip)
+	player:SetAttribute("Materials", data.materials or 0)
 	player:SetAttribute("Repairs", HttpService:JSONEncode(data.repairs))
 	player:SetAttribute("Set_graphics", data.settings.graphics)
 	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
@@ -85,6 +89,26 @@ function PlayerDataService.addScrip(player, amount)
 		return false
 	end
 	data.scrip += amount
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.addMaterials(player, amount)
+	local data = PlayerDataService.get(player)
+	if not data or amount <= 0 then
+		return false
+	end
+	data.materials = (data.materials or 0) + math.floor(amount)
+	publishTokens(player, data)
+	return true
+end
+
+function PlayerDataService.spendMaterials(player, amount)
+	local data = PlayerDataService.get(player)
+	if not data or (data.materials or 0) < amount then
+		return false
+	end
+	data.materials -= amount
 	publishTokens(player, data)
 	return true
 end
