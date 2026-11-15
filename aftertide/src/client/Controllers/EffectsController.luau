@@ -224,6 +224,15 @@ function EffectsController.init(registry)
 end
 
 function EffectsController.start()
+	-- the Lucky Spin wheel on the Meridian turns slowly (client-side, purely visual)
+	local CollectionService = game:GetService("CollectionService")
+	RunService.RenderStepped:Connect(function(dt)
+		for _, wheel in CollectionService:GetTagged("SpinWheel") do
+			if wheel:IsA("Model") and wheel.PrimaryPart then
+				wheel:PivotTo(wheel:GetPivot() * CFrame.Angles(dt * 0.5, 0, 0))
+			end
+		end
+	end)
 	grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "AftertideHealth"
 	grade.Parent = Lighting

@@ -41,23 +41,22 @@ local CONTROLS = {
 	{ "SPRINT", "Shift (hold)", "L3" },
 	{ "CROUCH · PRONE", "C tap · C hold", "B tap · B hold" },
 	{ "DODGE · DIVE", "Space (dive while sprinting)", "L1" },
-	{ "AIM", "Right mouse", "L2" },
+	{ "AIM", "Right mouse", "L2 (aim assist)" },
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
 	{ "FIRE", "Left mouse", "R2" },
-	{ "RELOAD", "R", "X (no enemy near)" },
-	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-pad right" },
-	{ "BACKPACK GUN (slow)", "4", "" },
+	{ "RELOAD", "R", "R1" },
+	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-right · hold: holster" },
+	{ "BACKPACK GUN (slow)", "4", "hold D-down" },
 	{ "QUIETING · GRAB · MELEE", "F (from behind: Quiet / grab)", "X" },
-	{ "THROW · NEXT ITEM", "G · Z", "R1 · D-pad down" },
-	{ "ABILITY", "Q", "Y" },
-	{ "HEAL", "H", "D-pad up" },
-	{ "FLASHLIGHT", "T", "D-pad left" },
-	{ "AMMO CACHE · RESUPPLY", "V · B", "" },
-	{ "SATCHEL", "I or Tab", "View / Back" },
+	{ "THROW · NEXT ITEM", "G · Z", "Y · D-down" },
+	{ "ABILITY", "Q", "hold Y" },
+	{ "HEAL · RESUPPLY", "H · B", "D-up · hold D-up" },
+	{ "FLASHLIGHT · AMMO CACHE", "T · V", "D-left · hold D-left" },
+	{ "SATCHEL", "I or Tab", "View" },
 	{ "SWAP SHOULDER", "X", "R3" },
-	{ "SETTINGS · CONTROLS", "P · F1", "" },
+	{ "SETTINGS · CONTROLS", "P · F1", "in the satchel" },
 	{ "DIAGNOSTICS", "F2", "" },
-	{ "INTERACT", "E (hold)", "A" },
+	{ "INTERACT · CLOSE MENU", "E (hold) · click", "A · B" },
 }
 
 function HUD.toggleControls(force)
@@ -423,6 +422,9 @@ local function objectiveText(matchState, inEncounter)
 end
 
 function HUD.update(dt)
+	if controlsHint then
+		controlsHint.Text = State.gamepad and "VIEW  SATCHEL · SETTINGS · CONTROLS" or "F1  CONTROLS"
+	end
 	if not root then
 		return
 	end

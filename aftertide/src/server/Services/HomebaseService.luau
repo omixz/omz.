@@ -50,17 +50,23 @@ function HomebaseService.bonusesFor(player)
 				table.insert(bonus.pack, id)
 			end
 		end
-		-- crossing kits bought at the Quartermaster: delivered now, then used up
+		-- crossing kits (Quartermaster, Lucky Spin, Ammo Crates): delivered now, then used up.
+		-- At most MaxKitsEach of each kind per crossing; extra Ammo Crates wait for the next one.
+		local left = {}
 		for kitId, count in data.kit or {} do
 			for _, k in Quartermaster.Kits do
 				if k.id == kitId then
+					local use = math.min(count, Quartermaster.MaxKitsEach)
 					for itemId, amount in k.items do
-						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * count
+						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * use
+					end
+					if count > use then
+						left[kitId] = count - use
 					end
 				end
 			end
 		end
-		data.kit = {}
+		data.kit = left
 		Services.PlayerDataService.publish(player)
 	end
 	return bonus
@@ -131,7 +137,7 @@ local function buyKit(player, kitId)
 		return
 	end
 	for _, k in Quartermaster.Kits do
-		if k.id == kitId then
+		if k.id == kitId and not k.robux then
 			data.kit = data.kit or {}
 			if (data.kit[kitId] or 0) >= Quartermaster.MaxKitsEach then
 				toast(player, "That's as many as the Quartermaster will pack for one crossing.")
@@ -256,6 +262,12 @@ function HomebaseService.start()
 		UnlockGun = unlockGun,
 		SetLoadout = setLoadout,
 		BuyKit = buyKit,
+		Spin = function(player)
+			Services.SpinService.spin(player)
+		end,
+		OpenSpin = function(player)
+			Net.notify(player, "OpenSpin", {})
+		end,
 		OpenProjects = function(player)
 			Net.notify(player, "OpenRepairs", {})
 		end,

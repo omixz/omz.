@@ -4,10 +4,11 @@
 -- An ID of 0 means "not configured": the shop shows the item but will not prompt a purchase.
 --
 -- `price` is the Robux price the creation tool sets; the shop always shows Roblox's live price.
--- Rules (docs/03-monetisation.md): fixed contents, never random; every run aid has a per-crossing
+-- Rules (docs/03-monetisation.md): fixed contents (the one exception: Lucky Spin tokens, whose
+-- odds are shown before buying and which aren't sold where paid random items are restricted); every run aid has a per-crossing
 -- or per-encounter limit and can also be earned free by playing; cosmetics never change stats.
 --
--- grant kinds:  tokens = { secondWind | resupply | ammo = n }   outfit = "<Cosmetics outfit id>"
+-- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   outfit = "<Cosmetics outfit id>"
 --               outfits = { ids }   oneTime = true (can only be bought once per account)
 return {
 	Products = {
@@ -67,6 +68,36 @@ return {
 			desc = "Three Shipwright's Crew tokens: finish three Meridian projects instantly.",
 			grant = { tokens = { build = 3 } },
 		},
+		AmmoCrate = {
+			productId = 3731802328,
+			name = "Ammo Crate",
+			price = 35,
+			desc = "Packed for your next crossing: +8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows. Up to 2 crates open per crossing; extras wait for the next.",
+			grant = { kit = { ammocrate = 1 } },
+		},
+		AmmoCrate3 = {
+			productId = 3731802331,
+			name = "Ammo Crate x3",
+			price = 89,
+			desc = "Three Ammo Crates. Up to 2 open per crossing; the third waits for the next.",
+			grant = { kit = { ammocrate = 3 } },
+		},
+		LuckySpin = {
+			productId = 3731802336,
+			name = "Lucky Spin",
+			price = 10,
+			desc = "One extra spin of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 1 } },
+			randomItem = true,
+		},
+		LuckySpin5 = {
+			productId = 3731802338,
+			name = "Lucky Spin x5",
+			price = 45,
+			desc = "Five extra spins of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 5 } },
+			randomItem = true,
+		},
 		Outfit_mara_pilot = {
 			productId = 3731795745,
 			name = "Mara: Night Pilot",
@@ -97,7 +128,7 @@ return {
 		},
 	},
 	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
-	Order = { "StarterPack", "SecondWind", "SecondWind3", "Resupply", "AmmoCache", "AmmoCache5", "ShipwrightCrew", "ShipwrightCrew3" },
+	Order = { "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
 
 	-- Game passes (permanent). Created by tools/create_products.py like the products above.
 	Passes = {

@@ -21,6 +21,8 @@ local Repairs = require(UI:WaitForChild("Repairs"))
 local Settings = require(UI:WaitForChild("Settings"))
 local Quests = require(UI:WaitForChild("Quests"))
 local Quartermaster = require(UI:WaitForChild("Quartermaster"))
+local Spin = require(UI:WaitForChild("Spin"))
+local Guide = require(UI:WaitForChild("Guide"))
 
 local UIController = {}
 local Controllers
@@ -49,6 +51,10 @@ function UIController.toggleControls(force)
 	HUD.toggleControls(force)
 end
 
+function UIController.openSpin()
+	Spin.open()
+end
+
 function UIController.toggleSettings()
 	Settings.toggle()
 end
@@ -62,6 +68,7 @@ local function closeMenus()
 	CharacterSelect.close()
 	Quests.close()
 	Quartermaster.close()
+	Spin.close()
 end
 
 function UIController.init(registry)
@@ -124,6 +131,12 @@ function UIController.start()
 	build("Quartermaster", function()
 		Quartermaster.build(gui, request)
 	end)
+	build("Guide", function()
+		Guide.build(gui, request)
+	end)
+	build("Spin", function()
+		Spin.build(gui, request, Shop.prompt)
+	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")
 		dgui.Name = "AftertideDiagnostics"
@@ -133,6 +146,20 @@ function UIController.start()
 		dgui.Parent = player:WaitForChild("PlayerGui")
 		Diagnostics.build(dgui)
 	end)
+	Satchel.setMenuHandlers({
+		spin = function()
+			Spin.open()
+		end,
+		shop = function()
+			Shop.open()
+		end,
+		settings = function()
+			UIController.toggleSettings()
+		end,
+		controls = function()
+			HUD.toggleControls(true)
+		end,
+	})
 	Diagnostics.setStatusProvider(function()
 		local out = {}
 		local anim = Controllers.PlayerAnimator.status()
@@ -179,6 +206,11 @@ function UIController.start()
 			if State.character then
 				Satchel.toggle()
 			end
+		elseif key == Enum.KeyCode.ButtonB and State.uiOpen() then
+			Diagnostics.noteInput("pad B -> close menus")
+			closeMenus()
+			Settings.close()
+			Results.close()
 		elseif key == Enum.KeyCode.F1 then
 			Diagnostics.noteInput("key F1 -> controls")
 			HUD.toggleControls()
@@ -215,6 +247,10 @@ function UIController.start()
 			Quests.open()
 		elseif kind == "OpenQuartermaster" then
 			Quartermaster.open()
+		elseif kind == "OpenSpin" then
+			Spin.open()
+		elseif kind == "SpinResult" then
+			task.spawn(Spin.result, data)
 		elseif kind == "CloseMenus" then
 			closeMenus()
 		elseif kind == "Hit" then
@@ -258,10 +294,53 @@ function UIController.start()
 			warn(("[UI] %s: %s"):format(name, tostring(err)))
 		end
 	end
+	-- Console: keep the selection cursor inside whatever menu is open; drop it when none is.
+	local GuiService = game:GetService("GuiService")
+	local function firstButton()
+		local best, bestY, bestX
+		for _, d in gui:GetDescendants() do
+			if d:IsA("GuiButton") and d.Visible and d.Selectable then
+				local shown, modal = true, false
+				local a = d
+				while a and a ~= gui do
+					if a:IsA("GuiObject") then
+						if not a.Visible then
+							shown = false
+							break
+						end
+						if a.ZIndex >= 20 then
+							modal = true
+						end
+					end
+					a = a.Parent
+				end
+				if shown and modal then
+					local p = d.AbsolutePosition
+					if not best or p.Y < bestY - 4 or (math.abs(p.Y - bestY) <= 4 and p.X < bestX) then
+						best, bestY, bestX = d, p.Y, p.X
+					end
+				end
+			end
+		end
+		return best
+	end
+	local function manageSelection()
+		local sel = GuiService.SelectedObject
+		if not State.uiOpen() then
+			if sel and sel:IsDescendantOf(gui) then
+				GuiService.SelectedObject = nil
+			end
+		elseif State.gamepad and (sel == nil or not sel.Visible or not sel:IsDescendantOf(gui)) then
+			GuiService.SelectedObject = firstButton()
+		end
+	end
 	RunService.RenderStepped:Connect(function(dt)
+		safe("Selection", manageSelection)
 		safe("HUD", HUD.update, dt)
 		safe("Satchel", Satchel.refresh)
 		safe("Shop", Shop.refresh)
+		safe("Spin", Spin.refresh)
+		safe("Guide", Guide.update)
 	end)
 end
 

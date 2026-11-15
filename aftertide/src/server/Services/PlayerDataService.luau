@@ -23,7 +23,7 @@ local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
 local function defaultData()
 	return {
 		version = 1,
-		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo, build = 0 },
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo, build = 0, spin = 0 },
 		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
@@ -41,6 +41,8 @@ local function defaultData()
 		loadout = { long = "", pack = {} }, -- chosen at the Quartermaster
 		kit = {}, -- [kitId] = count, delivered at the start of the next crossing
 		firstFinaleWin = false,
+		spinDay = "", -- UTC day of the last free Lucky Spin
+		tutorial = {}, -- first-time Meridian steps done: { crew, chart, sail }
 	}
 end
 
@@ -49,7 +51,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" and key ~= "tutorial" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -80,6 +82,7 @@ local function publishTokens(player, data)
 	player:SetAttribute("Guns", HttpService:JSONEncode(data.guns or { revolver = true }))
 	player:SetAttribute("Loadout", HttpService:JSONEncode(data.loadout or {}))
 	player:SetAttribute("Kit", HttpService:JSONEncode(data.kit or {}))
+	player:SetAttribute("NewPlayer", not (data.tutorial and data.tutorial.sailed) and (data.stats.runs or 0) == 0)
 end
 
 function PlayerDataService.publish(player)
@@ -156,6 +159,18 @@ end
 function PlayerDataService.hasRepair(player, repairId)
 	local data = PlayerDataService.get(player)
 	return data ~= nil and data.repairs[repairId] == true
+end
+
+-- First-time help: remembered once you've set sail.
+function PlayerDataService.markTutorial(player, step)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.tutorial = data.tutorial or {}
+		if not data.tutorial[step] then
+			data.tutorial[step] = true
+			publishTokens(player, data)
+		end
+	end
 end
 
 function PlayerDataService.addRepair(player, repairId)

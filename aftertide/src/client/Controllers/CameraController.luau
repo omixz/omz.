@@ -38,6 +38,47 @@ params.FilterType = Enum.RaycastFilterType.Exclude
 local aimParams = RaycastParams.new()
 aimParams.FilterType = Enum.RaycastFilterType.Exclude
 
+-- Console aim assist (gamepad only, while aiming): the look slows over a target ("friction")
+-- and drifts gently onto it while you're moving the stick ("magnetism"). Never snaps.
+local lastPad = false
+local assistParams = RaycastParams.new()
+assistParams.FilterType = Enum.RaycastFilterType.Exclude
+local function wrapAngle(a)
+	return (a + math.pi) % (2 * math.pi) - math.pi
+end
+local function aimAssistTarget()
+	local enemies = Workspace:FindFirstChild("Enemies")
+	local cam = Workspace.CurrentCamera
+	if not (enemies and cam) then
+		return nil
+	end
+	local origin = cam.CFrame.Position
+	local look = cam.CFrame.LookVector
+	local best, bestAngle = nil, math.rad(7)
+	for _, model in enemies:GetChildren() do
+		local part = model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")
+		if part and model:GetAttribute("State") ~= "Dispersed" and (model:GetAttribute("HP") or 1) > 0 then
+			local to = part.Position - origin
+			local dist = to.Magnitude
+			if dist < 140 then
+				local angle = math.acos(math.clamp(look:Dot(to.Unit), -1, 1))
+				-- a wider cone up close
+				local cone = math.rad(math.clamp(7 * 25 / math.max(dist, 1), 2.5, 9))
+				if angle < cone and angle < bestAngle then
+					assistParams.FilterDescendantsInstances = { State.character, model }
+					if not Workspace:Raycast(origin, to, assistParams) then
+						best, bestAngle = part, angle
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+function CameraController.usingGamepad()
+	return lastPad
+end
+
 function CameraController.getYaw()
 	return yaw
 end
@@ -145,8 +186,16 @@ local function update(dt)
 		UserInputService.MouseIconEnabled = false
 	end
 
+	local assist = State.aiming and lastPad and player:GetAttribute("Set_aimAssist") ~= false and aimAssistTarget() or nil
+	if assist and padLook.Magnitude > 0.15 then
+		local d = (assist.Position - Workspace.CurrentCamera.CFrame.Position).Unit
+		local wantYaw, wantPitch = math.atan2(-d.X, -d.Z), math.asin(d.Y)
+		local k = math.min(1, dt * 2.2)
+		yaw += wrapAngle(wantYaw - yaw) * k
+		pitch += (wantPitch - pitch) * k * 0.6
+	end
 	if padLook.Magnitude > 0.15 then
-		local aimSlow = State.aiming and 0.55 or 1
+		local aimSlow = (State.aiming and 0.55 or 1) * (assist and 0.6 or 1)
 		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
 		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
 	end
@@ -270,6 +319,12 @@ function CameraController.start()
 			padLook = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end)
+	UserInputService.LastInputTypeChanged:Connect(function(kind)
+		lastPad = kind.Name:sub(1, 7) == "Gamepad"
+		State.gamepad = lastPad
+	end)
+	lastPad = UserInputService:GetLastInputType().Name:sub(1, 7) == "Gamepad"
+	State.gamepad = lastPad
 
 	UserInputService.TouchStarted:Connect(function(input, processed)
 		if processed or touchInput or State.uiOpen() then

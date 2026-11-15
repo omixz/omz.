@@ -160,101 +160,345 @@ local function prompt(parent, action, object, onTriggered, hold)
 	return p
 end
 
--- The Meridian: a beached car ferry, 96 x 32 studs of deck, bridge at the stern (-X).
--- Deck plan (x along the ship, z across; o = FerryOrigin):
---   x -47..-31  bridge (cabins door, projects board, leaderboard on its front face)
---   x -28..-9   aft deck: lockers, quest board, generator, workshop (+ workbench)
---   x  -6.. 6   midships: chart table, spawn line
---   x   8..25   infirmary (port) / chart room (starboard)
---   x  26..46   Purser's Office, cargo, armory, lookout tower at the bow
+-- Station signs: a floating name card above each station, readable from across the deck.
+-- `hero` = the big gold "start here" card for the chart table.
+local function stationSign(part, title, subtitle, color, offsetY, hero)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "StationSign"
+	gui.Size = hero and UDim2.new(11, 0, 3.4, 0) or UDim2.new(7.5, 0, 2.2, 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, offsetY or 4, 0)
+	gui.MaxDistance = hero and 220 or 70
+	gui.LightInfluence = 0
+	gui.Parent = part
+	local card = Instance.new("Frame")
+	card.Size = UDim2.fromScale(1, 1)
+	card.BackgroundColor3 = hero and Color3.fromRGB(255, 196, 70) or Color3.fromRGB(20, 26, 30)
+	card.BackgroundTransparency = hero and 0 or 0.15
+	card.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.Parent = card
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = hero and 4 or 3
+	stroke.Parent = card
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.fromScale(1, 0.62)
+	t.Font = Enum.Font.Oswald
+	t.TextScaled = true
+	t.Text = title
+	t.TextColor3 = hero and Color3.fromRGB(40, 24, 8) or color
+	t.Parent = card
+	local s = Instance.new("TextLabel")
+	s.BackgroundTransparency = 1
+	s.Position = UDim2.fromScale(0.05, 0.6)
+	s.Size = UDim2.fromScale(0.9, 0.34)
+	s.Font = Enum.Font.GothamMedium
+	s.TextScaled = true
+	s.Text = subtitle
+	s.TextColor3 = hero and Color3.fromRGB(70, 44, 14) or Color3.fromRGB(230, 226, 214)
+	s.Parent = card
+	return gui
+end
+
+-- A striped canvas awning (market-stall style) over a station.
+local function awning(parent, center, sizeX, sizeZ, height, colorA, colorB, alongX)
+	local stripes = 6
+	for i = 0, stripes - 1 do
+		local col = i % 2 == 0 and colorA or colorB
+		local w = (alongX and sizeX or sizeZ) / stripes
+		local off = -((alongX and sizeX or sizeZ) / 2) + w * (i + 0.5)
+		local size = alongX and Vector3.new(w, 0.25, sizeZ) or Vector3.new(sizeX, 0.25, w)
+		local pos = center + (alongX and Vector3.new(off, height, 0) or Vector3.new(0, height, off))
+		block(parent, size, CFrame.new(pos) * CFrame.Angles(alongX and 0.12 or 0, 0, alongX and 0 or 0.12), col, Enum.Material.Fabric, { CanCollide = false, CastShadow = true })
+	end
+end
+
+local function potPlant(parent, at, scale)
+	scale = scale or 1
+	block(parent, Vector3.new(1.6, 1.4, 1.6) * scale, at + Vector3.new(0, 0.7 * scale, 0), Color3.fromRGB(196, 104, 64), Enum.Material.Slate, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(at + Vector3.new(0, 0.7 * scale, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+	for i, c in { { 0, 2.1, 0, 2.2 }, { 0.5, 2.6, 0.3, 1.5 }, { -0.4, 2.5, -0.3, 1.4 } } do
+		local green = i == 1 and Color3.fromRGB(76, 150, 70) or Color3.fromRGB(96, 172, 80)
+		block(parent, Vector3.new(c[4], c[4], c[4]) * scale, at + Vector3.new(c[1], c[2], c[3]) * scale, green, Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
+	end
+	if scale >= 1 then
+		block(parent, Vector3.new(0.5, 0.5, 0.5), at + Vector3.new(0.4, 3.0, -0.2) * scale, Color3.fromRGB(240, 90, 110), Enum.Material.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false })
+	end
+end
+
+local function lifeRing(parent, cf)
+	-- an orange ring of 8 short segments with white bands
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local col = i % 2 == 0 and Color3.fromRGB(240, 110, 40) or Color3.fromRGB(245, 240, 230)
+		block(parent, Vector3.new(0.5, 0.5, 0.95), cf * CFrame.Angles(0, 0, a) * CFrame.new(0, 1, 0) * CFrame.Angles(0, math.pi / 2, 0), col, Enum.Material.SmoothPlastic, { CanCollide = false })
+	end
+end
+
+-- The Meridian: a car ferry turned home, moored at a sunny harbour pier.
+-- 96 x 32 studs of deck, bridge at the stern (-X). Everything starts at the CHART TABLE in the
+-- middle of the deck (gold light, "SET SAIL"); the other stations ring the deck with signs.
+--   x -47..-31  bridge (crew cabin door, projects board, leaderboard on its front face)
+--   x -28..-9   aft deck: crew lockers + quest board (starboard), workbench (port)
+--   x  -9.. 9   midships plaza: chart table, Lucky Spin wheel (starboard), spawn line
+--   x  26..34   Quartermaster (starboard), Purser's Office shop (port)
+--   project rooms go where the scaffolding stands (see ROOMS)
 local function buildFerry(parent)
 	table.clear(layoutBoxes)
 	local o = Game.FerryOrigin
-	local deckColor = Color3.fromRGB(70, 66, 60)
-	local hull = Color3.fromRGB(176, 176, 166)
 	local M = Enum.Material
-	-- sea, sandbar, hull, deck, railings
-	block(parent, Vector3.new(900, 1, 900), o + Vector3.new(0, -7, 0), Color3.fromRGB(30, 40, 44), M.Glass, { Reflectance = 0.12, CanQuery = false })
-	block(parent, Vector3.new(170, 4, 70), o + Vector3.new(0, -6, 0), Color3.fromRGB(120, 112, 96), M.Sand)
-	block(parent, Vector3.new(96, 2, 32), o + Vector3.new(0, -1, 0), deckColor, M.DiamondPlate)
+	local teak = Color3.fromRGB(164, 112, 70)
+	local white = Color3.fromRGB(240, 236, 226)
+	local teal = Color3.fromRGB(32, 150, 160)
+	local red = Color3.fromRGB(196, 54, 46)
+	local navy = Color3.fromRGB(30, 52, 84)
+
+	-- harbour: clear turquoise water, a sandy shallows strip, the pier, a distant island
+	block(parent, Vector3.new(1400, 1, 1400), o + Vector3.new(0, -6, 0), Color3.fromRGB(40, 150, 170), M.Glass, { Reflectance = 0.18, Transparency = 0.1, CanQuery = false })
+	block(parent, Vector3.new(1400, 1, 1400), o + Vector3.new(0, -9, 0), Color3.fromRGB(196, 188, 140), M.Sand, { CanQuery = false })
+	-- pier along the port side, with bollards and lamp posts
+	block(parent, Vector3.new(140, 1.2, 12), o + Vector3.new(0, -0.4, -24), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
+	for x = -66, 66, 12 do
+		block(parent, Vector3.new(1.2, 8, 1.2), o + Vector3.new(x, -4.5, -18.6), Color3.fromRGB(96, 74, 52), M.Wood)
+		block(parent, Vector3.new(1.2, 8, 1.2), o + Vector3.new(x, -4.5, -29.4), Color3.fromRGB(96, 74, 52), M.Wood)
+		block(parent, Vector3.new(0.9, 1.2, 0.9), o + Vector3.new(x + 6, 0.8, -19.2), Color3.fromRGB(40, 40, 44), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(x + 6, 0.8, -19.2)) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	for _, x in { -54, -18, 18, 54 } do
+		block(parent, Vector3.new(0.4, 9, 0.4), o + Vector3.new(x, 4.3, -29), Color3.fromRGB(40, 60, 70), M.Metal)
+		MapKit.bulb(parent, o + Vector3.new(x, 9, -29), 20)
+	end
+	-- the island across the bay and a lighthouse
+	for _, h in { { -160, 260, 120, 46 }, { -60, 300, 160, 60 }, { 70, 280, 130, 50 }, { 180, 250, 110, 40 } } do
+		block(parent, Vector3.new(h[3], h[4] * 2, h[3] * 0.8), o + Vector3.new(h[1], -10, h[2]), Color3.fromRGB(86, 150, 74), M.Grass, { Shape = Enum.PartType.Ball, CanQuery = false, CanCollide = false })
+	end
+	for i = 0, 5 do
+		block(parent, Vector3.new(5.2 - i * 0.3, 5, 5.2 - i * 0.3), o + Vector3.new(120, -3 + i * 5, 190), i % 2 == 0 and white or red, M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(120, -3 + i * 5, 190)) * CFrame.Angles(0, 0, math.pi / 2), CanQuery = false })
+	end
+	local lamp = block(parent, Vector3.new(2.4, 2.4, 2.4), o + Vector3.new(120, 28, 190), Color3.fromRGB(255, 230, 150), M.Neon, { Shape = Enum.PartType.Ball, CanQuery = false })
+	local lampLight = Instance.new("PointLight")
+	lampLight.Range = 40
+	lampLight.Color = Color3.fromRGB(255, 220, 150)
+	lampLight.Parent = lamp
+
+	-- hull: white topsides, teal band, red below the waterline; teak deck
+	block(parent, Vector3.new(96, 2, 32), o + Vector3.new(0, -1, 0), teak, M.WoodPlanks)
+	for i = -5, 5 do -- deck seams
+		block(parent, Vector3.new(96, 0.05, 0.12), o + Vector3.new(0, 0.02, i * 2.8), Color3.fromRGB(110, 76, 50), M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+	end
 	for _, z in { -16.5, 16.5 } do
-		block(parent, Vector3.new(97, 8, 1), o + Vector3.new(0, -5, z), hull, M.CorrodedMetal)
-		block(parent, Vector3.new(96, 3.5, 0.5), o + Vector3.new(0, 1.75, z * 0.97), C.metal, M.Metal)
+		block(parent, Vector3.new(97, 4, 1), o + Vector3.new(0, -3, z), white, M.SmoothPlastic)
+		block(parent, Vector3.new(97.2, 1.1, 1.1), o + Vector3.new(0, -2.2, z), teal, M.SmoothPlastic)
+		block(parent, Vector3.new(97, 3, 1), o + Vector3.new(0, -6.5, z), red, M.SmoothPlastic)
+		-- railing: white posts and a teal top rail
+		block(parent, Vector3.new(96, 0.35, 0.35), o + Vector3.new(0, 3.3, z * 0.97), teal, M.Metal)
+		block(parent, Vector3.new(96, 0.2, 0.2), o + Vector3.new(0, 1.8, z * 0.97), white, M.Metal)
+		for x = -46, 46, 4 do
+			block(parent, Vector3.new(0.25, 3.4, 0.25), o + Vector3.new(x, 1.7, z * 0.97), white, M.Metal)
+		end
+		block(parent, Vector3.new(96, 3.5, 0.2), o + Vector3.new(0, 1.75, z * 0.985), white, M.SmoothPlastic, { Transparency = 1 }) -- invisible railing collision
+		for _, x in { -22, 6, 34 } do
+			lifeRing(parent, CFrame.new(o + Vector3.new(x, 2.4, z * 1.005)) * CFrame.Angles(0, z > 0 and 0 or math.pi, 0))
+		end
 	end
 	for _, x in { -48.25, 48.25 } do
-		block(parent, Vector3.new(0.5, 3.5, 32), o + Vector3.new(x, 1.75, 0), C.metal, M.Metal)
-		block(parent, Vector3.new(1, 8, 33), o + Vector3.new(x * 1.01, -5, 0), hull, M.CorrodedMetal)
+		block(parent, Vector3.new(0.35, 0.35, 32), o + Vector3.new(x, 3.3, 0), teal, M.Metal)
+		block(parent, Vector3.new(0.2, 3.5, 32), o + Vector3.new(x, 1.75, 0), white, M.SmoothPlastic, { Transparency = 1 })
+		block(parent, Vector3.new(1, 4, 33), o + Vector3.new(x * 1.01, -3, 0), white, M.SmoothPlastic)
+		block(parent, Vector3.new(1.1, 1.1, 33.2), o + Vector3.new(x * 1.01, -2.2, 0), teal, M.SmoothPlastic)
+		block(parent, Vector3.new(1, 3, 33), o + Vector3.new(x * 1.01, -6.5, 0), red, M.SmoothPlastic)
+	end
+	-- the name on both sides of the bow
+	for _, z in { -17.05, 17.05 } do
+		local plate = block(parent, Vector3.new(22, 2.6, 0.1), o + Vector3.new(30, -3.4, z), white, M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = z < 0 and Enum.NormalId.Front or Enum.NormalId.Back
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 30
+		gui.Parent = plate
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = "M E R I D I A N"
+		label.TextColor3 = navy
+		label.Parent = gui
 	end
 
-	-- bridge superstructure
-	fixture(parent, "Bridge", Vector3.new(16, 12, 22), o + Vector3.new(-39, 6, 0), hull, M.CorrodedMetal)
-	block(parent, Vector3.new(18, 1, 24), o + Vector3.new(-39, 12.5, 0), C.metal, M.Metal)
-	block(parent, Vector3.new(0.3, 2.4, 18), o + Vector3.new(-30.9, 9, 0), Color3.fromRGB(40, 48, 52), M.Glass, { Transparency = 0.3 })
+	-- bridge superstructure: white with a teal trim, a window band, a red-and-white funnel
+	fixture(parent, "Bridge", Vector3.new(16, 12, 22), o + Vector3.new(-39, 6, 0), white, M.SmoothPlastic)
+	block(parent, Vector3.new(16.2, 0.8, 22.2), o + Vector3.new(-39, 0.4, 0), teal, M.SmoothPlastic)
+	block(parent, Vector3.new(18, 1, 24), o + Vector3.new(-39, 12.5, 0), navy, M.Metal)
+	block(parent, Vector3.new(0.3, 2.6, 19), o + Vector3.new(-30.9, 9, 0), Color3.fromRGB(60, 110, 140), M.Glass, { Transparency = 0.25, Reflectance = 0.3 })
+	for _, z in { -11.05, 11.05 } do
+		block(parent, Vector3.new(14, 2.4, 0.3), o + Vector3.new(-39, 9, z), Color3.fromRGB(60, 110, 140), M.Glass, { Transparency = 0.25, Reflectance = 0.3 })
+	end
+	local funnelAt = o + Vector3.new(-39, 16.5, -9)
+	register("Funnel", CFrame.new(funnelAt), Vector3.new(4.4, 7, 4.4))
+	for i, band in { { -2.5, red, 2 }, { -0.5, white, 2 }, { 1.5, red, 2 }, { 3.0, Color3.fromRGB(30, 30, 32), 1 } } do
+		block(parent, Vector3.new(band[3], 4.4, 4.4), funnelAt + Vector3.new(0, band[1], 0), band[2], M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(funnelAt + Vector3.new(0, band[1], 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+		assert(i)
+	end
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = SMOKE
+	smoke.Rate = 3
+	smoke.Lifetime = NumberRange.new(5, 8)
+	smoke.Speed = NumberRange.new(2, 4)
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 9) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Color = ColorSequence.new(Color3.fromRGB(230, 230, 228))
+	smoke.Acceleration = Vector3.new(3, 1, 1)
+	smoke.Parent = block(parent, Vector3.new(1, 1, 1), funnelAt + Vector3.new(0, 4, 0), white, M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	-- flags on a line from the funnel to the bow mast
+	block(parent, Vector3.new(0.4, 14, 0.4), o + Vector3.new(44, 7, 0), white, M.Metal)
+	local flagColors = { red, Color3.fromRGB(250, 200, 60), teal, Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 120, 60), white }
+	for i = 1, 18 do
+		local k = i / 19
+		local p = funnelAt:Lerp(o + Vector3.new(44, 13.5, 0), k) + Vector3.new(0, -math.sin(k * math.pi) * 3, 0)
+		block(parent, Vector3.new(0.1, 1.1, 0.9), CFrame.new(p) * CFrame.Angles(0, math.rad(90 + 12), 0) * CFrame.new(0, -0.5, 0), flagColors[i % #flagColors + 1], M.Fabric, { CanCollide = false, CanQuery = false })
+	end
 
 	-- on the bridge's front face (x = -31)
-	local cabin = fixture(parent, "CabinDoor", Vector3.new(0.6, 8, 4), o + Vector3.new(-30.65, 4, 6), Color3.fromRGB(90, 96, 92), M.Metal)
+	local cabin = fixture(parent, "CabinDoor", Vector3.new(0.6, 8, 4), o + Vector3.new(-30.65, 4, 6), navy, M.Metal)
+	stationSign(cabin, "CREW CABINS", "Change character", Color3.fromRGB(160, 200, 255), 5.5)
 	prompt(cabin, "Change crew member", "Crew cabins", function(player)
 		Services.MatchService.openCharacterSelect(player)
 	end)
-	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(120, 100, 76), M.WoodPlanks)
+	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
+	stationSign(board, "PROJECTS", "Upgrade the Meridian", Color3.fromRGB(120, 200, 230), 3.6)
 	prompt(board, "Plan projects", "The Meridian", function(player)
 		Services.MatchService.openMenu(player, "OpenRepairs")
 	end)
-	local leaderboard = fixture(parent, "Leaderboard", Vector3.new(0.3, 5, 6), o + Vector3.new(-30.8, 4.5, -7.8), Color3.fromRGB(46, 52, 56), M.Slate)
+	local leaderboard = fixture(parent, "Leaderboard", Vector3.new(0.3, 5, 6), o + Vector3.new(-30.8, 4.5, -7.8), Color3.fromRGB(30, 46, 64), M.SmoothPlastic)
 	MapService.leaderboardPart = leaderboard
 
-	-- aft deck
-	local lockers = fixture(parent, "CrewLockers", Vector3.new(4, 7, 1.4), o + Vector3.new(-26, 3.5, 14.6), Color3.fromRGB(72, 80, 78), M.DiamondPlate)
+	-- aft deck, starboard: crew lockers (wardrobe) and the quest board
+	local lockers = fixture(parent, "CrewLockers", Vector3.new(4, 7, 1.4), o + Vector3.new(-26, 3.5, 14.6), Color3.fromRGB(70, 130, 200), M.Metal)
+	for i = -1, 1 do
+		block(parent, Vector3.new(0.08, 6.4, 1.42), o + Vector3.new(-26 + i * 1.33 + 0.66, 3.5, 14.6), Color3.fromRGB(40, 80, 140), M.Metal, { CanCollide = false })
+	end
+	stationSign(lockers, "WARDROBE", "Outfits", Color3.fromRGB(240, 150, 200), 5.2)
 	prompt(lockers, "Open wardrobe", "Crew lockers", function(player)
 		Services.MatchService.openShop(player, "Wardrobe")
 	end)
-	local quests = fixture(parent, "QuestBoard", Vector3.new(5, 4, 0.4), o + Vector3.new(-18, 3.6, 14.8), Color3.fromRGB(130, 108, 80), M.WoodPlanks)
+	local quests = fixture(parent, "QuestBoard", Vector3.new(5, 4, 0.4), o + Vector3.new(-18, 3.6, 14.8), Color3.fromRGB(176, 134, 88), M.WoodPlanks)
 	for _, x in { -20.75, -15.25 } do
-		fixture(parent, "QuestBoardPost", Vector3.new(0.4, 5.6, 0.4), o + Vector3.new(x, 2.8, 14.8), Color3.fromRGB(86, 70, 54), M.Wood)
+		fixture(parent, "QuestBoardPost", Vector3.new(0.4, 5.6, 0.4), o + Vector3.new(x, 2.8, 14.8), Color3.fromRGB(110, 80, 54), M.Wood)
 	end
+	for i, c in { Color3.fromRGB(250, 240, 200), Color3.fromRGB(255, 220, 160), Color3.fromRGB(230, 245, 255) } do
+		block(parent, Vector3.new(1.2, 1.5, 0.05), o + Vector3.new(-19.6 + i * 1.3, 3.7 + (i % 2) * 0.3, 14.57), c, M.SmoothPlastic, { CanCollide = false })
+	end
+	stationSign(quests, "QUESTS", "Daily & weekly rewards", Color3.fromRGB(250, 210, 110), 3.8)
 	prompt(quests, "Read the board", "Quests", function(player)
 		Services.MatchService.openMenu(player, "OpenQuests")
 	end)
-	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(86, 66, 46), M.WoodPlanks)
-	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(110, 40, 30), M.Metal) -- vice
+
+	-- aft deck, port: the workbench
+	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(140, 100, 64), M.WoodPlanks)
+	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(200, 60, 40), M.Metal) -- vice
+	block(parent, Vector3.new(1.4, 0.5, 0.8), o + Vector3.new(-15.5, 3.25, -13.4), Color3.fromRGB(230, 170, 40), M.Metal) -- toolbox
+	stationSign(bench, "WORKBENCH", "Upgrade your guns", Color3.fromRGB(255, 170, 90), 4.2)
 	prompt(bench, "Use workbench", "Workbench", function(player)
 		Services.MatchService.openMenu(player, "OpenWorkbench")
 	end)
 
-	-- midships: the tide chart
-	local chart = fixture(parent, "ChartTable", Vector3.new(5, 3, 3), o + Vector3.new(0, 1.5, -2), Color3.fromRGB(96, 70, 48), M.WoodPlanks)
-	block(parent, Vector3.new(4.4, 0.1, 2.4), o + Vector3.new(0, 3.05, -2), Color3.fromRGB(214, 204, 176), M.SmoothPlastic)
-	local chartPrompt = prompt(chart, "Read the tide chart", "Tide chart", function(player)
+	-- midships plaza: compass rose and the CHART TABLE (start here)
+	block(parent, Vector3.new(0.12, 15, 15), o + Vector3.new(0, 0.06, -1), Color3.fromRGB(196, 150, 96), M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 0.06, -1)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false })
+	block(parent, Vector3.new(0.14, 12.6, 12.6), o + Vector3.new(0, 0.07, -1), Color3.fromRGB(150, 104, 62), M.WoodPlanks, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 0.07, -1)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false })
+	for i = 0, 3 do
+		block(parent, Vector3.new(0.6, 0.06, 12), CFrame.new(o + Vector3.new(0, 0.12, -1)) * CFrame.Angles(0, i * math.pi / 4, 0), Color3.fromRGB(240, 220, 170), M.SmoothPlastic, { CanCollide = false })
+	end
+	local chart = fixture(parent, "ChartTable", Vector3.new(5, 3, 3), o + Vector3.new(0, 1.5, -2), Color3.fromRGB(110, 76, 48), M.WoodPlanks)
+	block(parent, Vector3.new(4.6, 0.1, 2.6), o + Vector3.new(0, 3.05, -2), Color3.fromRGB(236, 222, 186), M.SmoothPlastic)
+	block(parent, Vector3.new(1.2, 0.12, 0.12), o + Vector3.new(0.6, 3.15, -2.2), red, M.SmoothPlastic, { CanCollide = false })
+	-- the beacon: a column of warm light over the table, visible from anywhere on deck
+	local beam = block(parent, Vector3.new(30, 1.3, 1.3), o + Vector3.new(0, 18.2, -2), Color3.fromRGB(255, 210, 110), M.Neon, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 18.2, -2)) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.55, CanCollide = false, CanQuery = false, CastShadow = false, Name = "SailBeacon" })
+	local glow = Instance.new("PointLight")
+	glow.Range = 16
+	glow.Brightness = 2
+	glow.Color = Color3.fromRGB(255, 210, 120)
+	glow.Parent = chart
+	stationSign(beam, "SET SAIL", "Start here: choose a mission", Color3.fromRGB(255, 255, 255), -10.5, true)
+	local chartPrompt = prompt(chart, "Set sail (choose a mission)", "Tide chart", function(player)
 		Services.MatchService.requestChart(player)
-	end, 0.8)
+	end, 0.5)
 	chartPrompt.Name = "ChartPrompt"
+	chartPrompt.MaxActivationDistance = 12
+	local guide = Instance.new("Attachment")
+	guide.Name = "GuideTarget"
+	guide.Position = Vector3.new(0, 2, 0)
+	guide.Parent = chart
 
-	-- the Purser's Office (shop)
-	local booth = fixture(parent, "PursersOffice", Vector3.new(7, 8, 5), o + Vector3.new(30, 4, -12.5), Color3.fromRGB(150, 146, 134), M.CorrodedMetal)
+	-- midships, starboard: the Lucky Spin wheel (free daily spin)
+	local wheelAt = o + Vector3.new(-3, 4.6, 14.6)
+	local wheelBase = fixture(parent, "SpinWheelStand", Vector3.new(5, 1.2, 1.6), o + Vector3.new(-3, 0.6, 14.6), navy, M.Metal)
+	register("SpinWheel", CFrame.new(wheelAt), Vector3.new(6.2, 6.2, 0.8))
+	local wheel = Instance.new("Model")
+	wheel.Name = "SpinWheel"
+	wheel.Parent = parent
+	local disc = block(wheel, Vector3.new(0.4, 6, 6), CFrame.new(wheelAt) * CFrame.Angles(0, math.pi / 2, 0), white, M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+	wheel.PrimaryPart = disc
+	local wedgeColors = { red, Color3.fromRGB(250, 200, 60), teal, Color3.fromRGB(150, 110, 230), Color3.fromRGB(240, 120, 60), Color3.fromRGB(90, 190, 110), Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 90, 150) }
+	for i = 0, 7 do
+		block(wheel, Vector3.new(0.9, 2.7, 0.2), CFrame.new(wheelAt) * CFrame.Angles(0, 0, i * math.pi / 4) * CFrame.new(0, 1.5, -0.25), wedgeColors[i + 1], M.SmoothPlastic, { CanCollide = false })
+	end
+	block(wheel, Vector3.new(0.5, 1, 1), CFrame.new(wheelAt + Vector3.new(0, 0, -0.4)) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(250, 210, 80), M.Metal, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+	block(parent, Vector3.new(0.5, 0.9, 0.5), wheelAt + Vector3.new(0, 3.3, -0.4), Color3.fromRGB(250, 210, 80), M.Metal, { CanCollide = false }) -- pointer
+	for _, x in { -2.7, 2.7 } do
+		block(parent, Vector3.new(0.4, 4.4, 0.4), o + Vector3.new(-3 + x, 3.2, 14.9), navy, M.Metal)
+	end
+	CollectionService:AddTag(wheel, "SpinWheel")
+	stationSign(wheelBase, "LUCKY SPIN", "1 free spin every day!", Color3.fromRGB(250, 200, 60), 9)
+	prompt(wheelBase, "Spin the wheel", "Lucky Spin", function(player)
+		Services.MatchService.openMenu(player, "OpenSpin")
+	end)
+
+	-- the Purser's Office (Robux shop): a yellow kiosk with a striped awning
+	local booth = fixture(parent, "PursersOffice", Vector3.new(7, 8, 5), o + Vector3.new(30, 4, -12.5), Color3.fromRGB(250, 206, 90), M.SmoothPlastic)
+	block(parent, Vector3.new(5, 2.4, 0.2), o + Vector3.new(30, 3.6, -9.95), Color3.fromRGB(70, 120, 160), M.Glass, { Transparency = 0.3, CanCollide = false })
+	awning(parent, o + Vector3.new(30, 0, -8.6), 8, 3, 7.4, red, white, true)
 	local boothLight = Instance.new("PointLight")
-	boothLight.Range = 10
-	boothLight.Brightness = 1
+	boothLight.Range = 12
+	boothLight.Brightness = 1.2
 	boothLight.Color = C.warm
 	boothLight.Parent = booth
-	prompt(booth, "Open the ledger", "The Purser's Office", function(player)
+	stationSign(booth, "SHOP", "Supplies, ammo & outfits", Color3.fromRGB(255, 120, 110), 6)
+	prompt(booth, "Open the shop", "The Purser's Office", function(player)
 		Services.MatchService.openShop(player)
 	end)
 
 	-- the Quartermaster's stall (Scrip store: guns, loadout, kits)
-	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(92, 78, 60), M.WoodPlanks)
-	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(70, 60, 48), M.WoodPlanks)
+	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(140, 104, 64), M.WoodPlanks)
+	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(96, 74, 52), M.WoodPlanks)
+	for i = -2, 2 do -- guns on the rack
+		block(parent, Vector3.new(0.2, 3.2, 0.25), o + Vector3.new(27 + i * 1.1, 3.6, 15.0), Color3.fromRGB(70, 56, 44), M.Wood, { CanCollide = false })
+	end
+	awning(parent, o + Vector3.new(27, 0, 12.6), 7, 3.2, 7.2, Color3.fromRGB(40, 110, 70), Color3.fromRGB(236, 226, 196), true)
 	local qmLight = Instance.new("PointLight")
 	qmLight.Range = 10
 	qmLight.Color = C.warm
 	qmLight.Parent = qm
+	stationSign(qm, "QUARTERMASTER", "Unlock guns · loadout · kits", Color3.fromRGB(140, 220, 140), 6.2)
 	prompt(qm, "Trade", "The Quartermaster", function(player)
 		Services.MatchService.openMenu(player, "OpenQuartermaster")
 	end)
 
-	-- cargo
-	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), C.containers[2], M.CorrodedMetal)
+	-- cargo with bright tarps
+	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), Color3.fromRGB(32, 120, 150), M.CorrodedMetal)
+	block(parent, Vector3.new(10.4, 0.3, 6.4), o + Vector3.new(40, 8.75, 0), Color3.fromRGB(240, 120, 50), M.Fabric)
 
-	-- string lights (lit by the Deck Lights project)
+	-- plants, benches and crates around the plaza (registered so nothing ends up in them)
+	for _, spot in { { -8, -14.6 }, { 8, -14.6 }, { -10, 14.6 }, { 4.5, 14.6 }, { -29, -9 }, { 22, 14.6 } } do
+		local at = o + Vector3.new(spot[1], 0, spot[2])
+		register("Planter", CFrame.new(at + Vector3.new(0, 1.2, 0)), Vector3.new(2.2, 2.4, 2.2))
+		potPlant(parent, at, 1)
+	end
+	for _, spot in { { -4, -14.8 }, { 4, -14.8 } } do
+		fixture(parent, "Bench", Vector3.new(4, 1.2, 1.4), o + Vector3.new(spot[1], 0.6, spot[2]), Color3.fromRGB(150, 104, 66), M.WoodPlanks)
+	end
+
+	-- string lights over the deck (always on; the Deck Lights project adds colour)
 	for i = 0, 9 do
 		local x = -27 + i * 6
 		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 4.5) * 0.2, 2), C.warm, M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, Name = "DeckBulb" })
@@ -372,11 +616,15 @@ function MapService.setFerryRepairs(owned)
 	end
 	for _, d in ferry:GetDescendants() do
 		if d:IsA("BasePart") and d.Name == "DeckBulb" then
+			-- always lit; the Deck Lights project turns them into coloured festival lights
+			local festive = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(255, 210, 90), Color3.fromRGB(120, 220, 160), Color3.fromRGB(120, 180, 255), Color3.fromRGB(230, 140, 255) }
+			local i = math.floor((d.Position.X + 100) / 6) % #festive + 1
+			d.Color = owned.lights and festive[i] or C.warm
 			local light = d:FindFirstChildOfClass("PointLight")
 			if light then
-				light.Enabled = owned.lights == true
+				light.Color = d.Color
+				light.Brightness = owned.lights and 1.3 or 0.9
 			end
-			d.Material = owned.lights and Enum.Material.Neon or Enum.Material.Glass
 		end
 	end
 	local rooms = ferry:FindFirstChild("Rooms")
@@ -942,10 +1190,12 @@ function MapService.buildFerryForTest(owned)
 	return ferry
 end
 
+-- Spawn line in front of the chart table, facing it: the first thing you see is SET SAIL.
 function MapService.ferrySpawn(index)
 	local o = Game.FerryOrigin
-	local pos = o + Vector3.new(-4 + ((index - 1) % 4) * 3, 3, 6)
-	return CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0))
+	local pos = o + Vector3.new(-4.5 + ((index - 1) % 4) * 3, 3, 8)
+	local look = o + Vector3.new(0, 3, -2)
+	return CFrame.lookAt(pos, Vector3.new(look.X, pos.Y, look.Z))
 end
 
 function MapService.encounterSpawn(index)

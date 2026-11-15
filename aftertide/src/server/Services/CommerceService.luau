@@ -45,6 +45,11 @@ local function processReceipt(receipt)
 	for kind, amount in grant.tokens or {} do
 		Services.PlayerDataService.addTokens(player, kind, amount)
 	end
+	for kitId, amount in grant.kit or {} do
+		data_.kit = data_.kit or {}
+		data_.kit[kitId] = (data_.kit[kitId] or 0) + amount
+		Services.PlayerDataService.publish(player)
+	end
 	if grant.outfit then
 		Services.PlayerDataService.ownOutfit(player, grant.outfit)
 	end
@@ -66,6 +71,9 @@ local function processReceipt(receipt)
 	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
 	if grant.outfit then
 		task.defer(Services.CosmeticsService.equip, player, grant.outfit)
+	end
+	if grant.tokens and grant.tokens.spin then
+		Net.notify(player, "OpenSpin", {})
 	end
 	if entry.key == "AmmoCache" or entry.key == "AmmoCache5" then
 		task.defer(function()

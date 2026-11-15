@@ -44,6 +44,8 @@ local function costText(recipe)
 	return table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
 end
 
+local menuHandlers = {}
+
 function Satchel.build(gui, actionSender)
 	sendAction = actionSender
 	local panel
@@ -91,8 +93,26 @@ function Satchel.build(gui, actionSender)
 	resupply.Activated:Connect(function()
 		sendAction("Resupply")
 	end)
-	local close = Theme.button({ LayoutOrder = 23, Text = "CLOSE  [Tab]", Size = UDim2.new(0, 160, 0, 36), Parent = scroller })
+	-- menus that have no key on a controller (and are handy with a mouse too)
+	Theme.heading({ LayoutOrder = 24, Text = "MENU", TextSize = 17, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 22), Parent = scroller })
+	local menuRow = Theme.make("Frame", { LayoutOrder = 25, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = scroller })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = menuRow
+	for i, entry in { { "LUCKY SPIN", "spin" }, { "SHOP", "shop" }, { "SETTINGS", "settings" }, { "CONTROLS", "controls" } } do
+		local b = Theme.button({ LayoutOrder = i, Text = entry[1], TextSize = 14, Size = UDim2.new(0.25, -5, 1, 0), Parent = menuRow })
+		b.Activated:Connect(function()
+			local fn = menuHandlers[entry[2]]
+			if fn then
+				Satchel.close()
+				fn()
+			end
+		end)
+	end
+	local close = Theme.button({ LayoutOrder = 30, Text = "CLOSE  [Tab / B]", Size = UDim2.new(0, 180, 0, 36), Parent = scroller })
 	close.Activated:Connect(Satchel.close)
+end
+
+function Satchel.setMenuHandlers(handlers)
+	menuHandlers = handlers
 end
 
 function Satchel.refresh()

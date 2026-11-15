@@ -15,6 +15,8 @@ return {
 		{ id = "rounds", name = "Spare rounds", desc = "+4 revolver rounds", price = 20, items = { pistolAmmo = 4 } },
 		{ id = "longrounds", name = "Long-gun ammunition", desc = "+3 rifle rounds, +2 shells, +3 arrows", price = 35, items = { rifleAmmo = 3, shells = 2, arrows = 3 } },
 		{ id = "medkit", name = "Field kit", desc = "+1 Field Dressing, +1 Cloth", price = 30, items = { dressing = 1, cloth = 1 } },
+		-- Robux only (Ammo Crate products); not listed at the Quartermaster
+		{ id = "ammocrate", robux = true, name = "Ammo Crate", desc = "+8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows", price = 0, items = { pistolAmmo = 8, rifleAmmo = 4, shells = 4, arrows = 6 } },
 		{ id = "throwables", name = "Throwables", desc = "+1 Bottle, +1 Flare Pot", price = 35, items = { bottle = 1, flarePot = 1 } },
 	},
 	MaxKitsEach = 2,

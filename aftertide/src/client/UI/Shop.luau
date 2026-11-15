@@ -44,6 +44,9 @@ function Shop.prompt(productKey)
 	if not product or product.productId == 0 then
 		return false
 	end
+	if product.randomItem and player:GetAttribute("PaidSpinRestricted") ~= false then
+		return false -- paid random items aren't offered where they're restricted (or unknown)
+	end
 	MarketplaceService:PromptProductPurchase(player, product.productId)
 	return true
 end

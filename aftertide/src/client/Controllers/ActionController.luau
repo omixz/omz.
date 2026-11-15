@@ -1,19 +1,21 @@
 --!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
---   Keyboard/mouse                     Gamepad
+--   Keyboard/mouse                     Gamepad (Xbox names; PlayStation in brackets)
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
 --   (Shift / L3 while aiming: hold breath to steady your aim)
---   C / Ctrl crouch (hold: prone)      B crouch (hold: prone)
---   RMB aim, LMB fire                  L2 aim, R2 fire
---   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
---   R reload (Second Wind if downed)   X: Quieting/shove near a Hushed, else reload
---   F Quieting / shove                 (X, contextual)
---   G throw, Z next throwable          R1 throw, D-pad down next throwable
---   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
---   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
---   X swap shoulder, Tab / I satchel   R3 shoulder, View/Back satchel
---   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
+--   C / Ctrl crouch (hold: prone)      B [Circle] crouch (hold: prone)
+--   RMB aim, LMB fire                  L2 aim, R2 fire (aim assist while aiming)
+--   R reload (Second Wind if downed)   R1 reload (Second Wind if downed)
+--   F Quieting / grab / melee          X [Square] (reloads when nobody is in reach)
+--   Space dodge (dive when sprinting)  L1 dodge
+--   G throw, Q ability                 Y [Triangle] tap: throw · hold: ability
+--   1 long gun, 2 sidearm, 3 holster   D-pad right tap: next weapon · hold: holster
+--   Z next throwable, 4 backpack gun   D-pad down tap: next throwable · hold: backpack gun
+--   T torch, V ammo cache              D-pad left tap: torch · hold: ammo cache
+--   H heal, B resupply                 D-pad up tap: heal · hold: resupply
+--   X swap shoulder, Tab / I satchel   R3 shoulder, View [Share/Touchpad] satchel
+--   P settings, F1 controls            in the satchel; A interacts, B closes menus
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
 
@@ -92,6 +94,27 @@ bindUnsafe = function(name, handler, ...)
 	end
 end
 
+-- Gamepad buttons with two jobs: tap for one action, hold (0.4 s) for the other.
+local function bindPad(name, key, onTap, onHold)
+	local pressedAt, press = 0, 0
+	bind(name, function(state)
+		if state == Begin then
+			pressedAt = os.clock()
+			press += 1
+			local mine = press
+			task.delay(0.4, function()
+				if mine == press and pressedAt > 0 then
+					pressedAt = 0
+					onHold()
+				end
+			end)
+		elseif state == End and pressedAt > 0 then
+			pressedAt = 0
+			onTap()
+		end
+	end, key)
+end
+
 local function enemyNearby(radius)
 	local enemies = Workspace:FindFirstChild("Enemies")
 	local root = State.root
@@ -150,7 +173,7 @@ function ActionController.start()
 		elseif canAct() then
 			Weapon.reload()
 		end
-	end, Enum.KeyCode.R)
+	end, Enum.KeyCode.R, Enum.KeyCode.ButtonR1)
 
 	bind("Quiet", function(state, input)
 		if state ~= Begin or not canAct() then
@@ -184,18 +207,18 @@ function ActionController.start()
 		if state == Begin and canAct() then
 			Weapon.cycleWeapon()
 		end
-	end, Enum.KeyCode.DPadRight)
+	end)
 
 	bind("Throw", function(state)
 		if state == Begin and canAct() then
 			Weapon.throw()
 		end
-	end, Enum.KeyCode.G, Enum.KeyCode.ButtonR1)
+	end, Enum.KeyCode.G)
 	bind("NextThrowable", function(state)
 		if state == Begin and State.character then
 			Weapon.cycleThrowable()
 		end
-	end, Enum.KeyCode.Z, Enum.KeyCode.DPadDown)
+	end, Enum.KeyCode.Z)
 
 	bind("Dodge", function(state)
 		if state == Begin and canAct() then
@@ -207,23 +230,70 @@ function ActionController.start()
 		if state == Begin and canAct() then
 			act("Ability")
 		end
-	end, Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
+	end, Enum.KeyCode.Q)
 	bind("Heal", function(state)
 		if state == Begin and canAct() then
 			act("Heal")
 		end
-	end, Enum.KeyCode.H, Enum.KeyCode.DPadUp)
+	end, Enum.KeyCode.H)
 	bind("Torch", function(state)
 		if state == Begin and State.character and not State.downed then
 			act("Torch")
 		end
-	end, Enum.KeyCode.T, Enum.KeyCode.DPadLeft)
+	end, Enum.KeyCode.T)
+
+	-- gamepad: buttons with a tap and a hold action
+	bindPad("PadY", Enum.KeyCode.ButtonY, function()
+		if canAct() then
+			Weapon.throw()
+		end
+	end, function()
+		if canAct() then
+			act("Ability")
+		end
+	end)
+	bindPad("PadRight", Enum.KeyCode.DPadRight, function()
+		if canAct() then
+			Weapon.cycleWeapon()
+		end
+	end, function()
+		if canAct() then
+			act("Equip", "none")
+		end
+	end)
+	bindPad("PadDown", Enum.KeyCode.DPadDown, function()
+		if State.character then
+			Weapon.cycleThrowable()
+		end
+	end, function()
+		if State.character and not State.downed and not State.uiOpen() then
+			act("SwapPack", 1)
+		end
+	end)
+	bindPad("PadLeft", Enum.KeyCode.DPadLeft, function()
+		if State.character and not State.downed then
+			act("Torch")
+		end
+	end, function()
+		if canAct() then
+			act("AmmoCache")
+		end
+	end)
+	bindPad("PadUp", Enum.KeyCode.DPadUp, function()
+		if canAct() then
+			act("Heal")
+		end
+	end, function()
+		if canAct() then
+			act("Resupply")
+		end
+	end)
 
 	-- tap: crouch / stand (or up from prone);  hold: go prone
 	local crouchPressedAt, crouchPress = 0, 0
 	bind("Crouch", function(state, input)
-		if not State.character then
-			return
+		if not State.character or State.uiOpen() then
+			return Pass -- B closes menus while one is open
 		end
 		if isTouch(input) then
 			if state == Begin then

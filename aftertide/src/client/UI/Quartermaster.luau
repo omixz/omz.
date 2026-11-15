@@ -116,6 +116,9 @@ local function rebuild()
 	section(order, "KITS FOR YOUR NEXT CROSSING")
 	local kit = decode("Kit", {})
 	for _, k in Quartermaster.Kits do
+		if k.robux then
+			continue -- Ammo Crates are in the Purser's Office (Robux)
+		end
 		order += 1
 		local have = kit[k.id] or 0
 		local holder = row(order, k.name .. (have > 0 and ("  ·  PACKED x" .. have) or ""), k.desc)

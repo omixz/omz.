@@ -3,7 +3,7 @@
 </Item>
 <Item class="Lighting" referent="RBX00000003"><Properties><string name="Name">Lighting</string><token name="Technology">4</token></Properties></Item>
 <Item class="Players" referent="RBX00000004"><Properties><string name="Name">Players</string><bool name="CharacterAutoLoads">false</bool></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX00000024"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000023"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ReplicatedStorage" referent="RBX00000025"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000024"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds a sculpted, clothed body over the (hidden) R15 skeleton so the crew don't look like
 -- Roblox avatars: tapered limbs, shaped torso, jacket, trousers, boots, backpack, a hat or
 -- hood, and a fog mask over the lower face (everyone wears one against the Pall).
@@ -183,7 +183,7 @@ end
 
 return BodyBuilder
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000001A"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000001B"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Roblox asset IDs of the uploaded 3D packs (aftertide/assets/*.glb). Filled in by
 -- tools/upload_assets.py (Open Cloud) or by hand after importing them in Studio.
 -- 0 = not uploaded yet: the game falls back to its built-in part models.
@@ -380,10 +380,11 @@ return Characters
 -- An ID of 0 means "not configured": the shop shows the item but will not prompt a purchase.
 --
 -- `price` is the Robux price the creation tool sets; the shop always shows Roblox's live price.
--- Rules (docs/03-monetisation.md): fixed contents, never random; every run aid has a per-crossing
+-- Rules (docs/03-monetisation.md): fixed contents (the one exception: Lucky Spin tokens, whose
+-- odds are shown before buying and which aren't sold where paid random items are restricted); every run aid has a per-crossing
 -- or per-encounter limit and can also be earned free by playing; cosmetics never change stats.
 --
--- grant kinds:  tokens = { secondWind | resupply | ammo = n }   outfit = "<Cosmetics outfit id>"
+-- grant kinds:  tokens = { secondWind | resupply | ammo | build | spin = n }   kit = { kitId = n }   outfit = "<Cosmetics outfit id>"
 --               outfits = { ids }   oneTime = true (can only be bought once per account)
 return {
 	Products = {
@@ -443,6 +444,36 @@ return {
 			desc = "Three Shipwright's Crew tokens: finish three Meridian projects instantly.",
 			grant = { tokens = { build = 3 } },
 		},
+		AmmoCrate = {
+			productId = 3731802328,
+			name = "Ammo Crate",
+			price = 35,
+			desc = "Packed for your next crossing: +8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows. Up to 2 crates open per crossing; extras wait for the next.",
+			grant = { kit = { ammocrate = 1 } },
+		},
+		AmmoCrate3 = {
+			productId = 3731802331,
+			name = "Ammo Crate x3",
+			price = 89,
+			desc = "Three Ammo Crates. Up to 2 open per crossing; the third waits for the next.",
+			grant = { kit = { ammocrate = 3 } },
+		},
+		LuckySpin = {
+			productId = 3731802336,
+			name = "Lucky Spin",
+			price = 10,
+			desc = "One extra spin of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 1 } },
+			randomItem = true,
+		},
+		LuckySpin5 = {
+			productId = 3731802338,
+			name = "Lucky Spin x5",
+			price = 45,
+			desc = "Five extra spins of the Lucky Spin wheel. The odds of every prize are shown on the wheel screen.",
+			grant = { tokens = { spin = 5 } },
+			randomItem = true,
+		},
 		Outfit_mara_pilot = {
 			productId = 3731795745,
 			name = "Mara: Night Pilot",
@@ -473,7 +504,7 @@ return {
 		},
 	},
 	-- Supplies tab, top to bottom (outfits are listed in the Wardrobe tab).
-	Order = { "StarterPack", "SecondWind", "SecondWind3", "Resupply", "AmmoCache", "AmmoCache5", "ShipwrightCrew", "ShipwrightCrew3" },
+	Order = { "StarterPack", "AmmoCrate", "AmmoCrate3", "AmmoCache", "AmmoCache5", "Resupply", "SecondWind", "SecondWind3", "ShipwrightCrew", "ShipwrightCrew3" },
 
 	-- Game passes (permanent). Created by tools/create_products.py like the products above.
 	Passes = {
@@ -5362,6 +5393,8 @@ return {
 		{ id = "rounds", name = "Spare rounds", desc = "+4 revolver rounds", price = 20, items = { pistolAmmo = 4 } },
 		{ id = "longrounds", name = "Long-gun ammunition", desc = "+3 rifle rounds, +2 shells, +3 arrows", price = 35, items = { rifleAmmo = 3, shells = 2, arrows = 3 } },
 		{ id = "medkit", name = "Field kit", desc = "+1 Field Dressing, +1 Cloth", price = 30, items = { dressing = 1, cloth = 1 } },
+		-- Robux only (Ammo Crate products); not listed at the Quartermaster
+		{ id = "ammocrate", robux = true, name = "Ammo Crate", desc = "+8 revolver rounds, +4 rifle rounds, +4 shells, +6 arrows", price = 0, items = { pistolAmmo = 8, rifleAmmo = 4, shells = 4, arrows = 6 } },
 		{ id = "throwables", name = "Throwables", desc = "+1 Bottle, +1 Flare Pot", price = 35, items = { bottle = 1, flarePot = 1 } },
 	},
 	MaxKitsEach = 2,
@@ -5529,7 +5562,33 @@ Sounds.Volume = VOLUME
 
 return Sounds
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Lucky Spin (Meridian deck and the HUD).
+--   * One FREE spin every day (resets at 00:00 UTC).
+--   * Extra spins are Spin tokens: bought for Robux (LuckySpin products) or won on the wheel.
+--   * The odds below are shown to players in the Spin screen BEFORE they spin or buy, as
+--     Roblox's paid random items policy requires. Where PolicyService says paid random items
+--     are restricted for a player, spin tokens are not sold to them (the free daily spin stays).
+-- weights add up to 1000, so the odds read as exact percentages with one decimal.
+return {
+	Prizes = {
+		{ id = "scrip40", name = "40 Scrip", short = "40", icon = "S", weight = 260, color = { 214, 176, 92 }, grant = { scrip = 40 } },
+		{ id = "mat25", name = "25 Materials", short = "25", icon = "M", weight = 160, color = { 120, 170, 210 }, grant = { materials = 25 } },
+		{ id = "rounds", name = "Spare Rounds kit", short = "AMMO", icon = "A", weight = 140, color = { 230, 120, 80 }, grant = { kit = { rounds = 1 } } },
+		{ id = "scrip100", name = "100 Scrip", short = "100", icon = "S", weight = 130, color = { 240, 200, 90 }, grant = { scrip = 100 } },
+		{ id = "longrounds", name = "Long-gun Ammo kit", short = "AMMO+", icon = "A", weight = 90, color = { 240, 140, 70 }, grant = { kit = { longrounds = 1 } } },
+		{ id = "mat60", name = "60 Materials", short = "60", icon = "M", weight = 70, color = { 100, 190, 240 }, grant = { materials = 60 } },
+		{ id = "ammo", name = "Ammo Cache token", short = "CACHE", icon = "C", weight = 60, color = { 250, 110, 90 }, grant = { tokens = { ammo = 1 } } },
+		{ id = "spin", name = "Free re-spin", short = "AGAIN", icon = "R", weight = 40, color = { 170, 130, 240 }, grant = { tokens = { spin = 1 } } },
+		{ id = "secondWind", name = "Second Wind token", short = "LIFE", icon = "W", weight = 30, color = { 120, 220, 140 }, grant = { tokens = { secondWind = 1 } } },
+		{ id = "build", name = "Shipwright's Crew token", short = "BUILD", icon = "B", weight = 15, color = { 90, 210, 200 }, grant = { tokens = { build = 1 } } },
+		{ id = "jackpot", name = "JACKPOT: 500 Scrip", short = "500!", icon = "J", weight = 5, color = { 255, 214, 60 }, grant = { scrip = 500 } },
+	},
+	-- products in Config/Commerce: LuckySpin (1 spin), LuckySpin5 (5 spins)
+	MaxKitStack = 4, -- kits won on the wheel stack up to this many per kit type
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Two kinds of upgrade:
 --   * Workbench (per run, paid with Salvage found in the run): weapon parts, satchel, perks.
 --   * Meridian repairs (permanent, paid with Scrip earned by playing): the homebase.
@@ -5583,7 +5642,7 @@ Upgrades.Repairs = require(script.Parent.Projects).List
 
 return Upgrades
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fictional, stylised weapons (no real brands or real-world specs). Damage is against the
 -- Hushed (Drifter = 100 HP). Gunshots are LOUD: every shot is a noise event, so going loud
 -- is a choice with consequences. The bow is the quiet option.
@@ -5642,7 +5701,7 @@ return {
 }
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fits sculpted meshes (from tools/build_assets.py) onto a live skeleton.
 --
 -- Each segment mesh was sculpted around canonical joints (MeshMeta: top / bottom anchors).
@@ -6042,7 +6101,7 @@ end
 
 return MeshKit
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every client<->server message goes through these RemoteEvents. The server creates them;
 -- clients wait for them. Server handlers are rate-limited and wrapped in pcall so a bad
 -- payload can never crash a service. Validate EVERY argument in the handler.
@@ -6132,7 +6191,7 @@ end
 
 return Net
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Combines a character's innate perk and chosen perk into one modifier table.
 local Characters = require(script.Parent.Config.Characters)
 
@@ -6217,7 +6276,7 @@ end
 
 return Stats
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000021"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000022"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 local CollectionService = game:GetService("CollectionService")
 
 local Geometry = {}
@@ -6260,7 +6319,7 @@ end
 
 return Geometry
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- One-shot 3D sounds and attached loops, mixed through four SoundGroups (SFX, Ambience,
 -- Music, UI).
 --
@@ -6403,7 +6462,7 @@ end
 
 return Sfx
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Critically damped spring. Works for numbers and Vector3s.
 -- frequency = how quickly it settles (higher = snappier).
 local Spring = {}
@@ -6437,7 +6496,7 @@ end
 return Spring
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000023"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds stylised weapon models from parts (placeholders until Stage 5 meshes).
 -- Each model: PrimaryPart "Grip" (held in the right hand), barrel along -Z, and an
 -- Attachment "Muzzle" at the barrel tip. Parts are massless and ignored by raycasts.
@@ -6602,7 +6661,7 @@ return WeaponModels
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX00000040"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003F"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000025"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ServerScriptService" referent="RBX00000042"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000041"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000026"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE server bootstrap. Every service exposes optional init(registry) and start().
 -- init wires dependencies (no yielding); start begins loops and connections.
 local Players = game:GetService("Players")
@@ -6627,6 +6686,7 @@ local ORDER = {
 	"WorkbenchService",
 	"HomebaseService",
 	"CommerceService",
+	"SpinService",
 	"QuestService",
 	"LeaderboardService",
 	"MatchService",
@@ -6670,7 +6730,7 @@ end)
 
 print("[AFTERTIDE] server ready")
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000002A"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000002B"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- CANNERY ROW: a coastal fish cannery, container yard, net shed and tidal shallows.
 -- Bright overcast midday. Terrain ground (asphalt yard, concrete, grass verges, mud),
 -- real terrain water in the shallows, reeds and tall grass to hide in.
@@ -6877,7 +6937,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- HOLLOW PINES: forest hills above the coast. Pines, rocks, ferns, a creek, meadows of tall
 -- grass, three cabins and an old ranger lookout. Misty morning.
 local MapKit = require(script.Parent.MapKit)
@@ -7046,7 +7106,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- LARKSPUR STREET: an overgrown suburban street. Weatherboard houses you can enter, yards
 -- gone to tall grass, wrecked cars, power poles, a corner store. Warm golden afternoon.
 local MapKit = require(script.Parent.MapKit)
@@ -7185,7 +7245,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared building blocks for the encounter maps: parts, volumes, walls, lights, terrain,
 -- grass, props (sculpted meshes when loaded, part fallbacks otherwise) and houses.
 local CollectionService = game:GetService("CollectionService")
@@ -7983,7 +8043,7 @@ end
 return MapKit
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="Folder" referent="RBX0000003E"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000040"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every non-gun player action, validated server-side. The client only sends intent:
 --   Action("Quiet")                     Quieting from behind / with a Tide Spike, else shove
 --   Action("Throw", {dir, item})        bottle / flare pot / fog pot / salt bomb
@@ -8765,7 +8825,7 @@ end
 
 return ActionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Thin wrapper over AnalyticsService so we can see (Creator Hub > Analytics) where Scrip is
 -- earned and spent and which products sell. Never throws: analytics must not break gameplay.
 local AnalyticsService = game:GetService("AnalyticsService")
@@ -8809,7 +8869,7 @@ end
 
 return AnalyticsHelper
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Lightweight movement sanity checks. Roblox lets clients simulate their own character, so
 -- speed hacks are possible; we detect impossible displacement and pull the player back.
 -- PvE-only design keeps the stakes low (docs/02-technical-architecture.md section 2.4).
@@ -8885,7 +8945,7 @@ end
 
 return AntiCheatService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Loads the sculpted mesh packs (Config/AssetIds) once at server start and hands out clones.
 -- Sources, in order: ServerStorage > Assets > <Pack> (imported in Studio), then
 -- InsertService:LoadAsset(id) for uploaded packs. Missing packs => built-in fallbacks.
@@ -9172,7 +9232,7 @@ end
 
 return AssetService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
 -- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
 --
@@ -9777,7 +9837,7 @@ end
 
 return CharacterService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Developer product receipts. Rules that matter:
 --   * Idempotent: a receipt (PurchaseId) is granted exactly once, even if Roblox retries.
 --   * Only report PurchaseGranted once the grant is saved (or we're in memory-only Studio mode).
@@ -9824,6 +9884,11 @@ local function processReceipt(receipt)
 	for kind, amount in grant.tokens or {} do
 		Services.PlayerDataService.addTokens(player, kind, amount)
 	end
+	for kitId, amount in grant.kit or {} do
+		data_.kit = data_.kit or {}
+		data_.kit[kitId] = (data_.kit[kitId] or 0) + amount
+		Services.PlayerDataService.publish(player)
+	end
 	if grant.outfit then
 		Services.PlayerDataService.ownOutfit(player, grant.outfit)
 	end
@@ -9845,6 +9910,9 @@ local function processReceipt(receipt)
 	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
 	if grant.outfit then
 		task.defer(Services.CosmeticsService.equip, player, grant.outfit)
+	end
+	if grant.tokens and grant.tokens.spin then
+		Net.notify(player, "OpenSpin", {})
 	end
 	if entry.key == "AmmoCache" or entry.key == "AmmoCache5" then
 		task.defer(function()
@@ -9879,7 +9947,7 @@ end
 
 return CommerceService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Wardrobe (server side): who owns which outfit, buying outfits with Scrip, equipping,
 -- the Supporter game pass, and the colours a crew member should be dressed in.
 -- Cosmetic only: nothing here touches stats.
@@ -10014,7 +10082,7 @@ end
 
 return CosmeticsService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Hushed. Server-simulated, one state machine per enemy:
 --   Patrol -> (notice) -> Investigate -> Search -> Patrol
 --   any    -> (suspicion >= 1 or shot) -> Chase -> (lost sight) -> Search
@@ -11197,7 +11265,7 @@ end
 
 return EnemyService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian as a homebase that persists between crossings:
 --   * Repairs bought with Scrip (earned only by playing) unlock permanent bonuses and change
 --     how the ferry looks (deck lights, generator, radio mast, sick bay, armory rack).
@@ -11249,17 +11317,23 @@ function HomebaseService.bonusesFor(player)
 				table.insert(bonus.pack, id)
 			end
 		end
-		-- crossing kits bought at the Quartermaster: delivered now, then used up
+		-- crossing kits (Quartermaster, Lucky Spin, Ammo Crates): delivered now, then used up.
+		-- At most MaxKitsEach of each kind per crossing; extra Ammo Crates wait for the next one.
+		local left = {}
 		for kitId, count in data.kit or {} do
 			for _, k in Quartermaster.Kits do
 				if k.id == kitId then
+					local use = math.min(count, Quartermaster.MaxKitsEach)
 					for itemId, amount in k.items do
-						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * count
+						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * use
+					end
+					if count > use then
+						left[kitId] = count - use
 					end
 				end
 			end
 		end
-		data.kit = {}
+		data.kit = left
 		Services.PlayerDataService.publish(player)
 	end
 	return bonus
@@ -11330,7 +11404,7 @@ local function buyKit(player, kitId)
 		return
 	end
 	for _, k in Quartermaster.Kits do
-		if k.id == kitId then
+		if k.id == kitId and not k.robux then
 			data.kit = data.kit or {}
 			if (data.kit[kitId] or 0) >= Quartermaster.MaxKitsEach then
 				toast(player, "That's as many as the Quartermaster will pack for one crossing.")
@@ -11455,6 +11529,12 @@ function HomebaseService.start()
 		UnlockGun = unlockGun,
 		SetLoadout = setLoadout,
 		BuyKit = buyKit,
+		Spin = function(player)
+			Services.SpinService.spin(player)
+		end,
+		OpenSpin = function(player)
+			Net.notify(player, "OpenSpin", {})
+		end,
 		OpenProjects = function(player)
 			Net.notify(player, "OpenRepairs", {})
 		end,
@@ -11487,7 +11567,7 @@ end
 
 return HomebaseService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: items, reserve ammo, two weapon slots (long gun + sidearm, with magazines)
 -- and Salvage (run currency). Server-owned; replicated to the owner as player attributes:
 --   Inv_<item>, Cap_<item>, W_long, W_longMag, W_sidearm, W_sidearmMag, Salvage
@@ -11787,7 +11867,7 @@ end
 
 return InventoryService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Leaderboards:
 --   * leaderstats (Roblox's player list): Wins and Best Pall for everyone in the server
 --   * a global top 10 (most wins) on the Meridian's board, from an OrderedDataStore
@@ -11963,7 +12043,7 @@ end
 
 return LeaderboardService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Scavenging: searchable containers (drawers, lockers, toolboxes, ammo crates) that open
 -- with a short animation, and loose items that glint in the fog. Loot is rolled from
 -- Config/Loot tables (free, never paid). What doesn't fit your satchel is dropped on the
@@ -12183,7 +12263,7 @@ end
 
 return LootService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds the grey-box world in code so the project is fully self-contained:
 --   * The Meridian (ferry hideout deck) far from the encounter
 --   * the encounter maps (src/server/Maps/*), one loaded at a time
@@ -12345,101 +12425,345 @@ local function prompt(parent, action, object, onTriggered, hold)
 	return p
 end
 
--- The Meridian: a beached car ferry, 96 x 32 studs of deck, bridge at the stern (-X).
--- Deck plan (x along the ship, z across; o = FerryOrigin):
---   x -47..-31  bridge (cabins door, projects board, leaderboard on its front face)
---   x -28..-9   aft deck: lockers, quest board, generator, workshop (+ workbench)
---   x  -6.. 6   midships: chart table, spawn line
---   x   8..25   infirmary (port) / chart room (starboard)
---   x  26..46   Purser's Office, cargo, armory, lookout tower at the bow
+-- Station signs: a floating name card above each station, readable from across the deck.
+-- `hero` = the big gold "start here" card for the chart table.
+local function stationSign(part, title, subtitle, color, offsetY, hero)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "StationSign"
+	gui.Size = hero and UDim2.new(11, 0, 3.4, 0) or UDim2.new(7.5, 0, 2.2, 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, offsetY or 4, 0)
+	gui.MaxDistance = hero and 220 or 70
+	gui.LightInfluence = 0
+	gui.Parent = part
+	local card = Instance.new("Frame")
+	card.Size = UDim2.fromScale(1, 1)
+	card.BackgroundColor3 = hero and Color3.fromRGB(255, 196, 70) or Color3.fromRGB(20, 26, 30)
+	card.BackgroundTransparency = hero and 0 or 0.15
+	card.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.Parent = card
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = hero and 4 or 3
+	stroke.Parent = card
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.fromScale(1, 0.62)
+	t.Font = Enum.Font.Oswald
+	t.TextScaled = true
+	t.Text = title
+	t.TextColor3 = hero and Color3.fromRGB(40, 24, 8) or color
+	t.Parent = card
+	local s = Instance.new("TextLabel")
+	s.BackgroundTransparency = 1
+	s.Position = UDim2.fromScale(0.05, 0.6)
+	s.Size = UDim2.fromScale(0.9, 0.34)
+	s.Font = Enum.Font.GothamMedium
+	s.TextScaled = true
+	s.Text = subtitle
+	s.TextColor3 = hero and Color3.fromRGB(70, 44, 14) or Color3.fromRGB(230, 226, 214)
+	s.Parent = card
+	return gui
+end
+
+-- A striped canvas awning (market-stall style) over a station.
+local function awning(parent, center, sizeX, sizeZ, height, colorA, colorB, alongX)
+	local stripes = 6
+	for i = 0, stripes - 1 do
+		local col = i % 2 == 0 and colorA or colorB
+		local w = (alongX and sizeX or sizeZ) / stripes
+		local off = -((alongX and sizeX or sizeZ) / 2) + w * (i + 0.5)
+		local size = alongX and Vector3.new(w, 0.25, sizeZ) or Vector3.new(sizeX, 0.25, w)
+		local pos = center + (alongX and Vector3.new(off, height, 0) or Vector3.new(0, height, off))
+		block(parent, size, CFrame.new(pos) * CFrame.Angles(alongX and 0.12 or 0, 0, alongX and 0 or 0.12), col, Enum.Material.Fabric, { CanCollide = false, CastShadow = true })
+	end
+end
+
+local function potPlant(parent, at, scale)
+	scale = scale or 1
+	block(parent, Vector3.new(1.6, 1.4, 1.6) * scale, at + Vector3.new(0, 0.7 * scale, 0), Color3.fromRGB(196, 104, 64), Enum.Material.Slate, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(at + Vector3.new(0, 0.7 * scale, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+	for i, c in { { 0, 2.1, 0, 2.2 }, { 0.5, 2.6, 0.3, 1.5 }, { -0.4, 2.5, -0.3, 1.4 } } do
+		local green = i == 1 and Color3.fromRGB(76, 150, 70) or Color3.fromRGB(96, 172, 80)
+		block(parent, Vector3.new(c[4], c[4], c[4]) * scale, at + Vector3.new(c[1], c[2], c[3]) * scale, green, Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
+	end
+	if scale >= 1 then
+		block(parent, Vector3.new(0.5, 0.5, 0.5), at + Vector3.new(0.4, 3.0, -0.2) * scale, Color3.fromRGB(240, 90, 110), Enum.Material.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false })
+	end
+end
+
+local function lifeRing(parent, cf)
+	-- an orange ring of 8 short segments with white bands
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local col = i % 2 == 0 and Color3.fromRGB(240, 110, 40) or Color3.fromRGB(245, 240, 230)
+		block(parent, Vector3.new(0.5, 0.5, 0.95), cf * CFrame.Angles(0, 0, a) * CFrame.new(0, 1, 0) * CFrame.Angles(0, math.pi / 2, 0), col, Enum.Material.SmoothPlastic, { CanCollide = false })
+	end
+end
+
+-- The Meridian: a car ferry turned home, moored at a sunny harbour pier.
+-- 96 x 32 studs of deck, bridge at the stern (-X). Everything starts at the CHART TABLE in the
+-- middle of the deck (gold light, "SET SAIL"); the other stations ring the deck with signs.
+--   x -47..-31  bridge (crew cabin door, projects board, leaderboard on its front face)
+--   x -28..-9   aft deck: crew lockers + quest board (starboard), workbench (port)
+--   x  -9.. 9   midships plaza: chart table, Lucky Spin wheel (starboard), spawn line
+--   x  26..34   Quartermaster (starboard), Purser's Office shop (port)
+--   project rooms go where the scaffolding stands (see ROOMS)
 local function buildFerry(parent)
 	table.clear(layoutBoxes)
 	local o = Game.FerryOrigin
-	local deckColor = Color3.fromRGB(70, 66, 60)
-	local hull = Color3.fromRGB(176, 176, 166)
 	local M = Enum.Material
-	-- sea, sandbar, hull, deck, railings
-	block(parent, Vector3.new(900, 1, 900), o + Vector3.new(0, -7, 0), Color3.fromRGB(30, 40, 44), M.Glass, { Reflectance = 0.12, CanQuery = false })
-	block(parent, Vector3.new(170, 4, 70), o + Vector3.new(0, -6, 0), Color3.fromRGB(120, 112, 96), M.Sand)
-	block(parent, Vector3.new(96, 2, 32), o + Vector3.new(0, -1, 0), deckColor, M.DiamondPlate)
+	local teak = Color3.fromRGB(164, 112, 70)
+	local white = Color3.fromRGB(240, 236, 226)
+	local teal = Color3.fromRGB(32, 150, 160)
+	local red = Color3.fromRGB(196, 54, 46)
+	local navy = Color3.fromRGB(30, 52, 84)
+
+	-- harbour: clear turquoise water, a sandy shallows strip, the pier, a distant island
+	block(parent, Vector3.new(1400, 1, 1400), o + Vector3.new(0, -6, 0), Color3.fromRGB(40, 150, 170), M.Glass, { Reflectance = 0.18, Transparency = 0.1, CanQuery = false })
+	block(parent, Vector3.new(1400, 1, 1400), o + Vector3.new(0, -9, 0), Color3.fromRGB(196, 188, 140), M.Sand, { CanQuery = false })
+	-- pier along the port side, with bollards and lamp posts
+	block(parent, Vector3.new(140, 1.2, 12), o + Vector3.new(0, -0.4, -24), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
+	for x = -66, 66, 12 do
+		block(parent, Vector3.new(1.2, 8, 1.2), o + Vector3.new(x, -4.5, -18.6), Color3.fromRGB(96, 74, 52), M.Wood)
+		block(parent, Vector3.new(1.2, 8, 1.2), o + Vector3.new(x, -4.5, -29.4), Color3.fromRGB(96, 74, 52), M.Wood)
+		block(parent, Vector3.new(0.9, 1.2, 0.9), o + Vector3.new(x + 6, 0.8, -19.2), Color3.fromRGB(40, 40, 44), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(x + 6, 0.8, -19.2)) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	for _, x in { -54, -18, 18, 54 } do
+		block(parent, Vector3.new(0.4, 9, 0.4), o + Vector3.new(x, 4.3, -29), Color3.fromRGB(40, 60, 70), M.Metal)
+		MapKit.bulb(parent, o + Vector3.new(x, 9, -29), 20)
+	end
+	-- the island across the bay and a lighthouse
+	for _, h in { { -160, 260, 120, 46 }, { -60, 300, 160, 60 }, { 70, 280, 130, 50 }, { 180, 250, 110, 40 } } do
+		block(parent, Vector3.new(h[3], h[4] * 2, h[3] * 0.8), o + Vector3.new(h[1], -10, h[2]), Color3.fromRGB(86, 150, 74), M.Grass, { Shape = Enum.PartType.Ball, CanQuery = false, CanCollide = false })
+	end
+	for i = 0, 5 do
+		block(parent, Vector3.new(5.2 - i * 0.3, 5, 5.2 - i * 0.3), o + Vector3.new(120, -3 + i * 5, 190), i % 2 == 0 and white or red, M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(120, -3 + i * 5, 190)) * CFrame.Angles(0, 0, math.pi / 2), CanQuery = false })
+	end
+	local lamp = block(parent, Vector3.new(2.4, 2.4, 2.4), o + Vector3.new(120, 28, 190), Color3.fromRGB(255, 230, 150), M.Neon, { Shape = Enum.PartType.Ball, CanQuery = false })
+	local lampLight = Instance.new("PointLight")
+	lampLight.Range = 40
+	lampLight.Color = Color3.fromRGB(255, 220, 150)
+	lampLight.Parent = lamp
+
+	-- hull: white topsides, teal band, red below the waterline; teak deck
+	block(parent, Vector3.new(96, 2, 32), o + Vector3.new(0, -1, 0), teak, M.WoodPlanks)
+	for i = -5, 5 do -- deck seams
+		block(parent, Vector3.new(96, 0.05, 0.12), o + Vector3.new(0, 0.02, i * 2.8), Color3.fromRGB(110, 76, 50), M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+	end
 	for _, z in { -16.5, 16.5 } do
-		block(parent, Vector3.new(97, 8, 1), o + Vector3.new(0, -5, z), hull, M.CorrodedMetal)
-		block(parent, Vector3.new(96, 3.5, 0.5), o + Vector3.new(0, 1.75, z * 0.97), C.metal, M.Metal)
+		block(parent, Vector3.new(97, 4, 1), o + Vector3.new(0, -3, z), white, M.SmoothPlastic)
+		block(parent, Vector3.new(97.2, 1.1, 1.1), o + Vector3.new(0, -2.2, z), teal, M.SmoothPlastic)
+		block(parent, Vector3.new(97, 3, 1), o + Vector3.new(0, -6.5, z), red, M.SmoothPlastic)
+		-- railing: white posts and a teal top rail
+		block(parent, Vector3.new(96, 0.35, 0.35), o + Vector3.new(0, 3.3, z * 0.97), teal, M.Metal)
+		block(parent, Vector3.new(96, 0.2, 0.2), o + Vector3.new(0, 1.8, z * 0.97), white, M.Metal)
+		for x = -46, 46, 4 do
+			block(parent, Vector3.new(0.25, 3.4, 0.25), o + Vector3.new(x, 1.7, z * 0.97), white, M.Metal)
+		end
+		block(parent, Vector3.new(96, 3.5, 0.2), o + Vector3.new(0, 1.75, z * 0.985), white, M.SmoothPlastic, { Transparency = 1 }) -- invisible railing collision
+		for _, x in { -22, 6, 34 } do
+			lifeRing(parent, CFrame.new(o + Vector3.new(x, 2.4, z * 1.005)) * CFrame.Angles(0, z > 0 and 0 or math.pi, 0))
+		end
 	end
 	for _, x in { -48.25, 48.25 } do
-		block(parent, Vector3.new(0.5, 3.5, 32), o + Vector3.new(x, 1.75, 0), C.metal, M.Metal)
-		block(parent, Vector3.new(1, 8, 33), o + Vector3.new(x * 1.01, -5, 0), hull, M.CorrodedMetal)
+		block(parent, Vector3.new(0.35, 0.35, 32), o + Vector3.new(x, 3.3, 0), teal, M.Metal)
+		block(parent, Vector3.new(0.2, 3.5, 32), o + Vector3.new(x, 1.75, 0), white, M.SmoothPlastic, { Transparency = 1 })
+		block(parent, Vector3.new(1, 4, 33), o + Vector3.new(x * 1.01, -3, 0), white, M.SmoothPlastic)
+		block(parent, Vector3.new(1.1, 1.1, 33.2), o + Vector3.new(x * 1.01, -2.2, 0), teal, M.SmoothPlastic)
+		block(parent, Vector3.new(1, 3, 33), o + Vector3.new(x * 1.01, -6.5, 0), red, M.SmoothPlastic)
+	end
+	-- the name on both sides of the bow
+	for _, z in { -17.05, 17.05 } do
+		local plate = block(parent, Vector3.new(22, 2.6, 0.1), o + Vector3.new(30, -3.4, z), white, M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = z < 0 and Enum.NormalId.Front or Enum.NormalId.Back
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 30
+		gui.Parent = plate
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = "M E R I D I A N"
+		label.TextColor3 = navy
+		label.Parent = gui
 	end
 
-	-- bridge superstructure
-	fixture(parent, "Bridge", Vector3.new(16, 12, 22), o + Vector3.new(-39, 6, 0), hull, M.CorrodedMetal)
-	block(parent, Vector3.new(18, 1, 24), o + Vector3.new(-39, 12.5, 0), C.metal, M.Metal)
-	block(parent, Vector3.new(0.3, 2.4, 18), o + Vector3.new(-30.9, 9, 0), Color3.fromRGB(40, 48, 52), M.Glass, { Transparency = 0.3 })
+	-- bridge superstructure: white with a teal trim, a window band, a red-and-white funnel
+	fixture(parent, "Bridge", Vector3.new(16, 12, 22), o + Vector3.new(-39, 6, 0), white, M.SmoothPlastic)
+	block(parent, Vector3.new(16.2, 0.8, 22.2), o + Vector3.new(-39, 0.4, 0), teal, M.SmoothPlastic)
+	block(parent, Vector3.new(18, 1, 24), o + Vector3.new(-39, 12.5, 0), navy, M.Metal)
+	block(parent, Vector3.new(0.3, 2.6, 19), o + Vector3.new(-30.9, 9, 0), Color3.fromRGB(60, 110, 140), M.Glass, { Transparency = 0.25, Reflectance = 0.3 })
+	for _, z in { -11.05, 11.05 } do
+		block(parent, Vector3.new(14, 2.4, 0.3), o + Vector3.new(-39, 9, z), Color3.fromRGB(60, 110, 140), M.Glass, { Transparency = 0.25, Reflectance = 0.3 })
+	end
+	local funnelAt = o + Vector3.new(-39, 16.5, -9)
+	register("Funnel", CFrame.new(funnelAt), Vector3.new(4.4, 7, 4.4))
+	for i, band in { { -2.5, red, 2 }, { -0.5, white, 2 }, { 1.5, red, 2 }, { 3.0, Color3.fromRGB(30, 30, 32), 1 } } do
+		block(parent, Vector3.new(band[3], 4.4, 4.4), funnelAt + Vector3.new(0, band[1], 0), band[2], M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(funnelAt + Vector3.new(0, band[1], 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+		assert(i)
+	end
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = SMOKE
+	smoke.Rate = 3
+	smoke.Lifetime = NumberRange.new(5, 8)
+	smoke.Speed = NumberRange.new(2, 4)
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 9) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Color = ColorSequence.new(Color3.fromRGB(230, 230, 228))
+	smoke.Acceleration = Vector3.new(3, 1, 1)
+	smoke.Parent = block(parent, Vector3.new(1, 1, 1), funnelAt + Vector3.new(0, 4, 0), white, M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	-- flags on a line from the funnel to the bow mast
+	block(parent, Vector3.new(0.4, 14, 0.4), o + Vector3.new(44, 7, 0), white, M.Metal)
+	local flagColors = { red, Color3.fromRGB(250, 200, 60), teal, Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 120, 60), white }
+	for i = 1, 18 do
+		local k = i / 19
+		local p = funnelAt:Lerp(o + Vector3.new(44, 13.5, 0), k) + Vector3.new(0, -math.sin(k * math.pi) * 3, 0)
+		block(parent, Vector3.new(0.1, 1.1, 0.9), CFrame.new(p) * CFrame.Angles(0, math.rad(90 + 12), 0) * CFrame.new(0, -0.5, 0), flagColors[i % #flagColors + 1], M.Fabric, { CanCollide = false, CanQuery = false })
+	end
 
 	-- on the bridge's front face (x = -31)
-	local cabin = fixture(parent, "CabinDoor", Vector3.new(0.6, 8, 4), o + Vector3.new(-30.65, 4, 6), Color3.fromRGB(90, 96, 92), M.Metal)
+	local cabin = fixture(parent, "CabinDoor", Vector3.new(0.6, 8, 4), o + Vector3.new(-30.65, 4, 6), navy, M.Metal)
+	stationSign(cabin, "CREW CABINS", "Change character", Color3.fromRGB(160, 200, 255), 5.5)
 	prompt(cabin, "Change crew member", "Crew cabins", function(player)
 		Services.MatchService.openCharacterSelect(player)
 	end)
-	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(120, 100, 76), M.WoodPlanks)
+	local board = fixture(parent, "ProjectsBoard", Vector3.new(0.3, 4, 5), o + Vector3.new(-30.8, 4, -1.5), Color3.fromRGB(150, 116, 80), M.WoodPlanks)
+	stationSign(board, "PROJECTS", "Upgrade the Meridian", Color3.fromRGB(120, 200, 230), 3.6)
 	prompt(board, "Plan projects", "The Meridian", function(player)
 		Services.MatchService.openMenu(player, "OpenRepairs")
 	end)
-	local leaderboard = fixture(parent, "Leaderboard", Vector3.new(0.3, 5, 6), o + Vector3.new(-30.8, 4.5, -7.8), Color3.fromRGB(46, 52, 56), M.Slate)
+	local leaderboard = fixture(parent, "Leaderboard", Vector3.new(0.3, 5, 6), o + Vector3.new(-30.8, 4.5, -7.8), Color3.fromRGB(30, 46, 64), M.SmoothPlastic)
 	MapService.leaderboardPart = leaderboard
 
-	-- aft deck
-	local lockers = fixture(parent, "CrewLockers", Vector3.new(4, 7, 1.4), o + Vector3.new(-26, 3.5, 14.6), Color3.fromRGB(72, 80, 78), M.DiamondPlate)
+	-- aft deck, starboard: crew lockers (wardrobe) and the quest board
+	local lockers = fixture(parent, "CrewLockers", Vector3.new(4, 7, 1.4), o + Vector3.new(-26, 3.5, 14.6), Color3.fromRGB(70, 130, 200), M.Metal)
+	for i = -1, 1 do
+		block(parent, Vector3.new(0.08, 6.4, 1.42), o + Vector3.new(-26 + i * 1.33 + 0.66, 3.5, 14.6), Color3.fromRGB(40, 80, 140), M.Metal, { CanCollide = false })
+	end
+	stationSign(lockers, "WARDROBE", "Outfits", Color3.fromRGB(240, 150, 200), 5.2)
 	prompt(lockers, "Open wardrobe", "Crew lockers", function(player)
 		Services.MatchService.openShop(player, "Wardrobe")
 	end)
-	local quests = fixture(parent, "QuestBoard", Vector3.new(5, 4, 0.4), o + Vector3.new(-18, 3.6, 14.8), Color3.fromRGB(130, 108, 80), M.WoodPlanks)
+	local quests = fixture(parent, "QuestBoard", Vector3.new(5, 4, 0.4), o + Vector3.new(-18, 3.6, 14.8), Color3.fromRGB(176, 134, 88), M.WoodPlanks)
 	for _, x in { -20.75, -15.25 } do
-		fixture(parent, "QuestBoardPost", Vector3.new(0.4, 5.6, 0.4), o + Vector3.new(x, 2.8, 14.8), Color3.fromRGB(86, 70, 54), M.Wood)
+		fixture(parent, "QuestBoardPost", Vector3.new(0.4, 5.6, 0.4), o + Vector3.new(x, 2.8, 14.8), Color3.fromRGB(110, 80, 54), M.Wood)
 	end
+	for i, c in { Color3.fromRGB(250, 240, 200), Color3.fromRGB(255, 220, 160), Color3.fromRGB(230, 245, 255) } do
+		block(parent, Vector3.new(1.2, 1.5, 0.05), o + Vector3.new(-19.6 + i * 1.3, 3.7 + (i % 2) * 0.3, 14.57), c, M.SmoothPlastic, { CanCollide = false })
+	end
+	stationSign(quests, "QUESTS", "Daily & weekly rewards", Color3.fromRGB(250, 210, 110), 3.8)
 	prompt(quests, "Read the board", "Quests", function(player)
 		Services.MatchService.openMenu(player, "OpenQuests")
 	end)
-	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(86, 66, 46), M.WoodPlanks)
-	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(110, 40, 30), M.Metal) -- vice
+
+	-- aft deck, port: the workbench
+	local bench = fixture(parent, "Workbench", Vector3.new(6, 3, 2.6), o + Vector3.new(-14, 1.5, -13.6), Color3.fromRGB(140, 100, 64), M.WoodPlanks)
+	block(parent, Vector3.new(0.6, 0.6, 0.6), o + Vector3.new(-12, 3.3, -13.6), Color3.fromRGB(200, 60, 40), M.Metal) -- vice
+	block(parent, Vector3.new(1.4, 0.5, 0.8), o + Vector3.new(-15.5, 3.25, -13.4), Color3.fromRGB(230, 170, 40), M.Metal) -- toolbox
+	stationSign(bench, "WORKBENCH", "Upgrade your guns", Color3.fromRGB(255, 170, 90), 4.2)
 	prompt(bench, "Use workbench", "Workbench", function(player)
 		Services.MatchService.openMenu(player, "OpenWorkbench")
 	end)
 
-	-- midships: the tide chart
-	local chart = fixture(parent, "ChartTable", Vector3.new(5, 3, 3), o + Vector3.new(0, 1.5, -2), Color3.fromRGB(96, 70, 48), M.WoodPlanks)
-	block(parent, Vector3.new(4.4, 0.1, 2.4), o + Vector3.new(0, 3.05, -2), Color3.fromRGB(214, 204, 176), M.SmoothPlastic)
-	local chartPrompt = prompt(chart, "Read the tide chart", "Tide chart", function(player)
+	-- midships plaza: compass rose and the CHART TABLE (start here)
+	block(parent, Vector3.new(0.12, 15, 15), o + Vector3.new(0, 0.06, -1), Color3.fromRGB(196, 150, 96), M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 0.06, -1)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false })
+	block(parent, Vector3.new(0.14, 12.6, 12.6), o + Vector3.new(0, 0.07, -1), Color3.fromRGB(150, 104, 62), M.WoodPlanks, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 0.07, -1)) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false })
+	for i = 0, 3 do
+		block(parent, Vector3.new(0.6, 0.06, 12), CFrame.new(o + Vector3.new(0, 0.12, -1)) * CFrame.Angles(0, i * math.pi / 4, 0), Color3.fromRGB(240, 220, 170), M.SmoothPlastic, { CanCollide = false })
+	end
+	local chart = fixture(parent, "ChartTable", Vector3.new(5, 3, 3), o + Vector3.new(0, 1.5, -2), Color3.fromRGB(110, 76, 48), M.WoodPlanks)
+	block(parent, Vector3.new(4.6, 0.1, 2.6), o + Vector3.new(0, 3.05, -2), Color3.fromRGB(236, 222, 186), M.SmoothPlastic)
+	block(parent, Vector3.new(1.2, 0.12, 0.12), o + Vector3.new(0.6, 3.15, -2.2), red, M.SmoothPlastic, { CanCollide = false })
+	-- the beacon: a column of warm light over the table, visible from anywhere on deck
+	local beam = block(parent, Vector3.new(30, 1.3, 1.3), o + Vector3.new(0, 18.2, -2), Color3.fromRGB(255, 210, 110), M.Neon, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(o + Vector3.new(0, 18.2, -2)) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.55, CanCollide = false, CanQuery = false, CastShadow = false, Name = "SailBeacon" })
+	local glow = Instance.new("PointLight")
+	glow.Range = 16
+	glow.Brightness = 2
+	glow.Color = Color3.fromRGB(255, 210, 120)
+	glow.Parent = chart
+	stationSign(beam, "SET SAIL", "Start here: choose a mission", Color3.fromRGB(255, 255, 255), -10.5, true)
+	local chartPrompt = prompt(chart, "Set sail (choose a mission)", "Tide chart", function(player)
 		Services.MatchService.requestChart(player)
-	end, 0.8)
+	end, 0.5)
 	chartPrompt.Name = "ChartPrompt"
+	chartPrompt.MaxActivationDistance = 12
+	local guide = Instance.new("Attachment")
+	guide.Name = "GuideTarget"
+	guide.Position = Vector3.new(0, 2, 0)
+	guide.Parent = chart
 
-	-- the Purser's Office (shop)
-	local booth = fixture(parent, "PursersOffice", Vector3.new(7, 8, 5), o + Vector3.new(30, 4, -12.5), Color3.fromRGB(150, 146, 134), M.CorrodedMetal)
+	-- midships, starboard: the Lucky Spin wheel (free daily spin)
+	local wheelAt = o + Vector3.new(-3, 4.6, 14.6)
+	local wheelBase = fixture(parent, "SpinWheelStand", Vector3.new(5, 1.2, 1.6), o + Vector3.new(-3, 0.6, 14.6), navy, M.Metal)
+	register("SpinWheel", CFrame.new(wheelAt), Vector3.new(6.2, 6.2, 0.8))
+	local wheel = Instance.new("Model")
+	wheel.Name = "SpinWheel"
+	wheel.Parent = parent
+	local disc = block(wheel, Vector3.new(0.4, 6, 6), CFrame.new(wheelAt) * CFrame.Angles(0, math.pi / 2, 0), white, M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+	wheel.PrimaryPart = disc
+	local wedgeColors = { red, Color3.fromRGB(250, 200, 60), teal, Color3.fromRGB(150, 110, 230), Color3.fromRGB(240, 120, 60), Color3.fromRGB(90, 190, 110), Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 90, 150) }
+	for i = 0, 7 do
+		block(wheel, Vector3.new(0.9, 2.7, 0.2), CFrame.new(wheelAt) * CFrame.Angles(0, 0, i * math.pi / 4) * CFrame.new(0, 1.5, -0.25), wedgeColors[i + 1], M.SmoothPlastic, { CanCollide = false })
+	end
+	block(wheel, Vector3.new(0.5, 1, 1), CFrame.new(wheelAt + Vector3.new(0, 0, -0.4)) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(250, 210, 80), M.Metal, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+	block(parent, Vector3.new(0.5, 0.9, 0.5), wheelAt + Vector3.new(0, 3.3, -0.4), Color3.fromRGB(250, 210, 80), M.Metal, { CanCollide = false }) -- pointer
+	for _, x in { -2.7, 2.7 } do
+		block(parent, Vector3.new(0.4, 4.4, 0.4), o + Vector3.new(-3 + x, 3.2, 14.9), navy, M.Metal)
+	end
+	CollectionService:AddTag(wheel, "SpinWheel")
+	stationSign(wheelBase, "LUCKY SPIN", "1 free spin every day!", Color3.fromRGB(250, 200, 60), 9)
+	prompt(wheelBase, "Spin the wheel", "Lucky Spin", function(player)
+		Services.MatchService.openMenu(player, "OpenSpin")
+	end)
+
+	-- the Purser's Office (Robux shop): a yellow kiosk with a striped awning
+	local booth = fixture(parent, "PursersOffice", Vector3.new(7, 8, 5), o + Vector3.new(30, 4, -12.5), Color3.fromRGB(250, 206, 90), M.SmoothPlastic)
+	block(parent, Vector3.new(5, 2.4, 0.2), o + Vector3.new(30, 3.6, -9.95), Color3.fromRGB(70, 120, 160), M.Glass, { Transparency = 0.3, CanCollide = false })
+	awning(parent, o + Vector3.new(30, 0, -8.6), 8, 3, 7.4, red, white, true)
 	local boothLight = Instance.new("PointLight")
-	boothLight.Range = 10
-	boothLight.Brightness = 1
+	boothLight.Range = 12
+	boothLight.Brightness = 1.2
 	boothLight.Color = C.warm
 	boothLight.Parent = booth
-	prompt(booth, "Open the ledger", "The Purser's Office", function(player)
+	stationSign(booth, "SHOP", "Supplies, ammo & outfits", Color3.fromRGB(255, 120, 110), 6)
+	prompt(booth, "Open the shop", "The Purser's Office", function(player)
 		Services.MatchService.openShop(player)
 	end)
 
 	-- the Quartermaster's stall (Scrip store: guns, loadout, kits)
-	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(92, 78, 60), M.WoodPlanks)
-	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(70, 60, 48), M.WoodPlanks)
+	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(140, 104, 64), M.WoodPlanks)
+	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(96, 74, 52), M.WoodPlanks)
+	for i = -2, 2 do -- guns on the rack
+		block(parent, Vector3.new(0.2, 3.2, 0.25), o + Vector3.new(27 + i * 1.1, 3.6, 15.0), Color3.fromRGB(70, 56, 44), M.Wood, { CanCollide = false })
+	end
+	awning(parent, o + Vector3.new(27, 0, 12.6), 7, 3.2, 7.2, Color3.fromRGB(40, 110, 70), Color3.fromRGB(236, 226, 196), true)
 	local qmLight = Instance.new("PointLight")
 	qmLight.Range = 10
 	qmLight.Color = C.warm
 	qmLight.Parent = qm
+	stationSign(qm, "QUARTERMASTER", "Unlock guns · loadout · kits", Color3.fromRGB(140, 220, 140), 6.2)
 	prompt(qm, "Trade", "The Quartermaster", function(player)
 		Services.MatchService.openMenu(player, "OpenQuartermaster")
 	end)
 
-	-- cargo
-	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), C.containers[2], M.CorrodedMetal)
+	-- cargo with bright tarps
+	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), Color3.fromRGB(32, 120, 150), M.CorrodedMetal)
+	block(parent, Vector3.new(10.4, 0.3, 6.4), o + Vector3.new(40, 8.75, 0), Color3.fromRGB(240, 120, 50), M.Fabric)
 
-	-- string lights (lit by the Deck Lights project)
+	-- plants, benches and crates around the plaza (registered so nothing ends up in them)
+	for _, spot in { { -8, -14.6 }, { 8, -14.6 }, { -10, 14.6 }, { 4.5, 14.6 }, { -29, -9 }, { 22, 14.6 } } do
+		local at = o + Vector3.new(spot[1], 0, spot[2])
+		register("Planter", CFrame.new(at + Vector3.new(0, 1.2, 0)), Vector3.new(2.2, 2.4, 2.2))
+		potPlant(parent, at, 1)
+	end
+	for _, spot in { { -4, -14.8 }, { 4, -14.8 } } do
+		fixture(parent, "Bench", Vector3.new(4, 1.2, 1.4), o + Vector3.new(spot[1], 0.6, spot[2]), Color3.fromRGB(150, 104, 66), M.WoodPlanks)
+	end
+
+	-- string lights over the deck (always on; the Deck Lights project adds colour)
 	for i = 0, 9 do
 		local x = -27 + i * 6
 		local bulb = block(parent, Vector3.new(0.5, 0.5, 0.5), o + Vector3.new(x, 7.5 - math.abs(i - 4.5) * 0.2, 2), C.warm, M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, Name = "DeckBulb" })
@@ -12557,11 +12881,15 @@ function MapService.setFerryRepairs(owned)
 	end
 	for _, d in ferry:GetDescendants() do
 		if d:IsA("BasePart") and d.Name == "DeckBulb" then
+			-- always lit; the Deck Lights project turns them into coloured festival lights
+			local festive = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(255, 210, 90), Color3.fromRGB(120, 220, 160), Color3.fromRGB(120, 180, 255), Color3.fromRGB(230, 140, 255) }
+			local i = math.floor((d.Position.X + 100) / 6) % #festive + 1
+			d.Color = owned.lights and festive[i] or C.warm
 			local light = d:FindFirstChildOfClass("PointLight")
 			if light then
-				light.Enabled = owned.lights == true
+				light.Color = d.Color
+				light.Brightness = owned.lights and 1.3 or 0.9
 			end
-			d.Material = owned.lights and Enum.Material.Neon or Enum.Material.Glass
 		end
 	end
 	local rooms = ferry:FindFirstChild("Rooms")
@@ -13127,10 +13455,12 @@ function MapService.buildFerryForTest(owned)
 	return ferry
 end
 
+-- Spawn line in front of the chart table, facing it: the first thing you see is SET SAIL.
 function MapService.ferrySpawn(index)
 	local o = Game.FerryOrigin
-	local pos = o + Vector3.new(-4 + ((index - 1) % 4) * 3, 3, 6)
-	return CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0))
+	local pos = o + Vector3.new(-4.5 + ((index - 1) % 4) * 3, 3, 8)
+	local look = o + Vector3.new(0, 3, -2)
+	return CFrame.lookAt(pos, Vector3.new(look.X, pos.Y, look.Z))
 end
 
 function MapService.encounterSpawn(index)
@@ -13187,7 +13517,7 @@ end
 
 return MapService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Crossing director (the roguelike run):
 --   Ferry      no crossing; pick crew, shop, repairs. Tide chart -> start a crossing.
 --   Planning   at the Meridian mid-crossing: workbench, crafting, choose the next route.
@@ -13479,6 +13809,9 @@ function MatchService.chooseRoute(player, index)
 		return
 	end
 	run.choice = option
+	for p in run.participants do
+		Services.PlayerDataService.markTutorial(p, "sailed")
+	end
 	setState("Starting")
 	ReplicatedStorage:SetAttribute("StartsAt", Workspace:GetServerTimeNow() + Game.StartCountdown)
 	Net.notifyAll("CloseMenus", {})
@@ -14197,7 +14530,7 @@ end
 
 return MatchService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- How the Hushed sense players.
 --   Sight: range + field-of-view cone + line-of-sight raycasts, scaled by stance, cover (reeds),
 --          light (lamp pools, your torch), movement and fog.
@@ -14393,7 +14726,7 @@ end
 
 return PerceptionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Persistent player data (tokens, stats, purchase receipts) in a DataStore.
 -- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
 -- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
@@ -14418,7 +14751,7 @@ local profiles = {} -- [Player] = { data = table, noSave = bool, loaded = bool }
 local function defaultData()
 	return {
 		version = 1,
-		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo, build = 0 },
+		tokens = { secondWind = Game.StartingTokens.secondWind, resupply = Game.StartingTokens.resupply, ammo = Game.StartingTokens.ammo, build = 0, spin = 0 },
 		stats = { runs = 0, wins = 0, takedowns = 0, encounters = 0, bestPall = 0 },
 		receipts = {},
 		receiptOrder = {},
@@ -14436,6 +14769,8 @@ local function defaultData()
 		loadout = { long = "", pack = {} }, -- chosen at the Quartermaster
 		kit = {}, -- [kitId] = count, delivered at the start of the next crossing
 		firstFinaleWin = false,
+		spinDay = "", -- UTC day of the last free Lucky Spin
+		tutorial = {}, -- first-time Meridian steps done: { crew, chart, sail }
 	}
 end
 
@@ -14444,7 +14779,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" and key ~= "tutorial" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -14475,6 +14810,7 @@ local function publishTokens(player, data)
 	player:SetAttribute("Guns", HttpService:JSONEncode(data.guns or { revolver = true }))
 	player:SetAttribute("Loadout", HttpService:JSONEncode(data.loadout or {}))
 	player:SetAttribute("Kit", HttpService:JSONEncode(data.kit or {}))
+	player:SetAttribute("NewPlayer", not (data.tutorial and data.tutorial.sailed) and (data.stats.runs or 0) == 0)
 end
 
 function PlayerDataService.publish(player)
@@ -14551,6 +14887,18 @@ end
 function PlayerDataService.hasRepair(player, repairId)
 	local data = PlayerDataService.get(player)
 	return data ~= nil and data.repairs[repairId] == true
+end
+
+-- First-time help: remembered once you've set sail.
+function PlayerDataService.markTutorial(player, step)
+	local data = PlayerDataService.get(player)
+	if data then
+		data.tutorial = data.tutorial or {}
+		if not data.tutorial[step] then
+			data.tutorial[step] = true
+			publishTokens(player, data)
+		end
+	end
 end
 
 function PlayerDataService.addRepair(player, repairId)
@@ -14742,7 +15090,7 @@ end
 
 return PlayerDataService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Quest board: daily and weekly challenges (Config/Quests). The same picks for everyone that
 -- day / week; progress from encounters; rewards (Scrip + Materials) pay out on completion.
 -- Published to the client as the JSON attribute "Quests".
@@ -14926,7 +15274,164 @@ end
 
 return QuestService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">SpinService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Lucky Spin: one free spin per UTC day, extra spins from Spin tokens (Robux or won).
+-- The server picks the prize; the client only animates to it. Odds: Config/Spin (shown in UI).
+local Players = game:GetService("Players")
+local PolicyService = game:GetService("PolicyService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Spin = require(Shared.Config.Spin)
+local Net = require(Shared.Net)
+
+local SpinService = {}
+local Services
+local rng = Random.new()
+local busy = {}
+
+local TOTAL = 0
+for _, p in Spin.Prizes do
+	TOTAL += p.weight
+end
+
+local function today()
+	return os.date("!%Y-%m-%d")
+end
+
+-- Unix time of the next 00:00 UTC (os.time() is UTC seconds).
+local function nextReset()
+	local now = os.time()
+	return now - now % 86400 + 86400
+end
+
+-- Players in regions where paid random items are restricted can't buy spins.
+function SpinService.paidRestricted(player)
+	local cached = player:GetAttribute("PaidSpinRestricted")
+	if cached ~= nil then
+		return cached
+	end
+	local restricted = true -- safest default if the policy can't be read
+	local ok, info = pcall(function()
+		return PolicyService:GetPolicyInfoForPlayerAsync(player)
+	end)
+	if ok and info then
+		restricted = info.ArePaidRandomItemsRestricted == true
+	end
+	player:SetAttribute("PaidSpinRestricted", restricted)
+	return restricted
+end
+
+function SpinService.publish(player)
+	local data = Services.PlayerDataService.get(player)
+	if not data then
+		return
+	end
+	player:SetAttribute("FreeSpinReady", data.spinDay ~= today())
+	player:SetAttribute("NextFreeSpinAt", nextReset())
+end
+
+local function pick()
+	local roll = rng:NextInteger(1, TOTAL)
+	for i, p in Spin.Prizes do
+		roll -= p.weight
+		if roll <= 0 then
+			return i, p
+		end
+	end
+	return 1, Spin.Prizes[1]
+end
+
+local function grant(player, data, prize)
+	local g = prize.grant
+	if g.scrip then
+		Services.PlayerDataService.addScrip(player, g.scrip)
+	end
+	if g.materials then
+		Services.PlayerDataService.addMaterials(player, g.materials)
+	end
+	for kind, n in g.tokens or {} do
+		Services.PlayerDataService.addTokens(player, kind, n)
+	end
+	for kitId, n in g.kit or {} do
+		data.kit = data.kit or {}
+		local have = data.kit[kitId] or 0
+		if have >= Spin.MaxKitStack then
+			Services.PlayerDataService.addScrip(player, 30) -- kit bag full: pay it out as Scrip
+		else
+			data.kit[kitId] = have + n
+		end
+	end
+	Services.PlayerDataService.publish(player)
+end
+
+function SpinService.spin(player)
+	if busy[player] then
+		return
+	end
+	local data = Services.PlayerDataService.get(player)
+	if not data then
+		return
+	end
+	local free = data.spinDay ~= today()
+	if free then
+		data.spinDay = today()
+	elseif (data.tokens.spin or 0) > 0 then
+		data.tokens.spin -= 1
+	else
+		if SpinService.paidRestricted(player) then
+			Net.notify(player, "Toast", { text = "Your free spin is back at midnight (UTC)." })
+		else
+			Net.notify(player, "NeedProduct", { productKey = "LuckySpin" })
+		end
+		return
+	end
+	busy[player] = true
+	local index, prize = pick()
+	grant(player, data, prize)
+	SpinService.publish(player)
+	Services.AnalyticsHelper.economy(player, "source", 0, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, "Spin_" .. prize.id)
+	Net.notify(player, "SpinResult", { index = index, free = free })
+	task.spawn(Services.PlayerDataService.save, player)
+	task.delay(4, function()
+		busy[player] = nil
+	end)
+end
+
+function SpinService.init(registry)
+	Services = registry
+end
+
+function SpinService.start()
+	local function onPlayer(player)
+		task.spawn(function()
+			Services.PlayerDataService.waitFor(player, 20)
+			SpinService.paidRestricted(player)
+			SpinService.publish(player)
+		end)
+	end
+	Players.PlayerAdded:Connect(onPlayer)
+	for _, p in Players:GetPlayers() do
+		onPlayer(p)
+	end
+	Players.PlayerRemoving:Connect(function(p)
+		busy[p] = nil
+	end)
+	-- the free spin comes back at midnight UTC for players who stay online
+	task.spawn(function()
+		while true do
+			task.wait(30)
+			for _, p in Players:GetPlayers() do
+				SpinService.publish(p)
+			end
+		end
+	end)
+	assert(Workspace)
+end
+
+return SpinService
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Guns and the bow, fully server-authoritative:
 --   * equip/holster (long gun on the back, sidearm on the hip; models replicate to everyone)
 --   * fire: client sends only aim direction + whether it's aiming; the server applies spread
@@ -15440,7 +15945,7 @@ end
 
 return WeaponService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian's workbench, used between encounters (Planning phase) with Salvage found in
 -- the run: weapon parts, satchel upgrades, and your character's other perks.
 -- Upgrades last for the current crossing only (roguelike), like everything in the satchel.
@@ -15559,22 +16064,24 @@ return WorkbenchService
 </Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX0000005F"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX0000005E"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX0000005D"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004C"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="StarterPlayer" referent="RBX00000063"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000062"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000061"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004E"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
---   Keyboard/mouse                     Gamepad
+--   Keyboard/mouse                     Gamepad (Xbox names; PlayStation in brackets)
 --   WASD move, Shift sprint            L-stick, L3 sprint (toggle)
 --   (Shift / L3 while aiming: hold breath to steady your aim)
---   C / Ctrl crouch (hold: prone)      B crouch (hold: prone)
---   RMB aim, LMB fire                  L2 aim, R2 fire
---   1 long gun, 2 sidearm, 3 holster   D-pad right: cycle weapons
---   R reload (Second Wind if downed)   X: Quieting/shove near a Hushed, else reload
---   F Quieting / shove                 (X, contextual)
---   G throw, Z next throwable          R1 throw, D-pad down next throwable
---   Space dodge (dive when sprinting)  L1 dodge (dive when sprinting)
---   Q ability, H heal, T torch         Y ability, D-pad up heal, D-pad left torch
---   X swap shoulder, Tab / I satchel   R3 shoulder, View/Back satchel
---   B resupply, V ammo cache, P settings  Start/Menu: Roblox menu
+--   C / Ctrl crouch (hold: prone)      B [Circle] crouch (hold: prone)
+--   RMB aim, LMB fire                  L2 aim, R2 fire (aim assist while aiming)
+--   R reload (Second Wind if downed)   R1 reload (Second Wind if downed)
+--   F Quieting / grab / melee          X [Square] (reloads when nobody is in reach)
+--   Space dodge (dive when sprinting)  L1 dodge
+--   G throw, Q ability                 Y [Triangle] tap: throw · hold: ability
+--   1 long gun, 2 sidearm, 3 holster   D-pad right tap: next weapon · hold: holster
+--   Z next throwable, 4 backpack gun   D-pad down tap: next throwable · hold: backpack gun
+--   T torch, V ammo cache              D-pad left tap: torch · hold: ammo cache
+--   H heal, B resupply                 D-pad up tap: heal · hold: resupply
+--   X swap shoulder, Tab / I satchel   R3 shoulder, View [Share/Touchpad] satchel
+--   P settings, F1 controls            in the satchel; A interacts, B closes menus
 local ContextActionService = game:GetService("ContextActionService")
 local Workspace = game:GetService("Workspace")
 
@@ -15653,6 +16160,27 @@ bindUnsafe = function(name, handler, ...)
 	end
 end
 
+-- Gamepad buttons with two jobs: tap for one action, hold (0.4 s) for the other.
+local function bindPad(name, key, onTap, onHold)
+	local pressedAt, press = 0, 0
+	bind(name, function(state)
+		if state == Begin then
+			pressedAt = os.clock()
+			press += 1
+			local mine = press
+			task.delay(0.4, function()
+				if mine == press and pressedAt > 0 then
+					pressedAt = 0
+					onHold()
+				end
+			end)
+		elseif state == End and pressedAt > 0 then
+			pressedAt = 0
+			onTap()
+		end
+	end, key)
+end
+
 local function enemyNearby(radius)
 	local enemies = Workspace:FindFirstChild("Enemies")
 	local root = State.root
@@ -15711,7 +16239,7 @@ function ActionController.start()
 		elseif canAct() then
 			Weapon.reload()
 		end
-	end, Enum.KeyCode.R)
+	end, Enum.KeyCode.R, Enum.KeyCode.ButtonR1)
 
 	bind("Quiet", function(state, input)
 		if state ~= Begin or not canAct() then
@@ -15745,18 +16273,18 @@ function ActionController.start()
 		if state == Begin and canAct() then
 			Weapon.cycleWeapon()
 		end
-	end, Enum.KeyCode.DPadRight)
+	end)
 
 	bind("Throw", function(state)
 		if state == Begin and canAct() then
 			Weapon.throw()
 		end
-	end, Enum.KeyCode.G, Enum.KeyCode.ButtonR1)
+	end, Enum.KeyCode.G)
 	bind("NextThrowable", function(state)
 		if state == Begin and State.character then
 			Weapon.cycleThrowable()
 		end
-	end, Enum.KeyCode.Z, Enum.KeyCode.DPadDown)
+	end, Enum.KeyCode.Z)
 
 	bind("Dodge", function(state)
 		if state == Begin and canAct() then
@@ -15768,23 +16296,70 @@ function ActionController.start()
 		if state == Begin and canAct() then
 			act("Ability")
 		end
-	end, Enum.KeyCode.Q, Enum.KeyCode.ButtonY)
+	end, Enum.KeyCode.Q)
 	bind("Heal", function(state)
 		if state == Begin and canAct() then
 			act("Heal")
 		end
-	end, Enum.KeyCode.H, Enum.KeyCode.DPadUp)
+	end, Enum.KeyCode.H)
 	bind("Torch", function(state)
 		if state == Begin and State.character and not State.downed then
 			act("Torch")
 		end
-	end, Enum.KeyCode.T, Enum.KeyCode.DPadLeft)
+	end, Enum.KeyCode.T)
+
+	-- gamepad: buttons with a tap and a hold action
+	bindPad("PadY", Enum.KeyCode.ButtonY, function()
+		if canAct() then
+			Weapon.throw()
+		end
+	end, function()
+		if canAct() then
+			act("Ability")
+		end
+	end)
+	bindPad("PadRight", Enum.KeyCode.DPadRight, function()
+		if canAct() then
+			Weapon.cycleWeapon()
+		end
+	end, function()
+		if canAct() then
+			act("Equip", "none")
+		end
+	end)
+	bindPad("PadDown", Enum.KeyCode.DPadDown, function()
+		if State.character then
+			Weapon.cycleThrowable()
+		end
+	end, function()
+		if State.character and not State.downed and not State.uiOpen() then
+			act("SwapPack", 1)
+		end
+	end)
+	bindPad("PadLeft", Enum.KeyCode.DPadLeft, function()
+		if State.character and not State.downed then
+			act("Torch")
+		end
+	end, function()
+		if canAct() then
+			act("AmmoCache")
+		end
+	end)
+	bindPad("PadUp", Enum.KeyCode.DPadUp, function()
+		if canAct() then
+			act("Heal")
+		end
+	end, function()
+		if canAct() then
+			act("Resupply")
+		end
+	end)
 
 	-- tap: crouch / stand (or up from prone);  hold: go prone
 	local crouchPressedAt, crouchPress = 0, 0
 	bind("Crouch", function(state, input)
-		if not State.character then
-			return
+		if not State.character or State.uiOpen() then
+			return Pass -- B closes menus while one is open
 		end
 		if isTouch(input) then
 			if state == Begin then
@@ -15864,7 +16439,7 @@ end
 
 return ActionController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Locomotion for custom realistic rigs that don't carry Roblox's default "Animate" script:
 -- blends idle / walk / run (and crouch variants) by speed using the animation IDs in
 -- Config/Rigs.Animations. Characters with an Animate script (the placeholder mannequin,
@@ -15940,7 +16515,7 @@ end
 
 return AnimationController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
 -- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
 -- swap, and mouse / gamepad / touch look.
@@ -15979,6 +16554,47 @@ local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Exclude
 local aimParams = RaycastParams.new()
 aimParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- Console aim assist (gamepad only, while aiming): the look slows over a target ("friction")
+-- and drifts gently onto it while you're moving the stick ("magnetism"). Never snaps.
+local lastPad = false
+local assistParams = RaycastParams.new()
+assistParams.FilterType = Enum.RaycastFilterType.Exclude
+local function wrapAngle(a)
+	return (a + math.pi) % (2 * math.pi) - math.pi
+end
+local function aimAssistTarget()
+	local enemies = Workspace:FindFirstChild("Enemies")
+	local cam = Workspace.CurrentCamera
+	if not (enemies and cam) then
+		return nil
+	end
+	local origin = cam.CFrame.Position
+	local look = cam.CFrame.LookVector
+	local best, bestAngle = nil, math.rad(7)
+	for _, model in enemies:GetChildren() do
+		local part = model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")
+		if part and model:GetAttribute("State") ~= "Dispersed" and (model:GetAttribute("HP") or 1) > 0 then
+			local to = part.Position - origin
+			local dist = to.Magnitude
+			if dist < 140 then
+				local angle = math.acos(math.clamp(look:Dot(to.Unit), -1, 1))
+				-- a wider cone up close
+				local cone = math.rad(math.clamp(7 * 25 / math.max(dist, 1), 2.5, 9))
+				if angle < cone and angle < bestAngle then
+					assistParams.FilterDescendantsInstances = { State.character, model }
+					if not Workspace:Raycast(origin, to, assistParams) then
+						best, bestAngle = part, angle
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+function CameraController.usingGamepad()
+	return lastPad
+end
 
 function CameraController.getYaw()
 	return yaw
@@ -16087,8 +16703,16 @@ local function update(dt)
 		UserInputService.MouseIconEnabled = false
 	end
 
+	local assist = State.aiming and lastPad and player:GetAttribute("Set_aimAssist") ~= false and aimAssistTarget() or nil
+	if assist and padLook.Magnitude > 0.15 then
+		local d = (assist.Position - Workspace.CurrentCamera.CFrame.Position).Unit
+		local wantYaw, wantPitch = math.atan2(-d.X, -d.Z), math.asin(d.Y)
+		local k = math.min(1, dt * 2.2)
+		yaw += wrapAngle(wantYaw - yaw) * k
+		pitch += (wantPitch - pitch) * k * 0.6
+	end
 	if padLook.Magnitude > 0.15 then
-		local aimSlow = State.aiming and 0.55 or 1
+		local aimSlow = (State.aiming and 0.55 or 1) * (assist and 0.6 or 1)
 		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
 		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
 	end
@@ -16212,6 +16836,12 @@ function CameraController.start()
 			padLook = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end)
+	UserInputService.LastInputTypeChanged:Connect(function(kind)
+		lastPad = kind.Name:sub(1, 7) == "Gamepad"
+		State.gamepad = lastPad
+	end)
+	lastPad = UserInputService:GetLastInputType().Name:sub(1, 7) == "Gamepad"
+	State.gamepad = lastPad
 
 	UserInputService.TouchStarted:Connect(function(input, processed)
 		if processed or touchInput or State.uiOpen() then
@@ -16252,7 +16882,7 @@ end
 
 return CameraController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client-only feedback: Tide Sense highlights, knockback, hit flash, low-health grade,
 -- takedown framing, Squall lightning, and hiding your own revive prompt.
 local Lighting = game:GetService("Lighting")
@@ -16478,6 +17108,15 @@ function EffectsController.init(registry)
 end
 
 function EffectsController.start()
+	-- the Lucky Spin wheel on the Meridian turns slowly (client-side, purely visual)
+	local CollectionService = game:GetService("CollectionService")
+	RunService.RenderStepped:Connect(function(dt)
+		for _, wheel in CollectionService:GetTagged("SpinWheel") do
+			if wheel:IsA("Model") and wheel.PrimaryPart then
+				wheel:PivotTo(wheel:GetPivot() * CFrame.Angles(dt * 0.5, 0, 0))
+			end
+		end
+	end)
 	grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "AftertideHealth"
 	grade.Parent = Lighting
@@ -16535,7 +17174,7 @@ end
 
 return EffectsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural animation for the Hushed (no animation assets needed). Drives each enemy's
 -- Motor6D skeleton from its replicated velocity, State and Gait:
 --   shamble (Drifter)   uneven, dragging steps, arms hanging and swaying
@@ -16869,7 +17508,7 @@ end
 
 return EnemyAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Graphics presets. Roblox decides the core render quality per device (from the player's
 -- graphics slider); these presets layer extra effects on top and decide how many costly
 -- things run:
@@ -17143,7 +17782,7 @@ end
 
 return GraphicsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Stances, speed states with acceleration, wading, aim-facing (strafe while aiming), and the
 -- dodge / sprint-dive movement. Poses are drawn by PlayerAnimator.
 local Players = game:GetService("Players")
@@ -17385,7 +18024,7 @@ end
 
 return MovementController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural full-body animation for every crew character (replaces Roblox's default
 -- Animate script, so movement doesn't look like a Roblox avatar). Runs on each client for
 -- all characters from replicated velocity + attributes:
@@ -18039,7 +18678,7 @@ end
 
 return PlayerAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- All client-side audio:
 --   ambience     wind + sea + low drone, mixed by where you are (ferry vs encounter)
 --   music        a tension loop that swells when Hushed are suspicious of / hunting you,
@@ -18266,7 +18905,7 @@ end
 
 return SoundController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004C"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Owns the ScreenGui and routes server notifications to the UI modules.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18289,6 +18928,8 @@ local Repairs = require(UI:WaitForChild("Repairs"))
 local Settings = require(UI:WaitForChild("Settings"))
 local Quests = require(UI:WaitForChild("Quests"))
 local Quartermaster = require(UI:WaitForChild("Quartermaster"))
+local Spin = require(UI:WaitForChild("Spin"))
+local Guide = require(UI:WaitForChild("Guide"))
 
 local UIController = {}
 local Controllers
@@ -18317,6 +18958,10 @@ function UIController.toggleControls(force)
 	HUD.toggleControls(force)
 end
 
+function UIController.openSpin()
+	Spin.open()
+end
+
 function UIController.toggleSettings()
 	Settings.toggle()
 end
@@ -18330,6 +18975,7 @@ local function closeMenus()
 	CharacterSelect.close()
 	Quests.close()
 	Quartermaster.close()
+	Spin.close()
 end
 
 function UIController.init(registry)
@@ -18392,6 +19038,12 @@ function UIController.start()
 	build("Quartermaster", function()
 		Quartermaster.build(gui, request)
 	end)
+	build("Guide", function()
+		Guide.build(gui, request)
+	end)
+	build("Spin", function()
+		Spin.build(gui, request, Shop.prompt)
+	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")
 		dgui.Name = "AftertideDiagnostics"
@@ -18401,6 +19053,20 @@ function UIController.start()
 		dgui.Parent = player:WaitForChild("PlayerGui")
 		Diagnostics.build(dgui)
 	end)
+	Satchel.setMenuHandlers({
+		spin = function()
+			Spin.open()
+		end,
+		shop = function()
+			Shop.open()
+		end,
+		settings = function()
+			UIController.toggleSettings()
+		end,
+		controls = function()
+			HUD.toggleControls(true)
+		end,
+	})
 	Diagnostics.setStatusProvider(function()
 		local out = {}
 		local anim = Controllers.PlayerAnimator.status()
@@ -18447,6 +19113,11 @@ function UIController.start()
 			if State.character then
 				Satchel.toggle()
 			end
+		elseif key == Enum.KeyCode.ButtonB and State.uiOpen() then
+			Diagnostics.noteInput("pad B -> close menus")
+			closeMenus()
+			Settings.close()
+			Results.close()
 		elseif key == Enum.KeyCode.F1 then
 			Diagnostics.noteInput("key F1 -> controls")
 			HUD.toggleControls()
@@ -18483,6 +19154,10 @@ function UIController.start()
 			Quests.open()
 		elseif kind == "OpenQuartermaster" then
 			Quartermaster.open()
+		elseif kind == "OpenSpin" then
+			Spin.open()
+		elseif kind == "SpinResult" then
+			task.spawn(Spin.result, data)
 		elseif kind == "CloseMenus" then
 			closeMenus()
 		elseif kind == "Hit" then
@@ -18526,16 +19201,59 @@ function UIController.start()
 			warn(("[UI] %s: %s"):format(name, tostring(err)))
 		end
 	end
+	-- Console: keep the selection cursor inside whatever menu is open; drop it when none is.
+	local GuiService = game:GetService("GuiService")
+	local function firstButton()
+		local best, bestY, bestX
+		for _, d in gui:GetDescendants() do
+			if d:IsA("GuiButton") and d.Visible and d.Selectable then
+				local shown, modal = true, false
+				local a = d
+				while a and a ~= gui do
+					if a:IsA("GuiObject") then
+						if not a.Visible then
+							shown = false
+							break
+						end
+						if a.ZIndex >= 20 then
+							modal = true
+						end
+					end
+					a = a.Parent
+				end
+				if shown and modal then
+					local p = d.AbsolutePosition
+					if not best or p.Y < bestY - 4 or (math.abs(p.Y - bestY) <= 4 and p.X < bestX) then
+						best, bestY, bestX = d, p.Y, p.X
+					end
+				end
+			end
+		end
+		return best
+	end
+	local function manageSelection()
+		local sel = GuiService.SelectedObject
+		if not State.uiOpen() then
+			if sel and sel:IsDescendantOf(gui) then
+				GuiService.SelectedObject = nil
+			end
+		elseif State.gamepad and (sel == nil or not sel.Visible or not sel:IsDescendantOf(gui)) then
+			GuiService.SelectedObject = firstButton()
+		end
+	end
 	RunService.RenderStepped:Connect(function(dt)
+		safe("Selection", manageSelection)
 		safe("HUD", HUD.update, dt)
 		safe("Satchel", Satchel.refresh)
 		safe("Shop", Shop.refresh)
+		safe("Spin", Spin.refresh)
+		safe("Guide", Guide.update)
 	end)
 end
 
 return UIController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004D"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client side of the gun system: input -> server intents, plus instant local feedback
 -- (muzzle flash, recoil kick, crosshair bloom) so shooting feels responsive. The server
 -- decides every hit (WeaponService).
@@ -18823,7 +19541,7 @@ end
 return WeaponController
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="LocalScript" referent="RBX0000004D"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="LocalScript" referent="RBX0000004F"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE client bootstrap.
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -18892,7 +19610,7 @@ if player.Character then
 	task.spawn(bindCharacter, player.Character)
 end
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared client-side state for controllers and UI.
 local State = {
 	character = nil,
@@ -18925,7 +19643,7 @@ end
 
 return State
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000005C"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000060"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
 local Players = game:GetService("Players")
 
@@ -19061,7 +19779,7 @@ end
 
 return CharacterSelect
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The tide chart: choose the next encounter route (type, conditions, bonus).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19167,7 +19885,7 @@ end
 
 return Chart
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- F2 diagnostics: what the game is actually doing on your machine, so problems can be fixed
 -- from facts instead of guesses. Shows client + server warnings/errors, the animator's
 -- state, the last keys / actions received, open menus, and the asset-fitting report.
@@ -19296,7 +20014,119 @@ end
 
 return Diagnostics
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Guide</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- First-time help on the Meridian, so a new player knows exactly how to start:
+--   * a small "Captain's orders" card (3 steps) until you've set sail once
+--   * a gold guide line on the deck from you to the SET SAIL chart table
+--   * for everyone on deck: a SET SAIL button (opens the tide chart from anywhere on the ship)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Game = require(Shared.Config.Game)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local Guide = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local card, steps, sailButton, spinBadge
+local beam, a0
+local request
+
+local function onDeck()
+	local s = ReplicatedStorage:GetAttribute("MatchState")
+	local root = State.root
+	return (s == "Ferry" or s == "Planning") and root ~= nil and (root.Position - Game.FerryOrigin).Magnitude < 140
+end
+
+local function chartTarget()
+	local world = Workspace:FindFirstChild("World")
+	local ferry = world and world:FindFirstChild("Meridian")
+	local chart = ferry and ferry:FindFirstChild("ChartTable")
+	return chart and chart:FindFirstChild("GuideTarget"), chart
+end
+
+function Guide.build(gui, requestFn)
+	request = requestFn
+	card = Theme.panel({ Name = "Guide", AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 22, 0, 90), Size = UDim2.new(0, 330, 0, 132), BackgroundTransparency = 0.12, Visible = false, Parent = gui })
+	Theme.padding(12).Parent = card
+	Theme.heading({ Text = "CAPTAIN'S ORDERS", TextSize = 18, TextColor3 = Color3.fromRGB(255, 200, 90), Size = UDim2.new(1, 0, 0, 22), Parent = card })
+	steps = {}
+	for i = 1, 3 do
+		steps[i] = Theme.label({ Position = UDim2.new(0, 0, 0, 4 + i * 30), Size = UDim2.new(1, 0, 0, 28), TextWrapped = true, TextSize = 13, Parent = card })
+	end
+	sailButton = Theme.button({ Name = "SetSail", Text = "⚓  SET SAIL", TextSize = 20, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -24, 1, -150), Size = UDim2.new(0, 190, 0, 48), BackgroundColor3 = Color3.fromRGB(214, 150, 50), TextColor3 = Color3.fromRGB(30, 20, 8), Visible = false, Parent = gui })
+	sailButton.Activated:Connect(function()
+		request("OpenChart")
+	end)
+	spinBadge = Theme.button({ Name = "SpinBadge", Text = "🎡  FREE SPIN!", TextSize = 16, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -24, 1, -206), Size = UDim2.new(0, 190, 0, 38), BackgroundColor3 = Color3.fromRGB(120, 80, 200), Visible = false, Parent = gui })
+	spinBadge.Activated:Connect(function()
+		request("OpenSpin")
+	end)
+end
+
+local function setBeam(show)
+	local target = chartTarget()
+	if show and target and State.root then
+		if not beam then
+			a0 = Instance.new("Attachment")
+			a0.Name = "GuideFrom"
+			beam = Instance.new("Beam")
+			beam.Name = "SetSailGuide"
+			beam.Color = ColorSequence.new(Color3.fromRGB(255, 210, 100))
+			beam.LightEmission = 1
+			beam.LightInfluence = 0
+			beam.Width0, beam.Width1 = 0.6, 0.6
+			beam.FaceCamera = true
+			beam.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			beam.TextureMode = Enum.TextureMode.Wrap
+			beam.TextureLength = 2
+			beam.TextureSpeed = 1.5
+			beam.Transparency = NumberSequence.new(0.25)
+			beam.Segments = 12
+			beam.CurveSize0, beam.CurveSize1 = 2, -2
+		end
+		a0.Position = Vector3.new(0, -2.2, 0) -- along the deck, from your feet
+		a0.Parent = State.root
+		beam.Attachment0, beam.Attachment1 = a0, target
+		beam.Parent = State.root
+		beam.Enabled = true
+	elseif beam then
+		beam.Enabled = false
+	end
+end
+
+function Guide.update()
+	if not card then
+		return
+	end
+	local deck = onDeck()
+	local newPlayer = player:GetAttribute("NewPlayer") == true
+	local menus = State.uiOpen()
+	sailButton.Visible = deck and not menus and ReplicatedStorage:GetAttribute("MatchState") ~= "Starting"
+	spinBadge.Visible = deck and not menus and player:GetAttribute("FreeSpinReady") == true
+	local showGuide = deck and newPlayer and not menus
+	card.Visible = showGuide
+	setBeam(showGuide)
+	if showGuide then
+		local hasCrew = player:GetAttribute("CharId") ~= nil
+		local _, chart = chartTarget()
+		local dist = chart and State.root and math.floor((chart.Position - State.root.Position).Magnitude) or 0
+		local near = dist < 12
+		local tick = "✔  "
+		steps[1].Text = (hasCrew and tick or "1  ") .. "Choose your crew member"
+		steps[1].TextColor3 = hasCrew and C.ok or C.text
+		steps[2].Text = (near and tick or "2  ") .. ("Follow the gold light to the SET SAIL table%s"):format(near and "" or ("  (" .. dist .. " studs)"))
+		steps[2].TextColor3 = near and C.ok or C.text
+		steps[3].Text = "3  " .. (State.gamepad and "Press A at the table" or "Hold E at the table (or click SET SAIL)") .. ", then pick a mission"
+	end
+end
+
+return Guide
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The HUD, designed to stay out of the way (survival-game minimal, not a Roblox overlay):
 --   top        compass bar with objective / teammate markers and distances; one-line objective
 --   bottom-right  fading cluster: segmented health, weapon + ammo pips, throwable;
@@ -19339,23 +20169,22 @@ local CONTROLS = {
 	{ "SPRINT", "Shift (hold)", "L3" },
 	{ "CROUCH · PRONE", "C tap · C hold", "B tap · B hold" },
 	{ "DODGE · DIVE", "Space (dive while sprinting)", "L1" },
-	{ "AIM", "Right mouse", "L2" },
+	{ "AIM", "Right mouse", "L2 (aim assist)" },
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
 	{ "FIRE", "Left mouse", "R2" },
-	{ "RELOAD", "R", "X (no enemy near)" },
-	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-pad right" },
-	{ "BACKPACK GUN (slow)", "4", "" },
+	{ "RELOAD", "R", "R1" },
+	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-right · hold: holster" },
+	{ "BACKPACK GUN (slow)", "4", "hold D-down" },
 	{ "QUIETING · GRAB · MELEE", "F (from behind: Quiet / grab)", "X" },
-	{ "THROW · NEXT ITEM", "G · Z", "R1 · D-pad down" },
-	{ "ABILITY", "Q", "Y" },
-	{ "HEAL", "H", "D-pad up" },
-	{ "FLASHLIGHT", "T", "D-pad left" },
-	{ "AMMO CACHE · RESUPPLY", "V · B", "" },
-	{ "SATCHEL", "I or Tab", "View / Back" },
+	{ "THROW · NEXT ITEM", "G · Z", "Y · D-down" },
+	{ "ABILITY", "Q", "hold Y" },
+	{ "HEAL · RESUPPLY", "H · B", "D-up · hold D-up" },
+	{ "FLASHLIGHT · AMMO CACHE", "T · V", "D-left · hold D-left" },
+	{ "SATCHEL", "I or Tab", "View" },
 	{ "SWAP SHOULDER", "X", "R3" },
-	{ "SETTINGS · CONTROLS", "P · F1", "" },
+	{ "SETTINGS · CONTROLS", "P · F1", "in the satchel" },
 	{ "DIAGNOSTICS", "F2", "" },
-	{ "INTERACT", "E (hold)", "A" },
+	{ "INTERACT · CLOSE MENU", "E (hold) · click", "A · B" },
 }
 
 function HUD.toggleControls(force)
@@ -19721,6 +20550,9 @@ local function objectiveText(matchState, inEncounter)
 end
 
 function HUD.update(dt)
+	if controlsHint then
+		controlsHint.Text = State.gamepad and "VIEW  SATCHEL · SETTINGS · CONTROLS" or "F1  CONTROLS"
+	end
 	if not root then
 		return
 	end
@@ -19868,7 +20700,7 @@ end
 
 return HUD
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
 -- and buy kits for your next crossing. Everyone starts with only the Service Revolver.
 local HttpService = game:GetService("HttpService")
@@ -19986,6 +20818,9 @@ local function rebuild()
 	section(order, "KITS FOR YOUR NEXT CROSSING")
 	local kit = decode("Kit", {})
 	for _, k in Quartermaster.Kits do
+		if k.robux then
+			continue -- Ammo Crates are in the Purser's Office (Robux)
+		end
 		order += 1
 		local have = kit[k.id] or 0
 		local holder = row(order, k.name .. (have > 0 and ("  ·  PACKED x" .. have) or ""), k.desc)
@@ -20041,7 +20876,7 @@ end
 
 return QM
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The quest board: today's three challenges and this week's two, with progress.
 -- Data comes from the server as the JSON attribute "Quests" (QuestService).
 local HttpService = game:GetService("HttpService")
@@ -20126,7 +20961,7 @@ end
 
 return Quests
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian projects board: permanent homebase upgrades built with Scrip + Materials (both
 -- earned from missions) or a Shipwright's Crew token, plus the armory once it's built.
 local HttpService = game:GetService("HttpService")
@@ -20247,7 +21082,7 @@ end
 
 return Repairs
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- End-of-encounter debrief.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -20319,7 +21154,7 @@ end
 
 return Results
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: everything you carry, throwable selection, field crafting and run aids.
 local Players = game:GetService("Players")
 
@@ -20364,6 +21199,8 @@ local function costText(recipe)
 	local yield = recipe.amount + ((recipe.perkYield and mods.craftYieldBonus) or 0)
 	return table.concat(parts, " + ") .. (yield > 1 and ("  →  ×" .. yield) or "")
 end
+
+local menuHandlers = {}
 
 function Satchel.build(gui, actionSender)
 	sendAction = actionSender
@@ -20412,8 +21249,26 @@ function Satchel.build(gui, actionSender)
 	resupply.Activated:Connect(function()
 		sendAction("Resupply")
 	end)
-	local close = Theme.button({ LayoutOrder = 23, Text = "CLOSE  [Tab]", Size = UDim2.new(0, 160, 0, 36), Parent = scroller })
+	-- menus that have no key on a controller (and are handy with a mouse too)
+	Theme.heading({ LayoutOrder = 24, Text = "MENU", TextSize = 17, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 22), Parent = scroller })
+	local menuRow = Theme.make("Frame", { LayoutOrder = 25, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = scroller })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = menuRow
+	for i, entry in { { "LUCKY SPIN", "spin" }, { "SHOP", "shop" }, { "SETTINGS", "settings" }, { "CONTROLS", "controls" } } do
+		local b = Theme.button({ LayoutOrder = i, Text = entry[1], TextSize = 14, Size = UDim2.new(0.25, -5, 1, 0), Parent = menuRow })
+		b.Activated:Connect(function()
+			local fn = menuHandlers[entry[2]]
+			if fn then
+				Satchel.close()
+				fn()
+			end
+		end)
+	end
+	local close = Theme.button({ LayoutOrder = 30, Text = "CLOSE  [Tab / B]", Size = UDim2.new(0, 180, 0, 36), Parent = scroller })
 	close.Activated:Connect(Satchel.close)
+end
+
+function Satchel.setMenuHandlers(handlers)
+	menuHandlers = handlers
 end
 
 function Satchel.refresh()
@@ -20460,7 +21315,7 @@ end
 
 return Satchel
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Settings: graphics preset (Auto / Performance / Balanced / Cinematic), look sensitivity,
 -- reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
@@ -20561,7 +21416,7 @@ end
 
 return Settings
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005C"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Purser's Office ledger: the in-world shop, in three tabs.
 --   SUPPLIES   run aids (tokens) and the one-time Starter Pack. Fixed contents, never random.
 --   WARDROBE   outfits for each crew member: equip, buy with Scrip, or buy with Robux.
@@ -20606,6 +21461,9 @@ function Shop.prompt(productKey)
 	local product = Commerce.Products[productKey]
 	if not product or product.productId == 0 then
 		return false
+	end
+	if product.randomItem and player:GetAttribute("PaidSpinRestricted") ~= false then
+		return false -- paid random items aren't offered where they're restricted (or unknown)
 	end
 	MarketplaceService:PromptProductPurchase(player, product.productId)
 	return true
@@ -20875,7 +21733,267 @@ end
 
 return Shop
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005D"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Lucky Spin screen: a prize reel that rolls to the prize the server picked.
+-- One free spin a day (00:00 UTC reset); extra spins are Spin tokens (won, or R$10 each).
+-- Every prize's odds are listed on this screen before you spin or buy (paid random items
+-- policy); spins aren't sold where paid random items are restricted.
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local SpinConfig = require(Shared.Config.Spin)
+local Commerce = require(Shared.Config.Commerce)
+local Sfx = require(Shared.Util.Sfx)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local Spin = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local backdrop, reel, strip, spinButton, buyOne, buyFive, status, wonLabel
+local request, promptProduct
+local spinning, rolling = false, false
+
+local TILE, GAP = 118, 8
+local TOTAL = 0
+for _, p in SpinConfig.Prizes do
+	TOTAL += p.weight
+end
+
+local function rgb(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+local function weightedIndex(rng)
+	local roll = rng:NextInteger(1, TOTAL)
+	for i, p in SpinConfig.Prizes do
+		roll -= p.weight
+		if roll <= 0 then
+			return i
+		end
+	end
+	return 1
+end
+
+local function tile(parent, prize, x)
+	local t = Theme.make("Frame", {
+		Position = UDim2.new(0, x, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Size = UDim2.new(0, TILE, 0, 110),
+		BackgroundColor3 = rgb(prize.color):Lerp(Color3.fromRGB(20, 22, 26), 0.55),
+		BorderSizePixel = 0,
+		Parent = parent,
+	})
+	Theme.corner(8).Parent = t
+	Theme.stroke(rgb(prize.color), 2, 0.1).Parent = t
+	Theme.make("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.35) }),
+		Parent = t,
+	})
+	Theme.label({ Text = prize.short, Font = Theme.Head, TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = rgb(prize.color), Position = UDim2.new(0, 0, 0, 14), Size = UDim2.new(1, 0, 0, 40), Parent = t })
+	Theme.label({ Text = prize.name, TextWrapped = true, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 6, 0, 58), Size = UDim2.new(1, -12, 0, 44), Parent = t })
+	return t
+end
+
+local function fillStrip(winIndex, winSlot)
+	Theme.clear(strip)
+	local rng = Random.new()
+	for slot = 1, winSlot + 4 do
+		local index = slot == winSlot and winIndex or weightedIndex(rng)
+		tile(strip, SpinConfig.Prizes[index], (slot - 1) * (TILE + GAP))
+	end
+end
+
+local function fmtTime(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	return ("%02d:%02d:%02d"):format(seconds // 3600, (seconds % 3600) // 60, seconds % 60)
+end
+
+local function restricted()
+	return player:GetAttribute("PaidSpinRestricted") ~= false
+end
+
+function Spin.refresh()
+	if not (backdrop and backdrop.Visible) then
+		return
+	end
+	local free = player:GetAttribute("FreeSpinReady") == true
+	local tokens = player:GetAttribute("Tokens_spin") or 0
+	local wait = (player:GetAttribute("NextFreeSpinAt") or 0) - Workspace:GetServerTimeNow()
+	if spinning then
+		spinButton.Text = "SPINNING…"
+	elseif free then
+		spinButton.Text = "SPIN  ·  FREE TODAY"
+	elseif tokens > 0 then
+		spinButton.Text = ("SPIN  ·  %d SPIN%s LEFT"):format(tokens, tokens == 1 and "" or "S")
+	elseif restricted() then
+		spinButton.Text = "NEXT FREE SPIN " .. fmtTime(wait)
+	else
+		spinButton.Text = ("SPIN  ·  R$%d"):format(Commerce.Products.LuckySpin.price)
+	end
+	spinButton.AutoButtonColor = not spinning
+	status.Text = free and "Your free spin for today is ready." or ("Next free spin in %s (resets 00:00 UTC)."):format(fmtTime(wait))
+	buyOne.Visible = not restricted()
+	buyFive.Visible = not restricted()
+end
+
+local function doSpin()
+	if spinning then
+		return
+	end
+	local free = player:GetAttribute("FreeSpinReady") == true
+	local tokens = player:GetAttribute("Tokens_spin") or 0
+	if not free and tokens <= 0 then
+		if not restricted() then
+			promptProduct("LuckySpin")
+		end
+		return
+	end
+	spinning = true
+	wonLabel.Text = ""
+	Sfx.ui("Ui_Confirm", 0.5)
+	request("Spin")
+	task.delay(6, function()
+		if spinning and not rolling then
+			spinning = false -- no answer from the server
+		end
+	end)
+end
+
+-- The server's pick arrives: roll the reel onto it.
+function Spin.result(data)
+	if not backdrop then
+		return
+	end
+	local index = tonumber(data and data.index) or 1
+	local prize = SpinConfig.Prizes[index] or SpinConfig.Prizes[1]
+	if not backdrop.Visible then
+		Spin.open()
+	end
+	spinning, rolling = true, true
+	local winSlot = 34
+	fillStrip(index, winSlot)
+	strip.Position = UDim2.new(0, 0, 0, 0)
+	local center = reel.AbsoluteSize.X / 2
+	local jitter = Random.new():NextNumber(-TILE * 0.32, TILE * 0.32)
+	local target = -((winSlot - 1) * (TILE + GAP) + TILE / 2 - center + jitter)
+	local duration = 4.2
+	local tween = TweenService:Create(strip, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.new(0, target, 0, 0) })
+	tween:Play()
+	-- a tick each time a tile passes the marker
+	task.spawn(function()
+		local last = 0
+		while tween.PlaybackState == Enum.PlaybackState.Playing do
+			local passed = math.floor((-strip.Position.X.Offset + center) / (TILE + GAP))
+			if passed ~= last then
+				last = passed
+				Sfx.ui("Ui_Tick", 0.35)
+			end
+			task.wait()
+		end
+	end)
+	tween.Completed:Wait()
+	Sfx.ui("Ui_Confirm", 0.9)
+	wonLabel.TextColor3 = rgb(prize.color)
+	wonLabel.Text = "YOU WON:  " .. string.upper(prize.name)
+	spinning, rolling = false, false
+end
+
+function Spin.build(gui, requestFn, promptFn)
+	request, promptProduct = requestFn, promptFn
+	local panel
+	backdrop, panel = Theme.modal(gui, "Spin", UDim2.new(0.94, 0, 0.88, 0), Vector2.new(820, 600))
+	Theme.heading({ Text = "LUCKY SPIN", TextSize = 28, Size = UDim2.new(1, -120, 0, 34), Parent = panel })
+	Theme.label({ Position = UDim2.new(0, 0, 0, 34), Text = "One free spin every day. Prizes go straight to you (kits are packed for your next crossing).", TextSize = 12, TextColor3 = C.dim, Size = UDim2.new(1, -120, 0, 18), Parent = panel })
+	local close = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
+	close.Activated:Connect(Spin.close)
+
+	reel = Theme.make("Frame", { Position = UDim2.new(0, 0, 0, 62), Size = UDim2.new(1, 0, 0, 132), BackgroundColor3 = Color3.fromRGB(10, 12, 14), BorderSizePixel = 0, ClipsDescendants = true, Parent = panel })
+	Theme.corner(8).Parent = reel
+	strip = Theme.make("Frame", { Size = UDim2.new(0, 10, 1, 0), BackgroundTransparency = 1, Parent = reel })
+	-- the marker
+	Theme.make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0, 4, 1, 0), BackgroundColor3 = C.lantern, BorderSizePixel = 0, ZIndex = 30, Parent = reel })
+	for _, side in { 0, 1 } do
+		Theme.make("Frame", {
+			AnchorPoint = Vector2.new(side, 0),
+			Position = UDim2.new(side, 0, 0, 0),
+			Size = UDim2.new(0.18, 0, 1, 0),
+			BackgroundColor3 = Color3.fromRGB(10, 12, 14),
+			BorderSizePixel = 0,
+			ZIndex = 25,
+			Parent = reel,
+		}):SetAttribute("Fade", side)
+	end
+	for _, f in reel:GetChildren() do
+		if f:GetAttribute("Fade") ~= nil then
+			Theme.make("UIGradient", {
+				Transparency = f:GetAttribute("Fade") == 0 and NumberSequence.new(0, 1) or NumberSequence.new(1, 0),
+				Parent = f,
+			})
+		end
+	end
+	fillStrip(#SpinConfig.Prizes, 4)
+
+	wonLabel = Theme.heading({ Text = "", TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.new(0, 0, 0, 200), Size = UDim2.new(1, 0, 0, 30), Parent = panel })
+
+	-- left: buttons
+	local left = Theme.make("Frame", { Position = UDim2.new(0, 0, 0, 240), Size = UDim2.new(0.48, 0, 1, -240), BackgroundTransparency = 1, Parent = panel })
+	spinButton = Theme.button({ Text = "SPIN", TextSize = 22, Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Color3.fromRGB(150, 96, 40), Parent = left })
+	spinButton.Activated:Connect(doSpin)
+	status = Theme.label({ Text = "", TextSize = 12, TextColor3 = C.dim, TextWrapped = true, Position = UDim2.new(0, 0, 0, 62), Size = UDim2.new(1, 0, 0, 32), Parent = left })
+	buyOne = Theme.button({ Text = ("BUY 1 SPIN  ·  R$%d"):format(Commerce.Products.LuckySpin.price), Position = UDim2.new(0, 0, 0, 100), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	buyOne.Activated:Connect(function()
+		promptProduct("LuckySpin")
+	end)
+	buyFive = Theme.button({ Text = ("BUY 5 SPINS  ·  R$%d"):format(Commerce.Products.LuckySpin5.price), Position = UDim2.new(0, 0, 0, 142), Size = UDim2.new(1, 0, 0, 36), Parent = left })
+	buyFive.Activated:Connect(function()
+		promptProduct("LuckySpin5")
+	end)
+
+	-- right: the odds, always visible
+	local right = Theme.panel({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 240), Size = UDim2.new(0.5, 0, 1, -240), BackgroundColor3 = C.panelHi, Parent = panel })
+	Theme.padding(10).Parent = right
+	Theme.heading({ Text = "ODDS PER SPIN", TextSize = 15, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 20), Parent = right })
+	local list = Theme.make("ScrollingFrame", { Position = UDim2.new(0, 0, 0, 24), Size = UDim2.new(1, 0, 1, -24), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = right })
+	Theme.list(Enum.FillDirection.Vertical, 2).Parent = list
+	for i, p in SpinConfig.Prizes do
+		local row = Theme.make("Frame", { LayoutOrder = i, Size = UDim2.new(1, -6, 0, 18), BackgroundTransparency = 1, Parent = list })
+		Theme.make("Frame", { Size = UDim2.new(0, 10, 0, 10), Position = UDim2.new(0, 0, 0.5, -5), BackgroundColor3 = rgb(p.color), BorderSizePixel = 0, Parent = row })
+		Theme.label({ Text = p.name, TextSize = 12, Position = UDim2.new(0, 16, 0, 0), Size = UDim2.new(1, -76, 1, 0), Parent = row })
+		Theme.label({ Text = ("%.1f%%"):format(p.weight / TOTAL * 100), TextSize = 12, Font = Theme.Head, TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 60, 1, 0), Parent = row })
+	end
+end
+
+function Spin.open()
+	if backdrop then
+		backdrop.Visible = true
+		State.setModal("spin", true)
+		Spin.refresh()
+		Theme.focus(spinButton)
+	end
+end
+
+function Spin.close()
+	if backdrop and not spinning then
+		backdrop.Visible = false
+		State.setModal("spin", false)
+	end
+end
+
+function Spin.toggle()
+	if backdrop and backdrop.Visible then
+		Spin.close()
+	else
+		Spin.open()
+	end
+end
+
+return Spin
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000005E"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
 -- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
 local Theme = {}
@@ -21053,7 +22171,7 @@ end
 
 return Theme
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005F"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The workbench: spend Salvage (found during the crossing) on weapon parts, satchel upgrades
 -- and your character's other perks. Upgrades last for this crossing.
 local HttpService = game:GetService("HttpService")

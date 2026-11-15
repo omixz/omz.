@@ -32,12 +32,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("script")
     ap.add_argument("--out")
+    ap.add_argument("--set", action="append", default=[], help="NAME=luau-expression globals for the test, e.g. SCENE_TARGET='\"HollowPines\"'")
     args = ap.parse_args()
     cfg = json.load(open(CONFIG))
     if not cfg.get("placeId"):
         raise SystemExit("Publish first: python3 tools/publish_place.py --place-id <id>")
     prelude = open(os.path.join(os.path.dirname(HERE), "tests", "engine", "_prelude.luau")).read()
-    script = prelude + "\n" + open(args.script).read()
+    sets = "".join(f"{kv.split('=', 1)[0]} = {kv.split('=', 1)[1]}\n" for kv in args.set)
+    script = prelude + "\n" + sets + open(args.script).read()
     task = call("POST", f"{API}/universes/{cfg['universeId']}/places/{cfg['placeId']}/luau-execution-session-tasks", {"script": script, "timeout": "280s"})
     path = task["path"]
     for _ in range(150):

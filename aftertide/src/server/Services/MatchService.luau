@@ -290,6 +290,9 @@ function MatchService.chooseRoute(player, index)
 		return
 	end
 	run.choice = option
+	for p in run.participants do
+		Services.PlayerDataService.markTutorial(p, "sailed")
+	end
 	setState("Starting")
 	ReplicatedStorage:SetAttribute("StartsAt", Workspace:GetServerTimeNow() + Game.StartCountdown)
 	Net.notifyAll("CloseMenus", {})
