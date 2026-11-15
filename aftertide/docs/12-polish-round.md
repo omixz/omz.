@@ -67,3 +67,16 @@ button automatically.
   four R$19 outfits; brighter wardrobe colours.
 - **New features:** 7-day login streak (rewards every day, bigger on day 7) and the Logbook:
   16 torn pages of story hidden two per mission; every 4 found pays Scrip and Materials.
+
+# Round 3
+- **Building kinds** (`MapKit.house`): house, shop (striped awning, sign, display windows), apartment
+  (2-3 extra floors with balconies), garage (roll-up door, tyres, drums, tool chest), chapel (bell
+  tower, coloured glass, pews), cabin. Larkspur mixes them along the street plus a chapel; Cannery
+  Row gets a harbour shop and a garage. Render: `docs/engine-building-kinds.png`.
+- **Masks:** every crew member wears one over the lower face: bandana (Mara navy, Sefa teal),
+  respirator with orange filters (Tobias), surgical (Ines).
+- **Sway:** the camera no longer drifts when you are not aiming (a hair of breathing only when
+  standing still); aim sway and held-gun sway are lower.
+- **Signature guns:** Mara lever carbine, Tobias recurve bow, Ines pump shotgun, Sefa bolt rifle,
+  each with only a few spare rounds. A gun chosen at the Quartermaster takes the holster and your
+  signature gun goes in the backpack if there is a free slot.

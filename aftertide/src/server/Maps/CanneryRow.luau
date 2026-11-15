@@ -94,7 +94,7 @@ function Map.build(parent, rng)
 
 	-- cover: crates, low walls, wrecks, barrels, rubble
 	for _, pos in {
-		Vector3.new(-30, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
+		Vector3.new(-18, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
 		Vector3.new(40, 0, 32), Vector3.new(-45, 0, 8), Vector3.new(-35, 0, -32), Vector3.new(-50, 0, -70),
 		Vector3.new(-20, 0, -80), Vector3.new(10, 0, -72), Vector3.new(30, 0, -90), Vector3.new(50, 0, -68),
 	} do
@@ -199,6 +199,19 @@ function Map.build(parent, rng)
 	table.insert(data.SupplyCandidates, office.loot[1])
 	for _, d in office.doorways do
 		table.insert(data.Doorways, d)
+	end
+	-- a harbour-side shop and a mechanic's garage, so the yard has more than warehouses
+	for _, spec in { { origin = Vector3.new(52, 0, 66), style = { kind = "shop", w = 24, d = 20 } }, { origin = Vector3.new(-45, 0, 38), style = { kind = "garage", w = 28, d = 22 } } } do
+		local b = MapKit.house(parent, spec.origin, 0, rng, spec.style)
+		for _, d in b.doorways do
+			table.insert(data.Doorways, d)
+		end
+		for _, c in b.containers do
+			table.insert(data.ContainerSpots, c)
+		end
+		for _, l in b.loot do
+			table.insert(data.LootSpots, l)
+		end
 	end
 	return data
 end

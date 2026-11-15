@@ -8,8 +8,10 @@
 --   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
 --   throwNoiseMult, craftTimeMult, craftYieldBonus (+n on traps/spikes/arrows),
 --   ammoBonus (+n starting revolver rounds), aimSpreadMult
--- loadout.weapons = { sidearm = <Weapons id> }: EVERY crew member starts a crossing with only the
--- Service Revolver. Long guns are unlocked at the Quartermaster (Scrip) and chosen there.
+-- loadout.weapons = { long = <signature long gun>, sidearm = "revolver" }: everyone starts with the
+-- Service Revolver plus ONE signature long gun that suits them, with only a few spare rounds.
+-- More guns are unlocked at the Quartermaster (Scrip); a gun chosen there takes the long-gun
+-- holster and the signature gun rides in the backpack if there is room.
 
 local Characters = {}
 
@@ -37,8 +39,8 @@ Characters.List = {
 			duration = 4,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
+			weapons = { long = "carbine", sidearm = "revolver" },
+			items = { pistolAmmo = 4, rifleAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
 		},
 		innate = {
 			id = "ShallowStep",
@@ -74,8 +76,8 @@ Characters.List = {
 			duration = 9,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
+			weapons = { long = "bow", sidearm = "revolver" },
+			items = { pistolAmmo = 4, arrows = 6, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
 		},
 		innate = {
 			id = "Tinkerer",
@@ -111,8 +113,8 @@ Characters.List = {
 			duration = 6,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, dressing = 2, cloth = 1, alcohol = 1 },
+			weapons = { long = "shotgun", sidearm = "revolver" },
+			items = { pistolAmmo = 4, shells = 4, dressing = 2, cloth = 1, alcohol = 1 },
 		},
 		innate = {
 			id = "FieldMedic",
@@ -148,8 +150,8 @@ Characters.List = {
 			duration = 5,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, bottle = 3, fogPot = 1, dressing = 1 },
+			weapons = { long = "rifle", sidearm = "revolver" },
+			items = { pistolAmmo = 4, rifleAmmo = 3, bottle = 3, fogPot = 1, dressing = 1 },
 		},
 		innate = {
 			id = "DeepPockets",

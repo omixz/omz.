@@ -1,6 +1,6 @@
 --!nonstrict
 -- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
--- and buy kits for your next crossing. Everyone starts with only the Service Revolver.
+-- and buy kits for your next crossing. Everyone starts with the revolver and a signature long gun.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
@@ -65,7 +65,7 @@ end
 local function rebuild()
 	Theme.clear(list)
 	local scrip = player:GetAttribute("Scrip") or 0
-	header.Text = ("SCRIP %d%s   ·   everyone starts a crossing with only the Service Revolver"):format(scrip, hasArmory() and "   ·   ARMORY: 15% OFF" or "")
+	header.Text = ("SCRIP %d%s   ·   every crew member starts with a revolver and one signature gun"):format(scrip, hasArmory() and "   ·   ARMORY: 15% OFF" or "")
 	local guns = decode("Guns", { revolver = true })
 	local loadout = decode("Loadout", { long = "", pack = {} })
 	loadout.pack = loadout.pack or {}

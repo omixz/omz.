@@ -1,7 +1,7 @@
 --!nonstrict
 -- The Quartermaster: the Meridian's store, paid with Scrip (earned at the end of every mission).
 -- Separate from Meridian projects (Materials). Nothing here is sold for Robux.
---   Guns: permanent unlocks. Everyone starts with only the Service Revolver.
+--   Guns: permanent unlocks. Everyone starts with the revolver plus a signature long gun (Mara carbine, Tobias bow, Ines shotgun, Sefa rifle).
 --   Kits: supplies delivered at the start of your NEXT crossing (up to 2 of each).
 -- The Armory project takes 15% off.
 return {

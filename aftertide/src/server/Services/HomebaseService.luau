@@ -12,6 +12,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Upgrades = require(Shared.Config.Upgrades)
 local Projects = require(Shared.Config.Projects)
 local Quartermaster = require(Shared.Config.Quartermaster)
+local Characters = require(Shared.Config.Characters)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
@@ -49,6 +50,13 @@ function HomebaseService.bonusesFor(player)
 			if #bonus.pack < slots and guns[id] and id ~= bonus.longGun and Weapons.List[id] and Weapons.List[id].slot == "long" then
 				table.insert(bonus.pack, id)
 			end
+		end
+		-- your signature gun stays with you: in the backpack if you chose another long gun
+		local session = Services.CharacterService.getSession(player)
+		local def = session and Characters.List[session.charId]
+		local sig = def and def.loadout.weapons.long
+		if sig and bonus.longGun and sig ~= bonus.longGun and #bonus.pack < slots and not table.find(bonus.pack, sig) then
+			table.insert(bonus.pack, 1, sig)
 		end
 		-- crossing kits (Quartermaster, Lucky Spin, Ammo Crates): delivered now, then used up.
 		-- At most MaxKitsEach of each kind per crossing; extra Ammo Crates wait for the next one.

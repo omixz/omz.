@@ -332,8 +332,8 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	local steady = 1 - 0.75 * a
 	local p = rig.phase or 0
 	pose = pose
-		* CFrame.new(math.sin(p) * 0.045 * moving, -math.abs(math.cos(p)) * 0.06 * moving + math.sin(t * 1.6) * 0.012 * steady, 0)
-		* CFrame.Angles(math.sin(t * 1.3) * 0.02 * steady + math.cos(p * 2) * 0.03 * moving, math.sin(t * 0.9) * 0.025 * steady + math.sin(p) * 0.05 * moving, math.sin(p) * 0.04 * moving)
+		* CFrame.new(math.sin(p) * 0.025 * moving, -math.abs(math.cos(p)) * 0.035 * moving + math.sin(t * 1.6) * 0.006 * steady, 0)
+		* CFrame.Angles(math.sin(t * 1.3) * 0.008 * steady + math.cos(p * 2) * 0.015 * moving, math.sin(t * 0.9) * 0.01 * steady + math.sin(p) * 0.025 * moving, math.sin(p) * 0.02 * moving)
 	if a > 0.05 and a < 0.95 then
 		pose = pose * CFrame.new(0, 0.1 * math.sin(a * math.pi), 0) * CFrame.Angles(0.12 * math.sin(a * math.pi), 0, 0)
 	end

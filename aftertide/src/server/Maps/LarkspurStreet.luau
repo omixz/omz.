@@ -28,7 +28,10 @@ function Map.build(parent, rng)
 	end
 
 	local doorways, containers, loot = {}, {}, {}
+	-- a mixed street: mostly homes, plus shops, flats and a garage
+	local MIX = { "house", "house", "house", "house", "shop", "apartment", "garage" }
 	local function addHouse(origin, yaw, style)
+		style = style or { kinds = MIX }
 		local h = MapKit.house(parent, origin, yaw, rng, style)
 		for _, d in h.doorways do
 			table.insert(doorways, d)
@@ -48,7 +51,9 @@ function Map.build(parent, rng)
 		addHouse(Vector3.new(x + 6, 0, -24), math.pi)
 	end
 	-- corner store at the west end
-	addHouse(Vector3.new(-100, 0, 64), 0, { w = 30, d = 26, h = 12, roof = "flat" })
+	addHouse(Vector3.new(-100, 0, 64), 0, { kind = "shop", w = 30, d = 26 })
+	-- the chapel at the end of the back lane
+	addHouse(Vector3.new(-5, 0, 66), 0, { kind = "chapel" })
 
 	-- back fences and yards gone wild
 	for _, z in { 58, -58 } do

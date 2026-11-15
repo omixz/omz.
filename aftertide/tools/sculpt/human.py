@@ -206,11 +206,33 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
     if o.get("friendly"):
         head_layers.append(("Pupil", lambda P: pupils(P, J), "SmoothPlastic", (0.04, 0.04, 0.05)))
         sk = np.array(skin, float)
-        head_layers.append(("Lips", lambda P: lips(P, J), "SmoothPlastic", tuple(np.clip(sk * np.array([0.85, 0.5, 0.5]) + np.array([0.16, 0.02, 0.04]), 0, 1))))
+        if not o.get("mask"):
+            head_layers.append(("Lips", lambda P: lips(P, J), "SmoothPlastic", tuple(np.clip(sk * np.array([0.85, 0.5, 0.5]) + np.array([0.16, 0.02, 0.04]), 0, 1))))
     head_layers.append(("Brows", lambda P: S.union(*[S.capsule(P, J["head"] + [sx * 0.07, 0.125, -0.395], J["head"] + [sx * 0.19, 0.115, -0.37], 0.017) for sx in (1, -1)]), "Fabric", palette(o, "hair", (0.12, 0.09, 0.07))))
     hc = J["head"]
     if mask:
-        head_layers.append(("Mask", lambda P: cloth(S.intersect(S.intersect(skin_head(P, J, b, f, face=False), below(P, hc[1] - 0.06), 0.03), P[:, 2] - (hc[2] - 0.02), 0.04), 0.03, P, (0.2, 1, 0), 4, 0.006, 3), "Fabric", mask))
+        # a mask over the lower face (nose to chin): bandana, respirator or surgical, wrapping the
+        # real nose and cheeks, with a band round the head and a knot / filters
+        mstyle = o.get("maskStyle", "bandana")
+
+        def mask_shape(P):
+            base = skin_head(P, J, b, f, face=False)
+            nose = S.ellipsoid(P, hc + [0, -0.06, -0.37], [0.06, 0.12, 0.08])
+            cheeks = S.union(S.ellipsoid(P, hc + [0.16, -0.08, -0.25], [0.11, 0.09, 0.09]), S.ellipsoid(P, hc + [-0.16, -0.08, -0.25], [0.11, 0.09, 0.09]))
+            face = S.smooth_union(0.06, base, nose, cheeks)
+            d = S.intersect(S.intersect(S.intersect(face, below(P, hc[1] - 0.012), 0.03), above(P, hc[1] - 0.37), 0.03), P[:, 2] - (hc[2] - 0.02), 0.04)
+            return cloth(d, 0.034, P, (0.2, 1, 0), 4, 0.005, 3)
+        head_layers.append(("Mask", mask_shape, "Fabric", mask))
+
+        def mask_band(P):
+            band = S.intersect(S.shell(skin_head(P, J, b, f, face=False) - 0.03, 0.026), S.intersect(above(P, hc[1] - 0.13), below(P, hc[1] - 0.045)))
+            if mstyle == "bandana":
+                knot = S.smooth_union(0.03, S.sphere(P, hc + [0, -0.09, 0.45], 0.075), S.capsule(P, hc + [0.03, -0.1, 0.46], hc + [0.11, -0.3, 0.52], 0.035), S.capsule(P, hc + [-0.03, -0.1, 0.46], hc + [-0.1, -0.28, 0.5], 0.035))
+                return S.smooth_union(0.02, band, knot)
+            return band
+        head_layers.append(("MaskBand", mask_band, "Fabric", tuple(np.clip(np.array(mask) * 0.8, 0, 1))))
+        if mstyle == "respirator":
+            head_layers.append(("Filter", lambda P: S.union(*[S.cylinder(P, hc + [sx * 0.17, -0.19, -0.4], hc + [sx * 0.17, -0.19, -0.52], 0.075, 0.015) for sx in (1, -1)]), "Metal", palette(o, "filterColor", (0.9, 0.5, 0.15))))
     hat = o.get("hat")
     hatc = palette(o, "hatColor", (0.25, 0.22, 0.2))
     hair = palette(o, "hair", (0.12, 0.09, 0.07))

@@ -60,7 +60,7 @@ Cosmetics.Layers = {
 	hat = { "Hat", "Hood" },
 	pack = { "Pack" },
 	scarf = { "Scarf" },
-	mask = { "Mask" },
+	mask = { "Mask", "MaskBand" },
 }
 
 function Cosmetics.defaultFor(charId)

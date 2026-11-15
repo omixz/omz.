@@ -375,7 +375,8 @@ end
 --   size, roof (gable / side gable / hip / flat / saltbox), a painted upper storey, porch
 --   (small / veranda / steps), door position, paint + trim + shutter colours, siding material,
 --   flower boxes, chimney, picket fence, and one of three interior layouts with furniture.
--- style: { w, d, h, color, cabin = true (log cabin palette, smaller), roof = kind }
+-- style: { w, d, h, color, cabin = true (log cabin palette, smaller), roof = kind,
+--          kind = "house" | "shop" | "apartment" | "garage" | "chapel" | "cabin", kinds = { weighted list } }
 -- Returns { doorways = {...}, containers = {...}, loot = {...} }.
 local PAINT = {
 	{ 142, 186, 220 }, { 150, 206, 170 }, { 240, 214, 130 }, { 232, 140, 120 }, { 184, 164, 216 },
@@ -397,10 +398,20 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	local function pick(list)
 		return list[rng:NextInteger(1, #list)]
 	end
-	local cabin = style.cabin == true
+	local kind = style.kind or (style.cabin and "cabin") or (style.kinds and pick(style.kinds)) or "house"
+	local cabin = kind == "cabin"
 	local W = style.w or (cabin and rng:NextInteger(16, 20) or rng:NextInteger(20, 30))
 	local D = style.d or (cabin and rng:NextInteger(14, 18) or rng:NextInteger(18, 24))
 	local H = style.h or (cabin and 9 or rng:NextInteger(10, 12))
+	if kind == "shop" then
+		W, D, H = style.w or rng:NextInteger(24, 30), style.d or rng:NextInteger(18, 22), style.h or 11
+	elseif kind == "apartment" then
+		W, D, H = style.w or rng:NextInteger(26, 32), style.d or rng:NextInteger(20, 24), style.h or 10
+	elseif kind == "garage" then
+		W, D, H = style.w or rng:NextInteger(26, 32), style.d or rng:NextInteger(22, 28), style.h or 12
+	elseif kind == "chapel" then
+		W, D, H = style.w or 22, style.d or 30, style.h or 14
+	end
 	local cf = CFrame.new(origin) * CFrame.Angles(0, yaw, 0)
 	local function at(x, y, z)
 		return cf * CFrame.new(x, y, z)
@@ -418,6 +429,24 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	local porchKind = cabin and "wide" or pick({ "small", "wide", "wide", "steps" })
 	local doorW = 5
 	local doorX = pick({ 0, 0, -W * 0.22, W * 0.22 })
+	local floors = 0 -- extra storeys above the ground floor (apartments)
+	if kind == "shop" then
+		roofKind, upper, porchKind, doorX = "flat", false, "steps", pick({ -W * 0.2, W * 0.2 })
+		siding = rgbOf(pick({ { 236, 214, 170 }, { 170, 210, 196 }, { 240, 170, 150 }, { 190, 200, 236 }, { 250, 226, 140 } }))
+	elseif kind == "apartment" then
+		roofKind, upper, porchKind, doorX, floors = "flat", false, "steps", 0, rng:NextInteger(2, 3)
+		wallMat = rng:NextNumber() < 0.6 and M.Brick or M.SmoothPlastic
+		siding = wallMat == M.Brick and rgbOf(pick({ { 176, 82, 64 }, { 200, 132, 100 }, { 150, 96, 80 } })) or rgbOf(pick({ { 226, 214, 190 }, { 190, 206, 214 }, { 232, 196, 170 } }))
+	elseif kind == "garage" then
+		roofKind, upper, porchKind, doorX = pick({ "flat", "saltbox" }), false, "steps", W * 0.3
+		wallMat = M.Concrete
+		siding = rgbOf(pick({ { 190, 192, 196 }, { 120, 150, 176 }, { 220, 180, 90 }, { 150, 170, 150 } }))
+	elseif kind == "chapel" then
+		roofKind, upper, porchKind, doorX = "gable", false, "steps", 0
+		doorW = 6
+		wallMat = M.SmoothPlastic
+		siding = rgbOf(pick({ { 244, 240, 232 }, { 236, 226, 206 }, { 214, 226, 236 } }))
+	end
 	local t = 1
 	local function wall(size, pos, color, mat)
 		return block(parent, size, at(pos.X, pos.Y, pos.Z), color or siding, mat or wallMat)
@@ -466,7 +495,7 @@ function MapKit.house(parent, origin, yaw, rng, style)
 		end
 	end
 	for _, wx in { -W * 0.32, 0, W * 0.32 } do
-		if math.abs(wx - doorX) > doorW / 2 + 2.6 and math.abs(wx) < W / 2 - 2.6 then
+		if kind ~= "garage" and math.abs(wx - doorX) > doorW / 2 + 2.6 and math.abs(wx) < W / 2 - 2.6 then
 			window(wx, 5.2, -0.6, false)
 		end
 	end
@@ -520,6 +549,102 @@ function MapKit.house(parent, origin, yaw, rng, style)
 		end
 		block(parent, Vector3.new(W, 1, D), at(0, topY + H2 + 0.5, D / 2), siding, wallMat)
 		topY += H2 + 1
+	end
+	-- apartments: stacked floors with a window grid, balconies and an entrance canopy
+	for fl = 1, floors do
+		local H2 = 9
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, 0))
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, D))
+		wall(Vector3.new(t, H2, D), Vector3.new(-W / 2, topY + H2 / 2, D / 2))
+		wall(Vector3.new(t, H2, D), Vector3.new(W / 2, topY + H2 / 2, D / 2))
+		block(parent, Vector3.new(W + 0.8, 0.7, 0.7), at(0, topY + 0.1, -0.35), trim, M.Concrete) -- floor line
+		local n = math.max(3, math.floor(W / 7))
+		for i = 0, n - 1 do
+			local wx = -W / 2 + (i + 0.5) * W / n
+			window(wx, topY + 4.8, -0.6, false)
+			if i % 2 == 0 then -- balcony
+				block(parent, Vector3.new(4.6, 0.4, 2.4), at(wx, topY + 1, -1.4), Color3.fromRGB(176, 172, 164), M.Concrete)
+				block(parent, Vector3.new(4.6, 0.25, 0.2), at(wx, topY + 3.2, -2.5), accent, M.Metal)
+				for _, bx in { -2.2, 2.2 } do
+					block(parent, Vector3.new(0.2, 2.3, 0.2), at(wx + bx, topY + 2.1, -2.5), accent, M.Metal)
+				end
+			end
+		end
+		block(parent, Vector3.new(W, 1, D), at(0, topY + H2 + 0.5, D / 2), siding, wallMat)
+		topY += H2 + 1
+	end
+	if kind == "apartment" then
+		block(parent, Vector3.new(8, 0.5, 5), at(doorX, 9.2, -3), accent, M.Metal) -- entrance canopy
+		for _, sx in { -3.6, 3.6 } do
+			block(parent, Vector3.new(0.3, 9, 0.3), at(doorX + sx, 4.5, -5.3), accent, M.Metal)
+		end
+	elseif kind == "shop" then
+		-- striped awning over the whole front, big signboard, window displays
+		local stripe = { rgbOf(pick(ACCENTS)), Color3.fromRGB(250, 248, 242) }
+		for i = 0, 9 do
+			block(parent, Vector3.new(W / 10, 0.3, 4.4), at(-W / 2 + (i + 0.5) * W / 10, 8.6 - (i % 2) * 0.01, -2.4) * CFrame.Angles(0.18, 0, 0), stripe[i % 2 + 1], M.Fabric, { CanCollide = false })
+		end
+		local sign = block(parent, Vector3.new(math.min(W - 4, 16), 2.4, 0.4), at(0, H + 1.4, -0.4), Color3.fromRGB(34, 42, 54), M.SmoothPlastic)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.Parent = sign
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = pick({ "BAKERY", "HARDWARE", "CORNER STORE", "CAFE", "BARBER", "GROCER", "BOOKS & TEA", "TACKLE SHOP" })
+		label.TextColor3 = Color3.fromRGB(255, 214, 110)
+		label.Parent = gui
+		for _, bx in { -W * 0.3, W * 0.3 } do -- barrels / crates out front
+			block(parent, Vector3.new(2, 2.4, 2), at(bx, 1.2, -6), Color3.fromRGB(150, 104, 66), M.WoodPlanks)
+		end
+	elseif kind == "garage" then
+		-- a roll-up door beside the walk-in door, a car-lift pit, tyres, drums and a red tool chest
+		local rx = -W * 0.2
+		block(parent, Vector3.new(11, 9, 0.5), at(rx, 4.6, -0.6), Color3.fromRGB(196, 198, 202), M.Metal)
+		for i = 1, 8 do
+			block(parent, Vector3.new(11, 0.12, 0.2), at(rx, 0.6 + i * 1.0, -0.95), Color3.fromRGB(150, 152, 158), M.Metal, { CanCollide = false })
+		end
+		block(parent, Vector3.new(12, 0.7, 0.8), at(rx, 9.5, -0.6), accent, M.SmoothPlastic)
+		for i = 0, 3 do
+			block(parent, Vector3.new(2.2, 1, 2.2), at(W * 0.42 - (i % 2) * 0.2, 0.55 + math.floor(i / 2) * 1, D * 0.22), Color3.fromRGB(34, 34, 36), M.Rubber, { Shape = Enum.PartType.Cylinder, CFrame = at(W * 0.42 - (i % 2) * 0.2, 0.55 + math.floor(i / 2) * 1, D * 0.22) * CFrame.Angles(0, 0, math.pi / 2) })
+		end
+		block(parent, Vector3.new(2, 3, 2), at(-W * 0.4, 1.5, D * 0.8), Color3.fromRGB(200, 60, 40), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = at(-W * 0.4, 1.5, D * 0.8) * CFrame.Angles(0, 0, math.pi / 2) })
+		block(parent, Vector3.new(3.4, 4, 1.8), at(W * 0.1, 2, D * 0.9), Color3.fromRGB(196, 50, 42), M.Metal)
+	elseif kind == "chapel" then
+		-- bell tower over the front: four walls, a pyramid roof, a cross, coloured glass
+		local tw, th = 8, 12
+		local ty = topY
+		for _, sd in { { 0, -tw / 2, tw, 0.8 }, { 0, tw / 2, tw, 0.8 } } do
+			block(parent, Vector3.new(sd[3], th, sd[4]), at(sd[1], ty + th / 2, 2 + sd[2]), siding, wallMat)
+		end
+		for _, sx in { -tw / 2, tw / 2 } do
+			block(parent, Vector3.new(0.8, th, tw), at(sx, ty + th / 2, 2), siding, wallMat)
+		end
+		block(parent, Vector3.new(tw + 0.6, 0.6, tw + 0.6), at(0, ty + th + 0.3, 2), roofColor, M.Concrete)
+		for i = 0, 3 do
+			local sz = tw - i * 1.6
+			block(parent, Vector3.new(sz, 1.5, sz), at(0, ty + th + 1.35 + i * 1.5, 2), roofColor, M.RoofShingles)
+		end
+		block(parent, Vector3.new(0.4, 3, 0.4), at(0, ty + th + 9, 2), Color3.fromRGB(236, 200, 90), M.Metal)
+		block(parent, Vector3.new(1.8, 0.4, 0.4), at(0, ty + th + 9.8, 2), Color3.fromRGB(236, 200, 90), M.Metal)
+		local bell = block(parent, Vector3.new(1.6, 1.8, 1.6), at(0, ty + 7, 2), Color3.fromRGB(196, 150, 70), M.Metal, { Shape = Enum.PartType.Ball })
+		bell.CanCollide = false
+		local glass = { Color3.fromRGB(220, 70, 70), Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 200, 70) }
+		for i = -1, 1 do
+			for _, sx in { -1, 1 } do
+				block(parent, Vector3.new(0.3, 6, 2.6), at(sx * (W / 2 + 0.4), 7, D * 0.55 + i * 6), glass[i + 2], M.Glass, { Transparency = 0.25 })
+			end
+		end
+		for i = 0, 3 do -- pews
+			for _, px in { -W * 0.22, W * 0.22 } do
+				block(parent, Vector3.new(W * 0.32, 1.6, 1.2), at(px, 1.8, D * 0.38 + i * 3.4), Color3.fromRGB(120, 84, 56), M.WoodPlanks)
+			end
+		end
+		block(parent, Vector3.new(6, 1.2, 3), at(0, 1.6, D * 0.92), Color3.fromRGB(236, 230, 214), M.SmoothPlastic) -- altar
 	end
 
 	-- roof

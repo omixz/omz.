@@ -16,9 +16,9 @@ elseif target == "Houses" then
 	folder = Instance.new("Folder")
 	folder.Parent = world
 	local rng = Random.new(SCENE_SEED or 3)
-	for i, kind in { "gable", "sideGable", "crossGable", "flat", "saltbox", "cabin" } do
-		local style = kind == "cabin" and { cabin = true } or { roof = kind, w = 26, d = 20 }
-		MapKit.house(folder, Vector3.new((i - 3.5) * 40, 0, 0), 0, rng, style)
+	local KINDS = SCENE_KINDS or { "house", "shop", "apartment", "garage", "chapel", "cabin" }
+	for i, kind in KINDS do
+		MapKit.house(folder, Vector3.new((i - (#KINDS + 1) / 2) * 44, 0, 0), 0, rng, { kind = kind })
 	end
 else
 	MapService.loadMap(target, Random.new(SCENE_SEED or 7))

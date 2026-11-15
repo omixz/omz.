@@ -251,13 +251,16 @@ local function update(dt)
 	-- subtle breathing sway (scaled down while aiming)
 	local t = os.clock()
 	local reduce = player:GetAttribute("Set_reduceMotion") == true
-	local sway = reduce and 0 or 0.006
+	-- the view itself must not wander when you're not aiming: only a hair of breathing when
+	-- standing completely still, none while moving, none with the sway setting off
+	local speed = State.root and Vector3.new(State.root.AssemblyLinearVelocity.X, 0, State.root.AssemblyLinearVelocity.Z).Magnitude or 0
+	local sway = (reduce or speed > 0.5) and 0 or 0.0008
 	local aimSway = 0
 	if State.aiming and not reduce then
 		-- breathing sway: steadier crouched, worse while moving
 		local v = State.root.AssemblyLinearVelocity
 		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
-		aimSway = (State.crouched and 0.0018 or 0.003) * (1 + moving * 1.5)
+		aimSway = (State.crouched and 0.0008 or 0.0014) * (1 + moving * 1.2)
 		if breath.holding then
 			if os.clock() - breath.since > BREATH_HOLD then
 				breath.holding = false

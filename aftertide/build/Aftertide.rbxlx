@@ -215,8 +215,10 @@ return {
 --   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
 --   throwNoiseMult, craftTimeMult, craftYieldBonus (+n on traps/spikes/arrows),
 --   ammoBonus (+n starting revolver rounds), aimSpreadMult
--- loadout.weapons = { sidearm = <Weapons id> }: EVERY crew member starts a crossing with only the
--- Service Revolver. Long guns are unlocked at the Quartermaster (Scrip) and chosen there.
+-- loadout.weapons = { long = <signature long gun>, sidearm = "revolver" }: everyone starts with the
+-- Service Revolver plus ONE signature long gun that suits them, with only a few spare rounds.
+-- More guns are unlocked at the Quartermaster (Scrip); a gun chosen there takes the long-gun
+-- holster and the signature gun rides in the backpack if there is room.
 
 local Characters = {}
 
@@ -244,8 +246,8 @@ Characters.List = {
 			duration = 4,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
+			weapons = { long = "carbine", sidearm = "revolver" },
+			items = { pistolAmmo = 4, rifleAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
 		},
 		innate = {
 			id = "ShallowStep",
@@ -281,8 +283,8 @@ Characters.List = {
 			duration = 9,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
+			weapons = { long = "bow", sidearm = "revolver" },
+			items = { pistolAmmo = 4, arrows = 6, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
 		},
 		innate = {
 			id = "Tinkerer",
@@ -318,8 +320,8 @@ Characters.List = {
 			duration = 6,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, dressing = 2, cloth = 1, alcohol = 1 },
+			weapons = { long = "shotgun", sidearm = "revolver" },
+			items = { pistolAmmo = 4, shells = 4, dressing = 2, cloth = 1, alcohol = 1 },
 		},
 		innate = {
 			id = "FieldMedic",
@@ -355,8 +357,8 @@ Characters.List = {
 			duration = 5,
 		},
 		loadout = {
-			weapons = { sidearm = "revolver" },
-			items = { pistolAmmo = 4, bottle = 3, fogPot = 1, dressing = 1 },
+			weapons = { long = "rifle", sidearm = "revolver" },
+			items = { pistolAmmo = 4, rifleAmmo = 3, bottle = 3, fogPot = 1, dressing = 1 },
 		},
 		innate = {
 			id = "DeepPockets",
@@ -637,7 +639,7 @@ Cosmetics.Layers = {
 	hat = { "Hat", "Hood" },
 	pack = { "Pack" },
 	scarf = { "Scarf" },
-	mask = { "Mask" },
+	mask = { "Mask", "MaskBand" },
 }
 
 function Cosmetics.defaultFor(charId)
@@ -2307,14 +2309,6 @@ return {
 						size = { 0.2261, 0.0071, 0.013 },
 						tris = 24,
 					},
-					Lips = {
-						part = "Crew_mara_Head_Lips",
-						material = "SmoothPlastic",
-						color = { 0.8733, 0.3573, 0.3145 },
-						center = { 0.0001, 5.2777, -0.3317 },
-						size = { 0.1975, 0.0585, 0.0622 },
-						tris = 180,
-					},
 					Brows = {
 						part = "Crew_mara_Head_Brows",
 						material = "Fabric",
@@ -2322,6 +2316,22 @@ return {
 						center = { 0.0055, 5.5856, -0.3368 },
 						size = { 0.3401, 0.037, 0.0392 },
 						tris = 144,
+					},
+					Mask = {
+						part = "Crew_mara_Head_Mask",
+						material = "Fabric",
+						color = { 0.1176, 0.2039, 0.4314 },
+						center = { -0.0012, 5.3152, -0.2032 },
+						size = { 0.6594, 0.3714, 0.4353 },
+						tris = 4788,
+					},
+					MaskBand = {
+						part = "Crew_mara_Head_MaskBand",
+						material = "Fabric",
+						color = { 0.0941, 0.1631, 0.3451 },
+						center = { -0.0004, 5.3293, 0.0474 },
+						size = { 0.6913, 0.2771, 0.8638 },
+						tris = 3568,
 					},
 					Hat = {
 						part = "Crew_mara_Head_Hat",
@@ -2691,14 +2701,6 @@ return {
 						size = { 0.2266, 0.0065, 0.0113 },
 						tris = 24,
 					},
-					Lips = {
-						part = "Crew_tobias_Head_Lips",
-						material = "SmoothPlastic",
-						color = { 0.6933, 0.2435, 0.2086 },
-						center = { 0.0024, 5.443, -0.3311 },
-						size = { 0.1918, 0.0586, 0.0627 },
-						tris = 160,
-					},
 					Brows = {
 						part = "Crew_tobias_Head_Brows",
 						material = "Fabric",
@@ -2706,6 +2708,30 @@ return {
 						center = { 0.0037, 5.7545, -0.3373 },
 						size = { 0.3351, 0.0289, 0.0418 },
 						tris = 116,
+					},
+					Mask = {
+						part = "Crew_tobias_Head_Mask",
+						material = "Fabric",
+						color = { 0.2745, 0.298, 0.3294 },
+						center = { -0.0003, 5.4817, -0.2024 },
+						size = { 0.6575, 0.3744, 0.436 },
+						tris = 4712,
+					},
+					MaskBand = {
+						part = "Crew_tobias_Head_MaskBand",
+						material = "Fabric",
+						color = { 0.2196, 0.2384, 0.2635 },
+						center = { -0.0005, 5.5705, 0.0184 },
+						size = { 0.6935, 0.0739, 0.8053 },
+						tris = 2500,
+					},
+					Filter = {
+						part = "Crew_tobias_Head_Filter",
+						material = "Metal",
+						color = { 0.9333, 0.502, 0.1569 },
+						center = { -0.0001, 5.4813, -0.4002 },
+						size = { 0.425, 0.1305, 0.1305 },
+						tris = 756,
 					},
 					Hat = {
 						part = "Crew_tobias_Head_Hat",
@@ -3083,14 +3109,6 @@ return {
 						size = { 0.2641, 0.043, 0.0435 },
 						tris = 76,
 					},
-					Lips = {
-						part = "Crew_ines_Head_Lips",
-						material = "SmoothPlastic",
-						color = { 0.5733, 0.1886, 0.1655 },
-						center = { 0.0007, 5.1116, -0.3318 },
-						size = { 0.1956, 0.0576, 0.0632 },
-						tris = 164,
-					},
 					Brows = {
 						part = "Crew_ines_Head_Brows",
 						material = "Fabric",
@@ -3098,6 +3116,22 @@ return {
 						center = { 0.0065, 5.4177, -0.3322 },
 						size = { 0.3462, 0.0235, 0.0496 },
 						tris = 132,
+					},
+					Mask = {
+						part = "Crew_ines_Head_Mask",
+						material = "Fabric",
+						color = { 0.9333, 0.9412, 0.9255 },
+						center = { 0.0006, 5.1501, -0.203 },
+						size = { 0.6592, 0.3712, 0.435 },
+						tris = 4864,
+					},
+					MaskBand = {
+						part = "Crew_ines_Head_MaskBand",
+						material = "Fabric",
+						color = { 0.7467, 0.7529, 0.7404 },
+						center = { -0.0001, 5.2393, 0.0178 },
+						size = { 0.6913, 0.0739, 0.8043 },
+						tris = 2496,
 					},
 					Hair = {
 						part = "Crew_ines_Head_Hair",
@@ -3451,14 +3485,6 @@ return {
 						size = { 0.2261, 0.0071, 0.013 },
 						tris = 24,
 					},
-					Lips = {
-						part = "Crew_sefa_Head_Lips",
-						material = "SmoothPlastic",
-						color = { 0.6467, 0.22, 0.1812 },
-						center = { 0.0001, 5.2777, -0.3317 },
-						size = { 0.1975, 0.0585, 0.0622 },
-						tris = 180,
-					},
 					Brows = {
 						part = "Crew_sefa_Head_Brows",
 						material = "Fabric",
@@ -3466,6 +3492,22 @@ return {
 						center = { 0.0055, 5.5856, -0.3368 },
 						size = { 0.3401, 0.037, 0.0392 },
 						tris = 144,
+					},
+					Mask = {
+						part = "Crew_sefa_Head_Mask",
+						material = "Fabric",
+						color = { 0.1412, 0.5882, 0.6275 },
+						center = { -0.0012, 5.3152, -0.2032 },
+						size = { 0.6595, 0.3714, 0.4353 },
+						tris = 4836,
+					},
+					MaskBand = {
+						part = "Crew_sefa_Head_MaskBand",
+						material = "Fabric",
+						color = { 0.1129, 0.4706, 0.502 },
+						center = { -0.0001, 5.3293, 0.0474 },
+						size = { 0.6938, 0.2771, 0.8638 },
+						tris = 3568,
 					},
 					Hood = {
 						part = "Crew_sefa_Head_Hood",
@@ -5601,7 +5643,7 @@ return Projects
 <Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Quartermaster: the Meridian's store, paid with Scrip (earned at the end of every mission).
 -- Separate from Meridian projects (Materials). Nothing here is sold for Robux.
---   Guns: permanent unlocks. Everyone starts with only the Service Revolver.
+--   Guns: permanent unlocks. Everyone starts with the revolver plus a signature long gun (Mara carbine, Tobias bow, Ines shotgun, Sefa rifle).
 --   Kits: supplies delivered at the start of your NEXT crossing (up to 2 of each).
 -- The Armory project takes 15% off.
 return {
@@ -7100,7 +7142,7 @@ function Map.build(parent, rng)
 
 	-- cover: crates, low walls, wrecks, barrels, rubble
 	for _, pos in {
-		Vector3.new(-30, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
+		Vector3.new(-18, 0, 40), Vector3.new(-20, 0, 55), Vector3.new(10, 0, 42), Vector3.new(25, 0, 60),
 		Vector3.new(40, 0, 32), Vector3.new(-45, 0, 8), Vector3.new(-35, 0, -32), Vector3.new(-50, 0, -70),
 		Vector3.new(-20, 0, -80), Vector3.new(10, 0, -72), Vector3.new(30, 0, -90), Vector3.new(50, 0, -68),
 	} do
@@ -7205,6 +7247,19 @@ function Map.build(parent, rng)
 	table.insert(data.SupplyCandidates, office.loot[1])
 	for _, d in office.doorways do
 		table.insert(data.Doorways, d)
+	end
+	-- a harbour-side shop and a mechanic's garage, so the yard has more than warehouses
+	for _, spec in { { origin = Vector3.new(52, 0, 66), style = { kind = "shop", w = 24, d = 20 } }, { origin = Vector3.new(-45, 0, 38), style = { kind = "garage", w = 28, d = 22 } } } do
+		local b = MapKit.house(parent, spec.origin, 0, rng, spec.style)
+		for _, d in b.doorways do
+			table.insert(data.Doorways, d)
+		end
+		for _, c in b.containers do
+			table.insert(data.ContainerSpots, c)
+		end
+		for _, l in b.loot do
+			table.insert(data.LootSpots, l)
+		end
 	end
 	return data
 end
@@ -7410,7 +7465,10 @@ function Map.build(parent, rng)
 	end
 
 	local doorways, containers, loot = {}, {}, {}
+	-- a mixed street: mostly homes, plus shops, flats and a garage
+	local MIX = { "house", "house", "house", "house", "shop", "apartment", "garage" }
 	local function addHouse(origin, yaw, style)
+		style = style or { kinds = MIX }
 		local h = MapKit.house(parent, origin, yaw, rng, style)
 		for _, d in h.doorways do
 			table.insert(doorways, d)
@@ -7430,7 +7488,9 @@ function Map.build(parent, rng)
 		addHouse(Vector3.new(x + 6, 0, -24), math.pi)
 	end
 	-- corner store at the west end
-	addHouse(Vector3.new(-100, 0, 64), 0, { w = 30, d = 26, h = 12, roof = "flat" })
+	addHouse(Vector3.new(-100, 0, 64), 0, { kind = "shop", w = 30, d = 26 })
+	-- the chapel at the end of the back lane
+	addHouse(Vector3.new(-5, 0, 66), 0, { kind = "chapel" })
 
 	-- back fences and yards gone wild
 	for _, z in { 58, -58 } do
@@ -7897,7 +7957,8 @@ end
 --   size, roof (gable / side gable / hip / flat / saltbox), a painted upper storey, porch
 --   (small / veranda / steps), door position, paint + trim + shutter colours, siding material,
 --   flower boxes, chimney, picket fence, and one of three interior layouts with furniture.
--- style: { w, d, h, color, cabin = true (log cabin palette, smaller), roof = kind }
+-- style: { w, d, h, color, cabin = true (log cabin palette, smaller), roof = kind,
+--          kind = "house" | "shop" | "apartment" | "garage" | "chapel" | "cabin", kinds = { weighted list } }
 -- Returns { doorways = {...}, containers = {...}, loot = {...} }.
 local PAINT = {
 	{ 142, 186, 220 }, { 150, 206, 170 }, { 240, 214, 130 }, { 232, 140, 120 }, { 184, 164, 216 },
@@ -7919,10 +7980,20 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	local function pick(list)
 		return list[rng:NextInteger(1, #list)]
 	end
-	local cabin = style.cabin == true
+	local kind = style.kind or (style.cabin and "cabin") or (style.kinds and pick(style.kinds)) or "house"
+	local cabin = kind == "cabin"
 	local W = style.w or (cabin and rng:NextInteger(16, 20) or rng:NextInteger(20, 30))
 	local D = style.d or (cabin and rng:NextInteger(14, 18) or rng:NextInteger(18, 24))
 	local H = style.h or (cabin and 9 or rng:NextInteger(10, 12))
+	if kind == "shop" then
+		W, D, H = style.w or rng:NextInteger(24, 30), style.d or rng:NextInteger(18, 22), style.h or 11
+	elseif kind == "apartment" then
+		W, D, H = style.w or rng:NextInteger(26, 32), style.d or rng:NextInteger(20, 24), style.h or 10
+	elseif kind == "garage" then
+		W, D, H = style.w or rng:NextInteger(26, 32), style.d or rng:NextInteger(22, 28), style.h or 12
+	elseif kind == "chapel" then
+		W, D, H = style.w or 22, style.d or 30, style.h or 14
+	end
 	local cf = CFrame.new(origin) * CFrame.Angles(0, yaw, 0)
 	local function at(x, y, z)
 		return cf * CFrame.new(x, y, z)
@@ -7940,6 +8011,24 @@ function MapKit.house(parent, origin, yaw, rng, style)
 	local porchKind = cabin and "wide" or pick({ "small", "wide", "wide", "steps" })
 	local doorW = 5
 	local doorX = pick({ 0, 0, -W * 0.22, W * 0.22 })
+	local floors = 0 -- extra storeys above the ground floor (apartments)
+	if kind == "shop" then
+		roofKind, upper, porchKind, doorX = "flat", false, "steps", pick({ -W * 0.2, W * 0.2 })
+		siding = rgbOf(pick({ { 236, 214, 170 }, { 170, 210, 196 }, { 240, 170, 150 }, { 190, 200, 236 }, { 250, 226, 140 } }))
+	elseif kind == "apartment" then
+		roofKind, upper, porchKind, doorX, floors = "flat", false, "steps", 0, rng:NextInteger(2, 3)
+		wallMat = rng:NextNumber() < 0.6 and M.Brick or M.SmoothPlastic
+		siding = wallMat == M.Brick and rgbOf(pick({ { 176, 82, 64 }, { 200, 132, 100 }, { 150, 96, 80 } })) or rgbOf(pick({ { 226, 214, 190 }, { 190, 206, 214 }, { 232, 196, 170 } }))
+	elseif kind == "garage" then
+		roofKind, upper, porchKind, doorX = pick({ "flat", "saltbox" }), false, "steps", W * 0.3
+		wallMat = M.Concrete
+		siding = rgbOf(pick({ { 190, 192, 196 }, { 120, 150, 176 }, { 220, 180, 90 }, { 150, 170, 150 } }))
+	elseif kind == "chapel" then
+		roofKind, upper, porchKind, doorX = "gable", false, "steps", 0
+		doorW = 6
+		wallMat = M.SmoothPlastic
+		siding = rgbOf(pick({ { 244, 240, 232 }, { 236, 226, 206 }, { 214, 226, 236 } }))
+	end
 	local t = 1
 	local function wall(size, pos, color, mat)
 		return block(parent, size, at(pos.X, pos.Y, pos.Z), color or siding, mat or wallMat)
@@ -7988,7 +8077,7 @@ function MapKit.house(parent, origin, yaw, rng, style)
 		end
 	end
 	for _, wx in { -W * 0.32, 0, W * 0.32 } do
-		if math.abs(wx - doorX) > doorW / 2 + 2.6 and math.abs(wx) < W / 2 - 2.6 then
+		if kind ~= "garage" and math.abs(wx - doorX) > doorW / 2 + 2.6 and math.abs(wx) < W / 2 - 2.6 then
 			window(wx, 5.2, -0.6, false)
 		end
 	end
@@ -8042,6 +8131,102 @@ function MapKit.house(parent, origin, yaw, rng, style)
 		end
 		block(parent, Vector3.new(W, 1, D), at(0, topY + H2 + 0.5, D / 2), siding, wallMat)
 		topY += H2 + 1
+	end
+	-- apartments: stacked floors with a window grid, balconies and an entrance canopy
+	for fl = 1, floors do
+		local H2 = 9
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, 0))
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, D))
+		wall(Vector3.new(t, H2, D), Vector3.new(-W / 2, topY + H2 / 2, D / 2))
+		wall(Vector3.new(t, H2, D), Vector3.new(W / 2, topY + H2 / 2, D / 2))
+		block(parent, Vector3.new(W + 0.8, 0.7, 0.7), at(0, topY + 0.1, -0.35), trim, M.Concrete) -- floor line
+		local n = math.max(3, math.floor(W / 7))
+		for i = 0, n - 1 do
+			local wx = -W / 2 + (i + 0.5) * W / n
+			window(wx, topY + 4.8, -0.6, false)
+			if i % 2 == 0 then -- balcony
+				block(parent, Vector3.new(4.6, 0.4, 2.4), at(wx, topY + 1, -1.4), Color3.fromRGB(176, 172, 164), M.Concrete)
+				block(parent, Vector3.new(4.6, 0.25, 0.2), at(wx, topY + 3.2, -2.5), accent, M.Metal)
+				for _, bx in { -2.2, 2.2 } do
+					block(parent, Vector3.new(0.2, 2.3, 0.2), at(wx + bx, topY + 2.1, -2.5), accent, M.Metal)
+				end
+			end
+		end
+		block(parent, Vector3.new(W, 1, D), at(0, topY + H2 + 0.5, D / 2), siding, wallMat)
+		topY += H2 + 1
+	end
+	if kind == "apartment" then
+		block(parent, Vector3.new(8, 0.5, 5), at(doorX, 9.2, -3), accent, M.Metal) -- entrance canopy
+		for _, sx in { -3.6, 3.6 } do
+			block(parent, Vector3.new(0.3, 9, 0.3), at(doorX + sx, 4.5, -5.3), accent, M.Metal)
+		end
+	elseif kind == "shop" then
+		-- striped awning over the whole front, big signboard, window displays
+		local stripe = { rgbOf(pick(ACCENTS)), Color3.fromRGB(250, 248, 242) }
+		for i = 0, 9 do
+			block(parent, Vector3.new(W / 10, 0.3, 4.4), at(-W / 2 + (i + 0.5) * W / 10, 8.6 - (i % 2) * 0.01, -2.4) * CFrame.Angles(0.18, 0, 0), stripe[i % 2 + 1], M.Fabric, { CanCollide = false })
+		end
+		local sign = block(parent, Vector3.new(math.min(W - 4, 16), 2.4, 0.4), at(0, H + 1.4, -0.4), Color3.fromRGB(34, 42, 54), M.SmoothPlastic)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.Parent = sign
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = pick({ "BAKERY", "HARDWARE", "CORNER STORE", "CAFE", "BARBER", "GROCER", "BOOKS & TEA", "TACKLE SHOP" })
+		label.TextColor3 = Color3.fromRGB(255, 214, 110)
+		label.Parent = gui
+		for _, bx in { -W * 0.3, W * 0.3 } do -- barrels / crates out front
+			block(parent, Vector3.new(2, 2.4, 2), at(bx, 1.2, -6), Color3.fromRGB(150, 104, 66), M.WoodPlanks)
+		end
+	elseif kind == "garage" then
+		-- a roll-up door beside the walk-in door, a car-lift pit, tyres, drums and a red tool chest
+		local rx = -W * 0.2
+		block(parent, Vector3.new(11, 9, 0.5), at(rx, 4.6, -0.6), Color3.fromRGB(196, 198, 202), M.Metal)
+		for i = 1, 8 do
+			block(parent, Vector3.new(11, 0.12, 0.2), at(rx, 0.6 + i * 1.0, -0.95), Color3.fromRGB(150, 152, 158), M.Metal, { CanCollide = false })
+		end
+		block(parent, Vector3.new(12, 0.7, 0.8), at(rx, 9.5, -0.6), accent, M.SmoothPlastic)
+		for i = 0, 3 do
+			block(parent, Vector3.new(2.2, 1, 2.2), at(W * 0.42 - (i % 2) * 0.2, 0.55 + math.floor(i / 2) * 1, D * 0.22), Color3.fromRGB(34, 34, 36), M.Rubber, { Shape = Enum.PartType.Cylinder, CFrame = at(W * 0.42 - (i % 2) * 0.2, 0.55 + math.floor(i / 2) * 1, D * 0.22) * CFrame.Angles(0, 0, math.pi / 2) })
+		end
+		block(parent, Vector3.new(2, 3, 2), at(-W * 0.4, 1.5, D * 0.8), Color3.fromRGB(200, 60, 40), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = at(-W * 0.4, 1.5, D * 0.8) * CFrame.Angles(0, 0, math.pi / 2) })
+		block(parent, Vector3.new(3.4, 4, 1.8), at(W * 0.1, 2, D * 0.9), Color3.fromRGB(196, 50, 42), M.Metal)
+	elseif kind == "chapel" then
+		-- bell tower over the front: four walls, a pyramid roof, a cross, coloured glass
+		local tw, th = 8, 12
+		local ty = topY
+		for _, sd in { { 0, -tw / 2, tw, 0.8 }, { 0, tw / 2, tw, 0.8 } } do
+			block(parent, Vector3.new(sd[3], th, sd[4]), at(sd[1], ty + th / 2, 2 + sd[2]), siding, wallMat)
+		end
+		for _, sx in { -tw / 2, tw / 2 } do
+			block(parent, Vector3.new(0.8, th, tw), at(sx, ty + th / 2, 2), siding, wallMat)
+		end
+		block(parent, Vector3.new(tw + 0.6, 0.6, tw + 0.6), at(0, ty + th + 0.3, 2), roofColor, M.Concrete)
+		for i = 0, 3 do
+			local sz = tw - i * 1.6
+			block(parent, Vector3.new(sz, 1.5, sz), at(0, ty + th + 1.35 + i * 1.5, 2), roofColor, M.RoofShingles)
+		end
+		block(parent, Vector3.new(0.4, 3, 0.4), at(0, ty + th + 9, 2), Color3.fromRGB(236, 200, 90), M.Metal)
+		block(parent, Vector3.new(1.8, 0.4, 0.4), at(0, ty + th + 9.8, 2), Color3.fromRGB(236, 200, 90), M.Metal)
+		local bell = block(parent, Vector3.new(1.6, 1.8, 1.6), at(0, ty + 7, 2), Color3.fromRGB(196, 150, 70), M.Metal, { Shape = Enum.PartType.Ball })
+		bell.CanCollide = false
+		local glass = { Color3.fromRGB(220, 70, 70), Color3.fromRGB(70, 130, 220), Color3.fromRGB(240, 200, 70) }
+		for i = -1, 1 do
+			for _, sx in { -1, 1 } do
+				block(parent, Vector3.new(0.3, 6, 2.6), at(sx * (W / 2 + 0.4), 7, D * 0.55 + i * 6), glass[i + 2], M.Glass, { Transparency = 0.25 })
+			end
+		end
+		for i = 0, 3 do -- pews
+			for _, px in { -W * 0.22, W * 0.22 } do
+				block(parent, Vector3.new(W * 0.32, 1.6, 1.2), at(px, 1.8, D * 0.38 + i * 3.4), Color3.fromRGB(120, 84, 56), M.WoodPlanks)
+			end
+		end
+		block(parent, Vector3.new(6, 1.2, 3), at(0, 1.6, D * 0.92), Color3.fromRGB(236, 230, 214), M.SmoothPlastic) -- altar
 	end
 
 	-- roof
@@ -11754,6 +11939,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Upgrades = require(Shared.Config.Upgrades)
 local Projects = require(Shared.Config.Projects)
 local Quartermaster = require(Shared.Config.Quartermaster)
+local Characters = require(Shared.Config.Characters)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
@@ -11791,6 +11977,13 @@ function HomebaseService.bonusesFor(player)
 			if #bonus.pack < slots and guns[id] and id ~= bonus.longGun and Weapons.List[id] and Weapons.List[id].slot == "long" then
 				table.insert(bonus.pack, id)
 			end
+		end
+		-- your signature gun stays with you: in the backpack if you chose another long gun
+		local session = Services.CharacterService.getSession(player)
+		local def = session and Characters.List[session.charId]
+		local sig = def and def.loadout.weapons.long
+		if sig and bonus.longGun and sig ~= bonus.longGun and #bonus.pack < slots and not table.find(bonus.pack, sig) then
+			table.insert(bonus.pack, 1, sig)
 		end
 		-- crossing kits (Quartermaster, Lucky Spin, Ammo Crates): delivered now, then used up.
 		-- At most MaxKitsEach of each kind per crossing; extra Ammo Crates wait for the next one.
@@ -17547,13 +17740,16 @@ local function update(dt)
 	-- subtle breathing sway (scaled down while aiming)
 	local t = os.clock()
 	local reduce = player:GetAttribute("Set_reduceMotion") == true
-	local sway = reduce and 0 or 0.006
+	-- the view itself must not wander when you're not aiming: only a hair of breathing when
+	-- standing completely still, none while moving, none with the sway setting off
+	local speed = State.root and Vector3.new(State.root.AssemblyLinearVelocity.X, 0, State.root.AssemblyLinearVelocity.Z).Magnitude or 0
+	local sway = (reduce or speed > 0.5) and 0 or 0.0008
 	local aimSway = 0
 	if State.aiming and not reduce then
 		-- breathing sway: steadier crouched, worse while moving
 		local v = State.root.AssemblyLinearVelocity
 		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
-		aimSway = (State.crouched and 0.0018 or 0.003) * (1 + moving * 1.5)
+		aimSway = (State.crouched and 0.0008 or 0.0014) * (1 + moving * 1.2)
 		if breath.holding then
 			if os.clock() - breath.since > BREATH_HOLD then
 				breath.holding = false
@@ -19137,8 +19333,8 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	local steady = 1 - 0.75 * a
 	local p = rig.phase or 0
 	pose = pose
-		* CFrame.new(math.sin(p) * 0.045 * moving, -math.abs(math.cos(p)) * 0.06 * moving + math.sin(t * 1.6) * 0.012 * steady, 0)
-		* CFrame.Angles(math.sin(t * 1.3) * 0.02 * steady + math.cos(p * 2) * 0.03 * moving, math.sin(t * 0.9) * 0.025 * steady + math.sin(p) * 0.05 * moving, math.sin(p) * 0.04 * moving)
+		* CFrame.new(math.sin(p) * 0.025 * moving, -math.abs(math.cos(p)) * 0.035 * moving + math.sin(t * 1.6) * 0.006 * steady, 0)
+		* CFrame.Angles(math.sin(t * 1.3) * 0.008 * steady + math.cos(p * 2) * 0.015 * moving, math.sin(t * 0.9) * 0.01 * steady + math.sin(p) * 0.025 * moving, math.sin(p) * 0.02 * moving)
 	if a > 0.05 and a < 0.95 then
 		pose = pose * CFrame.new(0, 0.1 * math.sin(a * math.pi), 0) * CFrame.Angles(0.12 * math.sin(a * math.pi), 0, 0)
 	end
@@ -20759,7 +20955,7 @@ function CharacterSelect.build(gui)
 	local panel
 	backdrop, panel = Theme.modal(gui, "CharacterSelect", UDim2.new(0.96, 0, 0.92, 0), Vector2.new(1120, 640))
 	Theme.heading({ Text = "BRINEWAKE  ·  THE CREW", TextSize = 30, Size = UDim2.new(1, -120, 0, 34), Parent = panel })
-	Theme.label({ Text = "Every crew member is free and plays differently (ability and perks). Everyone starts a crossing with only the Service Revolver: unlock more guns at the Quartermaster.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
+	Theme.label({ Text = "Every crew member is free and plays differently (ability and perks). Everyone starts with the Service Revolver and one signature long gun, with few spare rounds: unlock more guns at the Quartermaster.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
 	closeButton = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
 	closeButton.Activated:Connect(CharacterSelect.close)
 
@@ -21918,7 +22114,7 @@ return Logbook
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
--- and buy kits for your next crossing. Everyone starts with only the Service Revolver.
+-- and buy kits for your next crossing. Everyone starts with the revolver and a signature long gun.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
@@ -21983,7 +22179,7 @@ end
 local function rebuild()
 	Theme.clear(list)
 	local scrip = player:GetAttribute("Scrip") or 0
-	header.Text = ("SCRIP %d%s   ·   everyone starts a crossing with only the Service Revolver"):format(scrip, hasArmory() and "   ·   ARMORY: 15% OFF" or "")
+	header.Text = ("SCRIP %d%s   ·   every crew member starts with a revolver and one signature gun"):format(scrip, hasArmory() and "   ·   ARMORY: 15% OFF" or "")
 	local guns = decode("Guns", { revolver = true })
 	local loadout = decode("Loadout", { long = "", pack = {} })
 	loadout.pack = loadout.pack or {}
