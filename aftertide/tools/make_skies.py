@@ -20,11 +20,11 @@ N = 1024
 
 PRESETS = {
     # zenith, mid, horizon, below-horizon haze, cloud lit, cloud shade, cloud cover (0..1), band top (deg)
-    "ferry": dict(zenith=(58, 70, 96), mid=(150, 140, 150), horizon=(236, 176, 130), haze=(120, 104, 100), lit=(248, 196, 160), shade=(118, 100, 108), cover=0.55, band=28, seed=1),
-    "cannery": dict(zenith=(128, 138, 148), mid=(176, 184, 190), horizon=(214, 218, 220), haze=(150, 156, 158), lit=(222, 224, 226), shade=(132, 138, 144), cover=0.8, band=34, seed=2),
-    "larkspur": dict(zenith=(78, 124, 178), mid=(160, 178, 196), horizon=(250, 214, 168), haze=(176, 152, 128), lit=(255, 238, 214), shade=(176, 156, 150), cover=0.42, band=24, seed=3),
+    "ferry": dict(zenith=(58, 124, 204), mid=(124, 174, 226), horizon=(216, 234, 246), haze=(150, 178, 192), lit=(255, 255, 252), shade=(190, 202, 220), cover=0.45, band=26, seed=1),
+    "cannery": dict(zenith=(66, 128, 202), mid=(138, 182, 226), horizon=(222, 236, 244), haze=(160, 182, 192), lit=(255, 255, 255), shade=(188, 198, 214), cover=0.5, band=30, seed=2),
+    "larkspur": dict(zenith=(56, 108, 188), mid=(168, 166, 204), horizon=(255, 194, 136), haze=(204, 152, 120), lit=(255, 236, 206), shade=(214, 150, 150), cover=0.4, band=24, seed=3),
     "night": dict(zenith=(8, 11, 20), mid=(20, 26, 40), horizon=(46, 52, 66), haze=(14, 16, 22), lit=(70, 78, 96), shade=(14, 16, 24), cover=0.5, band=22, seed=5),
-    "pines": dict(zenith=(130, 154, 176), mid=(188, 200, 208), horizon=(226, 230, 230), haze=(176, 184, 186), lit=(240, 242, 242), shade=(170, 178, 186), cover=0.6, band=20, seed=4),
+    "pines": dict(zenith=(76, 138, 210), mid=(148, 196, 234), horizon=(232, 238, 232), haze=(176, 196, 190), lit=(255, 255, 250), shade=(198, 208, 222), cover=0.35, band=20, seed=4),
 }
 
 

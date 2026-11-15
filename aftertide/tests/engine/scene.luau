@@ -11,6 +11,15 @@ local target = SCENE_TARGET or "Meridian"
 local folder
 if target == "Meridian" then
 	folder = MapService.buildFerryForTest(SCENE_OWNED or {})
+elseif target == "Houses" then
+	-- one house of each roof kind in a row (and a cabin), for reviewing the generator
+	folder = Instance.new("Folder")
+	folder.Parent = world
+	local rng = Random.new(SCENE_SEED or 3)
+	for i, kind in { "gable", "sideGable", "crossGable", "flat", "saltbox", "cabin" } do
+		local style = kind == "cabin" and { cabin = true } or { roof = kind, w = 26, d = 20 }
+		MapKit.house(folder, Vector3.new((i - 3.5) * 40, 0, 0), 0, rng, style)
+	end
 else
 	MapService.loadMap(target, Random.new(SCENE_SEED or 7))
 	folder = world:FindFirstChild("Map_" .. target)

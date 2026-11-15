@@ -13,10 +13,10 @@ local Assets -- AssetService, set by MapService
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 MapKit.C = {
-	ground = Color3.fromRGB(70, 72, 70),
-	wall = Color3.fromRGB(96, 94, 88),
-	wallDark = Color3.fromRGB(70, 70, 68),
-	roof = Color3.fromRGB(74, 70, 64),
+	ground = Color3.fromRGB(96, 98, 92),
+	wall = Color3.fromRGB(176, 166, 148),
+	wallDark = Color3.fromRGB(120, 112, 100),
+	roof = Color3.fromRGB(150, 70, 56),
 	metal = Color3.fromRGB(46, 48, 50),
 	crate = Color3.fromRGB(92, 72, 52),
 	machine = Color3.fromRGB(70, 78, 80),
@@ -24,7 +24,7 @@ MapKit.C = {
 	water = Color3.fromRGB(52, 70, 74),
 	reed = Color3.fromRGB(110, 112, 76),
 	warm = Color3.fromRGB(255, 196, 130),
-	containers = { Color3.fromRGB(120, 58, 44), Color3.fromRGB(44, 86, 88), Color3.fromRGB(58, 68, 90), Color3.fromRGB(140, 112, 56) },
+	containers = { Color3.fromRGB(196, 74, 54), Color3.fromRGB(40, 140, 150), Color3.fromRGB(60, 100, 170), Color3.fromRGB(226, 170, 60), Color3.fromRGB(90, 150, 90) },
 }
 local C = MapKit.C
 
@@ -370,65 +370,257 @@ end
 
 -- Houses -------------------------------------------------------------------------------------------
 
--- A weatherboard house. origin = front-door ground point, facing = yaw (radians,
--- front faces -Z when 0). Returns { doorways = {...}, containers = {...}, loot = {...} }.
+-- A house. origin = front-door ground point, facing = yaw (radians,
+-- front faces -Z when 0). Every house is generated from the rng, so no two match:
+--   size, roof (gable / side gable / hip / flat / saltbox), a painted upper storey, porch
+--   (small / veranda / steps), door position, paint + trim + shutter colours, siding material,
+--   flower boxes, chimney, picket fence, and one of three interior layouts with furniture.
+-- style: { w, d, h, color, cabin = true (log cabin palette, smaller), roof = kind }
+-- Returns { doorways = {...}, containers = {...}, loot = {...} }.
+local PAINT = {
+	{ 142, 186, 220 }, { 150, 206, 170 }, { 240, 214, 130 }, { 232, 140, 120 }, { 184, 164, 216 },
+	{ 238, 228, 202 }, { 164, 188, 140 }, { 120, 172, 196 }, { 244, 184, 152 }, { 226, 232, 236 },
+}
+local CABIN = { { 150, 104, 66 }, { 128, 88, 58 }, { 170, 120, 76 }, { 116, 82, 60 } }
+local ROOFS = { { 58, 62, 70 }, { 184, 92, 64 }, { 70, 92, 124 }, { 62, 104, 74 }, { 112, 78, 58 }, { 150, 60, 54 } }
+local TRIMS = { { 250, 248, 242 }, { 242, 238, 228 }, { 64, 76, 94 } }
+local ACCENTS = { { 40, 92, 146 }, { 176, 52, 52 }, { 50, 112, 80 }, { 236, 196, 76 }, { 96, 64, 128 }, { 40, 40, 44 } }
+local FLOWERS = { { 240, 90, 110 }, { 255, 200, 60 }, { 250, 250, 250 }, { 180, 110, 230 }, { 255, 140, 60 } }
+
+local function rgbOf(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
 function MapKit.house(parent, origin, yaw, rng, style)
 	style = style or {}
-	local W, D, H = style.w or 26, style.d or 22, style.h or 11
+	local M = Enum.Material
+	local function pick(list)
+		return list[rng:NextInteger(1, #list)]
+	end
+	local cabin = style.cabin == true
+	local W = style.w or (cabin and rng:NextInteger(16, 20) or rng:NextInteger(20, 30))
+	local D = style.d or (cabin and rng:NextInteger(14, 18) or rng:NextInteger(18, 24))
+	local H = style.h or (cabin and 9 or rng:NextInteger(10, 12))
 	local cf = CFrame.new(origin) * CFrame.Angles(0, yaw, 0)
 	local function at(x, y, z)
 		return cf * CFrame.new(x, y, z)
 	end
-	local siding = style.color or ({ Color3.fromRGB(150, 156, 150), Color3.fromRGB(176, 160, 132), Color3.fromRGB(120, 132, 140), Color3.fromRGB(168, 150, 140) })[rng:NextInteger(1, 4)]
-	local trim = Color3.fromRGB(200, 196, 186)
-	local wallMat = Enum.Material.WoodPlanks
-	local function wall(size, pos)
-		return block(parent, size, at(pos.X, pos.Y, pos.Z), siding, wallMat)
+	local siding = style.color or rgbOf(cabin and pick(CABIN) or pick(PAINT))
+	local trim = rgbOf(cabin and { 236, 226, 200 } or pick(TRIMS))
+	local accent = rgbOf(pick(ACCENTS))
+	local roofColor = rgbOf(pick(ROOFS))
+	local wallMat = cabin and M.Wood or (rng:NextNumber() < 0.7 and M.WoodPlanks or (rng:NextNumber() < 0.6 and M.Brick or M.SmoothPlastic))
+	if wallMat == M.Brick and not style.color then
+		siding = rgbOf(pick({ { 176, 82, 64 }, { 160, 100, 80 }, { 196, 150, 120 } }))
 	end
-	-- floor + porch
-	block(parent, Vector3.new(W, 1, D), at(0, 0.5, D / 2), Color3.fromRGB(96, 82, 66), Enum.Material.WoodPlanks)
-	block(parent, Vector3.new(10, 0.8, 5), at(0, 0.4, -2.5), Color3.fromRGB(110, 96, 80), Enum.Material.WoodPlanks)
-	for _, sx in { -4.5, 4.5 } do
-		block(parent, Vector3.new(0.5, H - 1, 0.5), at(sx, H / 2, -4.6), trim, Enum.Material.Wood)
-	end
-	block(parent, Vector3.new(11, 0.5, 6), at(0, H - 0.6, -2.4), C.roof, Enum.Material.RoofShingles)
-	-- walls: front (door gap + windows), back, sides
-	local t = 1
+	local roofKind = style.roof or (cabin and pick({ "gable", "sideGable" }) or pick({ "gable", "gable", "sideGable", "crossGable", "flat", "saltbox" }))
+	local upper = not cabin and roofKind ~= "flat" and rng:NextNumber() < 0.35
+	local porchKind = cabin and "wide" or pick({ "small", "wide", "wide", "steps" })
 	local doorW = 5
-	wall(Vector3.new((W - doorW) / 2, H, t), Vector3.new(-(W + doorW) / 4, H / 2, 0))
-	wall(Vector3.new((W - doorW) / 2, H, t), Vector3.new((W + doorW) / 4, H / 2, 0))
-	wall(Vector3.new(doorW, H - 8, t), Vector3.new(0, 8 + (H - 8) / 2, 0))
+	local doorX = pick({ 0, 0, -W * 0.22, W * 0.22 })
+	local t = 1
+	local function wall(size, pos, color, mat)
+		return block(parent, size, at(pos.X, pos.Y, pos.Z), color or siding, mat or wallMat)
+	end
+
+	-- floor
+	block(parent, Vector3.new(W, 1, D), at(0, 0.5, D / 2), Color3.fromRGB(150, 112, 76), M.WoodPlanks)
+
+	-- walls: front with the door, back, sides; corner trim boards
+	local leftEnd, rightStart = doorX - doorW / 2, doorX + doorW / 2
+	wall(Vector3.new(leftEnd + W / 2, H, t), Vector3.new((-W / 2 + leftEnd) / 2, H / 2, 0))
+	wall(Vector3.new(W / 2 - rightStart, H, t), Vector3.new((rightStart + W / 2) / 2, H / 2, 0))
+	wall(Vector3.new(doorW, H - 8, t), Vector3.new(doorX, 8 + (H - 8) / 2, 0))
+	block(parent, Vector3.new(doorW + 0.8, 0.5, 1.2), at(doorX, 8.1, -0.1), trim, M.Wood) -- door head
 	wall(Vector3.new(W, H, t), Vector3.new(0, H / 2, D))
 	wall(Vector3.new(t, H, D), Vector3.new(-W / 2, H / 2, D / 2))
 	wall(Vector3.new(t, H, D), Vector3.new(W / 2, H / 2, D / 2))
-	-- windows (dark glass with trim) on front and sides
-	for _, wx in { -W * 0.32, W * 0.32 } do
-		block(parent, Vector3.new(4, 3.4, 0.3), at(wx, 5.2, -0.6), Color3.fromRGB(30, 34, 36), Enum.Material.Glass, { Transparency = 0.25 })
-		block(parent, Vector3.new(4.6, 0.3, 0.6), at(wx, 3.4, -0.7), trim, Enum.Material.Wood)
-	end
-	for _, sz in { D * 0.3, D * 0.7 } do
-		for _, sx in { -1, 1 } do
-			block(parent, Vector3.new(0.3, 3.4, 4), at(sx * (W / 2 + 0.6), 5.2, sz), Color3.fromRGB(30, 34, 36), Enum.Material.Glass, { Transparency = 0.25 })
+	for _, sx in { -1, 1 } do
+		for _, sz in { 0, D } do
+			block(parent, Vector3.new(1.3, H, 1.3), at(sx * W / 2, H / 2, sz), trim, M.Wood)
 		end
 	end
-	-- interior: one partition with a doorway, a few furniture blocks
-	wall(Vector3.new(W * 0.35, H, t), Vector3.new(-W * 0.325, H / 2, D * 0.55))
-	wall(Vector3.new(W * 0.35, H, t), Vector3.new(W * 0.325, H / 2, D * 0.55))
-	block(parent, Vector3.new(6, 2.4, 3), at(-W * 0.3, 1.7, D * 0.3), Color3.fromRGB(86, 70, 60), Enum.Material.Fabric) -- sofa
-	block(parent, Vector3.new(5, 3, 2.5), at(W * 0.3, 2, D * 0.85), Color3.fromRGB(120, 110, 96), Enum.Material.Wood) -- counter
-	-- roof: two sloped wedges
-	local rise = 7
-	-- WedgePart: tall edge at +Z, slope descending to -Z
-	MapKit.wedge(parent, Vector3.new(W + 2, rise, D / 2 + 1), at(0, H + rise / 2, D * 0.25 - 0.5), C.roof, Enum.Material.RoofShingles)
-	MapKit.wedge(parent, Vector3.new(W + 2, rise, D / 2 + 1), at(0, H + rise / 2, D * 0.75 + 0.5) * CFrame.Angles(0, math.pi, 0), C.roof, Enum.Material.RoofShingles)
+
+	-- windows: glass, trim, shutters, flower boxes
+	local boxes = not cabin and rng:NextNumber() < 0.55
+	local function window(x, y, z, sideways)
+		local glass = sideways and Vector3.new(0.3, 3.4, 3.6) or Vector3.new(3.6, 3.4, 0.3)
+		block(parent, glass, at(x, y, z), Color3.fromRGB(70, 110, 140), M.Glass, { Transparency = 0.3, Reflectance = 0.15 })
+		local frame = sideways and Vector3.new(0.5, 3.9, 4.2) or Vector3.new(4.2, 3.9, 0.5)
+		block(parent, frame * Vector3.new(sideways and 1 or 1, 0.12, sideways and 1 or 1), at(x, y + 1.95, z), trim, M.Wood)
+		block(parent, frame * Vector3.new(1, 0.12, 1), at(x, y - 1.95, z), trim, M.Wood)
+		if not cabin then
+			for _, s in { -1, 1 } do
+				local off = s * 2.5
+				block(parent, sideways and Vector3.new(0.25, 3.6, 1.2) or Vector3.new(1.2, 3.6, 0.25), at(x + (sideways and 0 or off), y, z + (sideways and off or 0)), accent, M.WoodPlanks)
+			end
+		end
+		if boxes then
+			local out = sideways and Vector3.new(x > 0 and 0.5 or -0.5, 0, 0) or Vector3.new(0, 0, -0.5)
+			local base = Vector3.new(x, y - 2.3, z) + out
+			block(parent, sideways and Vector3.new(0.9, 0.7, 3.6) or Vector3.new(3.6, 0.7, 0.9), at(base.X, base.Y, base.Z), Color3.fromRGB(120, 84, 56), M.Wood)
+			for i = -1, 1 do
+				local p = base + (sideways and Vector3.new(0, 0.55, i * 1.1) or Vector3.new(i * 1.1, 0.55, 0))
+				block(parent, Vector3.new(0.75, 0.75, 0.75), at(p.X, p.Y, p.Z), rgbOf(pick(FLOWERS)), M.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false })
+			end
+		end
+	end
+	for _, wx in { -W * 0.32, 0, W * 0.32 } do
+		if math.abs(wx - doorX) > doorW / 2 + 2.6 and math.abs(wx) < W / 2 - 2.6 then
+			window(wx, 5.2, -0.6, false)
+		end
+	end
+	for _, sz in { D * 0.3, D * 0.72 } do
+		for _, sx in { -1, 1 } do
+			window(sx * (W / 2 + 0.6), 5.2, sz, true)
+		end
+	end
+	for _, wx in { -W * 0.3, W * 0.3 } do
+		window(wx, 5.2, D + 0.6, false)
+	end
+
+	-- porch
+	if porchKind == "small" then
+		block(parent, Vector3.new(10, 0.8, 5), at(doorX, 0.4, -2.5), Color3.fromRGB(160, 120, 84), M.WoodPlanks)
+		for _, sx in { -4.5, 4.5 } do
+			block(parent, Vector3.new(0.5, H - 1, 0.5), at(doorX + sx, H / 2, -4.6), trim, M.Wood)
+		end
+		block(parent, Vector3.new(11, 0.5, 6), at(doorX, H - 0.6, -2.4), roofColor, M.RoofShingles)
+	elseif porchKind == "wide" then
+		block(parent, Vector3.new(W, 0.8, 6), at(0, 0.4, -3), Color3.fromRGB(160, 120, 84), M.WoodPlanks)
+		local n = math.max(2, math.floor(W / 6))
+		for i = 0, n do
+			local px = -W / 2 + 0.4 + (W - 0.8) * i / n
+			block(parent, Vector3.new(0.5, H - 1, 0.5), at(px, H / 2, -5.7), trim, M.Wood)
+			if i < n then
+				local mid = px + (W - 0.8) / n / 2
+				if math.abs(mid - doorX) > 3.5 then -- railing, open at the steps
+					block(parent, Vector3.new((W - 0.8) / n, 0.25, 0.25), at(mid, 3.2, -5.7), trim, M.Wood)
+					block(parent, Vector3.new((W - 0.8) / n, 0.25, 0.25), at(mid, 1.4, -5.7), trim, M.Wood)
+				end
+			end
+		end
+		block(parent, Vector3.new(W + 1, 0.4, 6.6), at(0, H - 0.5, -3), roofColor, M.RoofShingles)
+	else
+		block(parent, Vector3.new(6, 0.5, 2), at(doorX, 0.25, -1.2), Color3.fromRGB(170, 166, 156), M.Concrete)
+	end
+
+	-- upper storey (outside only; you live downstairs)
 	block(parent, Vector3.new(W, 1, D), at(0, H + 0.5, D / 2), siding, wallMat) -- ceiling
-	-- a dim lamp inside
+	local topY = H + 1
+	if upper then
+		local H2 = 8
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, 0))
+		wall(Vector3.new(W, H2, t), Vector3.new(0, topY + H2 / 2, D))
+		wall(Vector3.new(t, H2, D), Vector3.new(-W / 2, topY + H2 / 2, D / 2))
+		wall(Vector3.new(t, H2, D), Vector3.new(W / 2, topY + H2 / 2, D / 2))
+		block(parent, Vector3.new(W + 0.6, 0.6, 0.6), at(0, topY, -0.3), trim, M.Wood) -- belt course
+		for _, wx in { -W * 0.3, 0, W * 0.3 } do
+			window(wx, topY + 4, -0.6, false)
+		end
+		block(parent, Vector3.new(W, 1, D), at(0, topY + H2 + 0.5, D / 2), siding, wallMat)
+		topY += H2 + 1
+	end
+
+	-- roof
+	local rise = cabin and 6 or rng:NextInteger(5, 8)
+	local function wedge(size, c, col, mat)
+		return MapKit.wedge(parent, size, c, col or roofColor, mat or M.RoofShingles)
+	end
+	if roofKind == "gable" or roofKind == "crossGable" then
+		-- WedgePart: tall edge at +Z, slope descending to -Z
+		wedge(Vector3.new(W + 2, rise, D / 2 + 1), at(0, topY + rise / 2, D * 0.25 - 0.5))
+		wedge(Vector3.new(W + 2, rise, D / 2 + 1), at(0, topY + rise / 2, D * 0.75 + 0.5) * CFrame.Angles(0, math.pi, 0))
+		for _, s in { -1, 1 } do -- gable ends
+			wedge(Vector3.new(t, rise, D / 2), at(s * (W / 2), topY + rise / 2, D * 0.25), siding, wallMat)
+			wedge(Vector3.new(t, rise, D / 2), at(s * (W / 2), topY + rise / 2, D * 0.75) * CFrame.Angles(0, math.pi, 0), siding, wallMat)
+		end
+		if roofKind == "crossGable" then
+			-- a front-facing gable wing over one side of the front, ridge running front to back
+			local cw = math.floor(W * 0.42)
+			local cx = (doorX <= 0 and 1 or -1) * (W / 2 - cw / 2)
+			local len = D / 2 + 1
+			for _, s in { -1, 1 } do
+				local rot = CFrame.Angles(0, s < 0 and math.pi / 2 or -math.pi / 2, 0)
+				wedge(Vector3.new(len, rise + 0.4, cw / 2 + 0.6), at(cx + s * (cw / 4 + 0.3), topY + (rise + 0.4) / 2, len / 2 - 1) * rot)
+				wedge(Vector3.new(t, rise, cw / 2), at(cx + s * cw / 4, topY + rise / 2, -0.2) * rot, siding, wallMat)
+			end
+		end
+	elseif roofKind == "sideGable" then
+		for _, s in { -1, 1 } do
+			wedge(Vector3.new(D + 2, rise, W / 2 + 1), at(s * (W / 4 + 0.5), topY + rise / 2, D / 2) * CFrame.Angles(0, s < 0 and math.pi / 2 or -math.pi / 2, 0))
+			-- gable ends (front and back)
+			wedge(Vector3.new(t, rise, W / 2), at(s * W / 4, topY + rise / 2, 0) * CFrame.Angles(0, s < 0 and math.pi / 2 or -math.pi / 2, 0), siding, wallMat)
+			wedge(Vector3.new(t, rise, W / 2), at(s * W / 4, topY + rise / 2, D) * CFrame.Angles(0, s < 0 and math.pi / 2 or -math.pi / 2, 0), siding, wallMat)
+		end
+	elseif roofKind == "saltbox" then
+		wedge(Vector3.new(W + 2, rise, D + 2), at(0, topY + rise / 2, D / 2))
+		for _, s in { -1, 1 } do
+			wedge(Vector3.new(t, rise, D), at(s * (W / 2), topY + rise / 2, D / 2), siding, wallMat)
+		end
+	else -- flat with a parapet and a rooftop tank
+		for _, s in { -1, 1 } do
+			block(parent, Vector3.new(W + 1, 1.4, 0.6), at(0, topY + 0.7, s < 0 and -0.2 or D + 0.2), trim, M.Concrete)
+			block(parent, Vector3.new(0.6, 1.4, D + 1), at(s * (W / 2 + 0.2), topY + 0.7, D / 2), trim, M.Concrete)
+		end
+		block(parent, Vector3.new(3, 3, 3), at(W * 0.25, topY + 1.5, D * 0.65), Color3.fromRGB(150, 156, 160), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = at(W * 0.25, topY + 1.5, D * 0.65) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	if roofKind ~= "flat" and rng:NextNumber() < 0.55 then
+		block(parent, Vector3.new(2, rise + 3, 2), at(W * 0.3, topY + (rise + 3) / 2, D * 0.7), Color3.fromRGB(150, 70, 56), M.Brick)
+	end
+
+	-- front yard: picket fence with a gate, flowers by the steps
+	if not cabin and rng:NextNumber() < 0.45 then
+		local fz = -10
+		local fenceColor = rgbOf(pick({ { 250, 250, 246 }, { 250, 250, 246 }, { 176, 140, 100 } }))
+		for x = -W / 2, math.min(W / 2, 7), 1 do
+			if math.abs(x - doorX) > 2.4 then
+				block(parent, Vector3.new(0.3, 2.6, 0.2), at(x, 1.3, fz), fenceColor, M.Wood)
+			end
+		end
+		for _, y in { 0.9, 2.0 } do
+			local a, b = -W / 2, doorX - 2.4
+			if b > a then
+				block(parent, Vector3.new(b - a, 0.25, 0.15), at((a + b) / 2, y, fz + 0.18), fenceColor, M.Wood)
+			end
+			a, b = doorX + 2.4, math.min(W / 2, 7)
+			if b > a then
+				block(parent, Vector3.new(b - a, 0.25, 0.15), at((a + b) / 2, y, fz + 0.18), fenceColor, M.Wood)
+			end
+		end
+	end
+	for _, sx in { -1, 1 } do
+		local bx = doorX + sx * 4
+		if math.abs(bx) < W / 2 - 1 and porchKind ~= "wide" then
+			for i = 1, 4 do
+				block(parent, Vector3.new(0.7, 0.7, 0.7), at(bx + rng:NextNumber(-1, 1), 0.4, -1.6 - rng:NextNumber(0, 1)), rgbOf(pick(FLOWERS)), M.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false })
+				assert(i)
+			end
+		end
+	end
+
+	-- interior: one of three layouts, painted walls and furniture
+	local inner = rgbOf(pick({ { 236, 230, 214 }, { 214, 226, 220 }, { 240, 224, 200 }, { 222, 214, 232 } }))
+	local layout = rng:NextInteger(1, 3)
+	if layout == 1 then -- living room in front, two back rooms
+		wall(Vector3.new(W * 0.35, H, t), Vector3.new(-W * 0.325, H / 2, D * 0.55), inner, M.SmoothPlastic)
+		wall(Vector3.new(W * 0.35, H, t), Vector3.new(W * 0.325, H / 2, D * 0.55), inner, M.SmoothPlastic)
+	elseif layout == 2 then -- left / right rooms with a doorway between
+		wall(Vector3.new(t, H, D * 0.38), Vector3.new(W * 0.1, H / 2, D * 0.19 + 0.5), inner, M.SmoothPlastic)
+		wall(Vector3.new(t, H, D * 0.3), Vector3.new(W * 0.1, H / 2, D * 0.85 - 0.5), inner, M.SmoothPlastic)
+	end -- layout 3: open plan
+	block(parent, Vector3.new(W * 0.4, 0.06, D * 0.3), at(0, 1.03, D * 0.3), rgbOf(pick(ACCENTS)), M.Fabric, { CanCollide = false }) -- rug
+	block(parent, Vector3.new(6, 2.4, 3), at(-W * 0.3, 1.7, D * 0.3), rgbOf(pick({ { 70, 110, 150 }, { 160, 70, 60 }, { 90, 130, 90 }, { 180, 150, 100 } })), M.Fabric) -- sofa
+	block(parent, Vector3.new(5, 3, 2.5), at(W * 0.3, 2, D * 0.85), Color3.fromRGB(200, 196, 186), M.Wood) -- counter
+	block(parent, Vector3.new(3, 2.2, 2), at(W * 0.25, 1.6, D * 0.72), Color3.fromRGB(150, 108, 72), M.Wood) -- table
+	block(parent, Vector3.new(1, 5, 4), at(W / 2 - 1.1, 3.5, D * 0.75), Color3.fromRGB(120, 86, 60), M.Wood) -- bookshelf
+	-- a lamp inside
 	MapKit.bulb(parent, at(0, H - 1.5, D * 0.3).Position, 16)
 	local function world(x, z)
 		return at(x, 0, z).Position
 	end
 	return {
-		doorways = { { hinge = world(-doorW / 2, -0.1), width = doorW, dir = cf.RightVector } },
+		doorways = { { hinge = world(doorX - doorW / 2, -0.1), width = doorW, dir = cf.RightVector } },
 		containers = {
 			{ pos = world(-W * 0.38, D * 0.85), type = "Drawer", yaw = math.deg(yaw) + 180 },
 			{ pos = world(W * 0.4, D * 0.4), type = rng:NextNumber() < 0.5 and "Locker" or "Toolbox", yaw = math.deg(yaw) - 90 },

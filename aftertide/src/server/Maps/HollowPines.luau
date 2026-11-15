@@ -9,7 +9,7 @@ local Map = {
 	id = "HollowPines",
 	name = "Hollow Pines",
 	hilly = true,
-	lighting = { sky = "pines", clouds = 0.6, cloudDensity = 0.75, cloudColor = { 236, 238, 240 }, wind = { 4, 0, -3 }, clock = 7.9, brightness = 2.5, ambient = { 90, 98, 102 }, outdoor = { 132, 144, 150 }, fog = 0.4, haze = 1.9, fogColor = { 220, 226, 228 }, tint = { 234, 242, 246 }, saturation = -0.12, contrast = 0.1, shift = { 255, 222, 196 } },
+	lighting = { sky = "pines", clouds = 0.35, cloudDensity = 0.55, cloudColor = { 255, 255, 255 }, wind = { 4, 0, -3 }, clock = 8.6, brightness = 3.0, ambient = { 100, 108, 106 }, outdoor = { 146, 156, 150 }, fog = 0.3, haze = 1.0, fogColor = { 214, 230, 236 }, tint = { 250, 252, 244 }, saturation = 0.14, contrast = 0.08, shift = { 255, 230, 200 } },
 }
 
 local function creekX(z)
@@ -55,7 +55,7 @@ function Map.build(parent, rng)
 		-- every cabin faces -Z so it sits on the pad flattened for it
 		MapKit.clearAbove(spot.X - 16, spot.Z - 12, spot.X + 16, spot.Z + 26, y)
 		MapKit.slab(spot.X - 16, spot.Z - 12, spot.X + 16, spot.Z + 26, M.Ground, y, 16)
-		local h = MapKit.house(parent, Vector3.new(spot.X, y, spot.Z), 0, rng, { w = 18, d = 16, h = 9, color = Color3.fromRGB(110, 84, 62) })
+		local h = MapKit.house(parent, Vector3.new(spot.X, y, spot.Z), 0, rng, { cabin = true })
 		for _, d in h.doorways do
 			table.insert(doorways, d)
 		end
@@ -71,7 +71,7 @@ function Map.build(parent, rng)
 	local sy = baseHeight(-88, 32)
 	MapKit.clearAbove(STATION[1] - 6, STATION[2] - 8, STATION[3] + 6, STATION[4] + 8, sy)
 	MapKit.slab(STATION[1] - 6, STATION[2] - 8, STATION[3] + 6, STATION[4] + 8, M.Ground, sy, 16)
-	local station = MapKit.building(parent, STATION, sy, rng, { color = Color3.fromRGB(96, 78, 60), inner = Color3.fromRGB(150, 132, 108), material = Enum.Material.WoodPlanks, h = 10 })
+	local station = MapKit.building(parent, STATION, sy, rng, { color = Color3.fromRGB(150, 104, 66), inner = Color3.fromRGB(226, 214, 190), material = Enum.Material.WoodPlanks, h = 10 })
 	for _, d in station.doorways do
 		table.insert(doorways, d)
 	end

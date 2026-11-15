@@ -9,7 +9,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "CanneryRow",
 	name = "Cannery Row",
-	lighting = { sky = "cannery", clouds = 0.72, cloudDensity = 0.55, cloudColor = { 226, 230, 232 }, wind = { 12, 0, 5 }, clock = 13.6, brightness = 2.7, ambient = { 92, 98, 104 }, outdoor = { 140, 146, 150 }, fog = 0.3, haze = 1.2, fogColor = { 212, 216, 218 }, tint = { 236, 240, 242 }, saturation = -0.12, contrast = 0.12, shift = { 255, 238, 220 } },
+	lighting = { sky = "cannery", clouds = 0.45, cloudDensity = 0.5, cloudColor = { 255, 255, 255 }, wind = { 12, 0, 5 }, clock = 12.8, brightness = 3.2, ambient = { 106, 110, 114 }, outdoor = { 152, 158, 162 }, fog = 0.22, haze = 0.6, fogColor = { 206, 224, 238 }, tint = { 255, 252, 246 }, saturation = 0.12, contrast = 0.1, shift = { 255, 242, 226 } },
 }
 
 local OFFICE = { 26, 90, 72, 114 } -- the harbour office block (rooms, corridors, offices)
@@ -117,7 +117,7 @@ function Map.build(parent, rng)
 	end
 	MapKit.prop(parent, "Rubble_1", CFrame.new(-25, 0, -60), 1.4)
 	MapKit.prop(parent, "Rubble_1", CFrame.new(90, 0, 104) * CFrame.Angles(0, 2, 0), 1.1)
-	local office = MapKit.building(parent, OFFICE, 0, rng, { color = Color3.fromRGB(120, 112, 100), inner = Color3.fromRGB(170, 166, 150) })
+	local office = MapKit.building(parent, OFFICE, 0, rng, { color = Color3.fromRGB(70, 130, 160), inner = Color3.fromRGB(226, 228, 220) })
 	MapKit.prop(parent, "Rock_1", CFrame.new(-72, -1.6, -20), 1.2)
 	MapKit.prop(parent, "Rock_2", CFrame.new(-100, -1.6, 40) * CFrame.Angles(0, 1, 0), 1)
 	MapKit.prop(parent, "DeadTree_1", CFrame.new(-55, 0, 95), 0.8)

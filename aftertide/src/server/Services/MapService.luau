@@ -702,7 +702,7 @@ local function setupLighting()
 	Lighting.OutdoorAmbient = Color3.fromRGB(112, 120, 128)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 224, 196)
 	-- sky light on every surface: makes normal / roughness maps and wet metal read properly
-	Lighting.EnvironmentDiffuseScale = 0.65
+	Lighting.EnvironmentDiffuseScale = 1
 	Lighting.EnvironmentSpecularScale = 1
 	Lighting.ShadowSoftness = 0.25
 	Lighting.GlobalShadows = true
@@ -719,16 +719,16 @@ local function setupLighting()
 
 	colorCorrection = Instance.new("ColorCorrectionEffect")
 	colorCorrection.Name = "AftertideGrade"
-	colorCorrection.Saturation = -0.22
-	colorCorrection.Contrast = 0.16
-	colorCorrection.Brightness = 0.01
-	colorCorrection.TintColor = Color3.fromRGB(230, 236, 240)
+	colorCorrection.Saturation = 0.12
+	colorCorrection.Contrast = 0.08
+	colorCorrection.Brightness = 0.02
+	colorCorrection.TintColor = Color3.fromRGB(255, 250, 242)
 	colorCorrection.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.6
-	bloom.Size = 24
-	bloom.Threshold = 1.6
+	bloom.Intensity = 0.5
+	bloom.Size = 26
+	bloom.Threshold = 1.35
 	bloom.Parent = Lighting
 end
 
@@ -803,7 +803,8 @@ local function setupSky()
 	clouds.Parent = Workspace.Terrain
 end
 
-local FERRY_LIGHT = { sky = "ferry", clouds = 0.62, cloudColor = { 240, 222, 206 }, wind = { 10, 0, 4 }, clock = 17.6, brightness = 2.4, ambient = { 86, 84, 84 }, outdoor = { 140, 134, 128 }, fog = 0.3, haze = 1.4, fogColor = { 226, 184, 150 }, tint = { 248, 238, 228 }, saturation = -0.1, contrast = 0.12, shift = { 255, 220, 184 } }
+-- sunny harbour afternoon: bright, warm, saturated
+local FERRY_LIGHT = { sky = "ferry", clouds = 0.38, cloudDensity = 0.5, cloudColor = { 255, 255, 255 }, wind = { 8, 0, 4 }, clock = 15.2, brightness = 3.1, ambient = { 112, 110, 106 }, outdoor = { 152, 152, 150 }, fog = 0.2, haze = 0.6, fogColor = { 200, 222, 238 }, tint = { 255, 250, 242 }, saturation = 0.14, contrast = 0.08, shift = { 255, 236, 214 } }
 
 local function rgb(t)
 	return Color3.fromRGB(t[1], t[2], t[3])

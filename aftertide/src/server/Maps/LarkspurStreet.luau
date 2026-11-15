@@ -8,7 +8,7 @@ local block, volume = MapKit.block, MapKit.volume
 local Map = {
 	id = "LarkspurStreet",
 	name = "Larkspur Street",
-	lighting = { sky = "larkspur", clouds = 0.42, cloudDensity = 0.5, cloudColor = { 250, 238, 222 }, wind = { 5, 0, 2 }, clock = 16.3, brightness = 3.1, ambient = { 100, 94, 88 }, outdoor = { 160, 150, 136 }, fog = 0.22, haze = 0.9, fogColor = { 236, 210, 176 }, tint = { 255, 244, 230 }, saturation = -0.04, contrast = 0.1, shift = { 255, 226, 190 } },
+	lighting = { sky = "larkspur", clouds = 0.35, cloudDensity = 0.45, cloudColor = { 255, 236, 214 }, wind = { 5, 0, 2 }, clock = 16.6, brightness = 3.2, ambient = { 112, 102, 94 }, outdoor = { 168, 156, 140 }, fog = 0.2, haze = 0.8, fogColor = { 240, 210, 176 }, tint = { 255, 242, 226 }, saturation = 0.18, contrast = 0.1, shift = { 255, 222, 182 } },
 }
 
 local PHARMACY = { 62, 66, 106, 100 }
@@ -24,7 +24,7 @@ function Map.build(parent, rng)
 	MapKit.slab(-120, -13, 120, -9, M.Pavement, 0.15)
 	-- painted road line (faded)
 	for x = -115, 115, 12 do
-		block(parent, Vector3.new(5, 0.05, 0.4), Vector3.new(x, 0.1, 0), Color3.fromRGB(200, 190, 150), M.SmoothPlastic, { CanCollide = false, Transparency = 0.35 })
+		block(parent, Vector3.new(5, 0.05, 0.4), Vector3.new(x, 0.1, 0), Color3.fromRGB(250, 220, 120), M.SmoothPlastic, { CanCollide = false, Transparency = 0.15 })
 	end
 
 	local doorways, containers, loot = {}, {}, {}
@@ -48,13 +48,14 @@ function Map.build(parent, rng)
 		addHouse(Vector3.new(x + 6, 0, -24), math.pi)
 	end
 	-- corner store at the west end
-	addHouse(Vector3.new(-100, 0, 64), 0, { w = 30, d = 26, h = 12, color = Color3.fromRGB(150, 120, 100) })
+	addHouse(Vector3.new(-100, 0, 64), 0, { w = 30, d = 26, h = 12, roof = "flat" })
 
 	-- back fences and yards gone wild
 	for _, z in { 58, -58 } do
 		for x = -115, 115, 8 do
 			if rng:NextNumber() > 0.15 and not (z > 0 and x > 64 and x < 84) then -- gap to the pharmacy
-				block(parent, Vector3.new(7.6, 5, 0.3), CFrame.new(x, 2.5, z) * CFrame.Angles(0, 0, rng:NextNumber(-0.06, 0.06)), Color3.fromRGB(120, 100, 80), M.WoodPlanks)
+				local paint = ({ Color3.fromRGB(240, 238, 228), Color3.fromRGB(176, 136, 96), Color3.fromRGB(150, 190, 200), Color3.fromRGB(196, 214, 170) })[math.floor((x + 200) / 40) % 4 + 1]
+				block(parent, Vector3.new(7.6, 5, 0.3), CFrame.new(x, 2.5, z) * CFrame.Angles(0, 0, rng:NextNumber(-0.06, 0.06)), paint, M.WoodPlanks)
 			end
 		end
 	end
@@ -101,7 +102,7 @@ function Map.build(parent, rng)
 	end
 	MapKit.lamp(parent, Vector3.new(-60, 0, 12), false)
 	MapKit.lamp(parent, Vector3.new(40, 0, -12), false)
-	local pharmacy = MapKit.building(parent, PHARMACY, 0.1, rng, { color = Color3.fromRGB(150, 128, 110), inner = Color3.fromRGB(196, 190, 176), material = Enum.Material.Brick })
+	local pharmacy = MapKit.building(parent, PHARMACY, 0.1, rng, { color = Color3.fromRGB(186, 92, 70), inner = Color3.fromRGB(230, 236, 230), material = Enum.Material.Brick })
 	for _, d in pharmacy.doorways do
 		table.insert(doorways, d)
 	end

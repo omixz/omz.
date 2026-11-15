@@ -97,13 +97,13 @@ local function apply(mode)
 	bloom.Intensity = cinematic and 0.5 or 0.25
 	grade.Enabled = not performance
 	grade.Contrast = cinematic and 0.1 or 0.05
-	grade.Saturation = cinematic and -0.04 or 0
+	grade.Saturation = cinematic and 0.06 or 0.03
 	grade.TintColor = cinematic and Color3.fromRGB(255, 246, 236) or Color3.new(1, 1, 1)
 	mist.Rate = cinematic and 5 or (performance and 0 or 2)
 	dust.Rate = cinematic and 18 or 0
 	for _, f in vignette or {} do
 		f.Visible = not performance
-		f.BackgroundTransparency = cinematic and 0.5 or 0.68
+		f.BackgroundTransparency = cinematic and 0.62 or 0.8
 	end
 	-- wind-swayed terrain grass (cheap on PC/console, off on phones)
 	pcall(function()
