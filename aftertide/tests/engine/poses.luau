@@ -14,7 +14,7 @@ rig.Humanoid.HipHeight = hip
 rig:SetAttribute("BaseHipHeight", hip)
 MeshKit.applyRig(rig, meta, AssetService.part, "r15", 0, {})
 local guns = {}
-for slot, id in { long = "carbine", sidearm = "revolver" } do
+for slot, id in { long = LONG_GUN or "carbine", sidearm = "revolver" } do
 	local gun = WeaponModels.build(id, AssetService.part, AssetService.meta("Weapon_" .. id))
 	gun.Name = "Weapon_" .. slot
 	gun:PivotTo(rig:GetPivot())
@@ -42,7 +42,8 @@ rig:SetAttribute("Procedural", true)
 local State = require(ClientFolder.State)
 local PlayerAnimator = require(ClientFolder.Controllers.PlayerAnimator)
 local now = workspace:GetServerTimeNow()
-local SCEN = {
+NOW = now
+local SCEN = SCENARIOS or {
 	{ name = "aim_long", slot = "long", aim = true },
 	{ name = "ready_long", slot = "long" },
 	{ name = "sidearm_holstered_long", slot = "sidearm" },
@@ -52,15 +53,25 @@ local SCEN = {
 	{ name = "prone_sidearm", slot = "sidearm", prone = true },
 	{ name = "crouch_long", slot = "long", crouch = true },
 }
+if ACTION_TEST then
+	-- each gun mid-action: just fired (lever / pump / bolt / cylinder), and half-way through a reload
+	SCEN = {
+		{ name = "fired_long", slot = "long", aim = true, shotAge = 0.42 },
+		{ name = "reload_long_mid", slot = "long", attrs = { ReloadUntil = now + 1.2 }, reloadDur = 3 },
+		{ name = "fired_sidearm", slot = "sidearm", aim = true, shotAge = 0.12 },
+		{ name = "reload_sidearm_mid", slot = "sidearm", attrs = { ReloadUntil = now + 1.2 }, reloadDur = 2.5 },
+	}
+end
 local out = { scenarios = {} }
 for _, sc in SCEN do
-	for _, a in { "ReloadUntil", "HealAt" } do
+	for _, a in { "ReloadUntil", "HealAt", "ReloadDur" } do
 		rig:SetAttribute(a, nil)
 	end
 	for k, v in sc.attrs or {} do
 		rig:SetAttribute(k, v)
 	end
-	rig:SetAttribute("Equipped", sc.slot == "long" and "carbine" or "revolver")
+	rig:SetAttribute("Equipped", sc.slot == "long" and (LONG_GUN or "carbine") or "revolver")
+	rig:SetAttribute("ReloadDur", sc.reloadDur)
 	rig:SetAttribute("EquippedSlot", sc.slot)
 	mountAll(sc.slot)
 	State.aiming = sc.aim == true
@@ -69,6 +80,9 @@ for _, sc in SCEN do
 	State.pitch = 0
 	local err
 	for _ = 1, 45 do
+		if sc.shotAge then
+			PlayerAnimator.debugShotAge(rig, sc.shotAge)
+		end
 		local ok, e = PlayerAnimator.debugAnimate(rig, true, true)
 		if not ok then
 			err = tostring(e)
@@ -84,7 +98,8 @@ for _, sc in SCEN do
 			local gripCF = base * w.C0 * w.C1:Inverse()
 			for _, mp in gun:GetDescendants() do
 				if mp:IsA("MeshPart") then
-					local rel = gun.PrimaryPart.CFrame:ToObjectSpace(mp.CFrame)
+					local aw = mp:FindFirstChild("AnimWeld")
+					local rel = aw and (aw.C0 * aw.C1:Inverse()) or gun.PrimaryPart.CFrame:ToObjectSpace(mp.CFrame)
 					table.insert(pieces, { name = gun.Name .. "." .. mp.Name, cframe = cf12(gripCF * rel), size = v3t(mp.Size), source = mp:GetAttribute("SourceName"), fitRot = mp:GetAttribute("FitRot") and cf12(mp:GetAttribute("FitRot")) or nil })
 				end
 			end

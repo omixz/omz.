@@ -552,6 +552,10 @@ function CharacterService.damage(player, amount, fromPosition)
 		end
 	end
 	Net.notify(player, "Hurt", { amount = amount })
+	if player.Character then
+		player.Character:SetAttribute("HurtAt", Workspace:GetServerTimeNow()) -- everyone sees the flinch
+		player.Character:SetAttribute("HurtFrom", fromPosition)
+	end
 
 	if session.hp <= 0 then
 		CharacterService.down(player)

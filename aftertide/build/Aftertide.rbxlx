@@ -10019,6 +10019,10 @@ function CharacterService.damage(player, amount, fromPosition)
 		end
 	end
 	Net.notify(player, "Hurt", { amount = amount })
+	if player.Character then
+		player.Character:SetAttribute("HurtAt", Workspace:GetServerTimeNow()) -- everyone sees the flinch
+		player.Character:SetAttribute("HurtFrom", fromPosition)
+	end
 
 	if session.hp <= 0 then
 		CharacterService.down(player)
@@ -16030,6 +16034,7 @@ function WeaponService.reload(player, info)
 	s.reloadId += 1
 	local id = s.reloadId
 	char:SetAttribute("ReloadUntil", Workspace:GetServerTimeNow() + duration)
+	char:SetAttribute("ReloadDur", duration) -- lets every client play the reload in step
 	Sfx.at(info.root.Position, "Reload", 0.4, 30)
 	task.delay(duration, function()
 		if s.reloadId ~= id or not char.Parent then
@@ -18443,6 +18448,126 @@ function PlayerAnimator.noteShot(char)
 	end
 end
 
+-- Moving parts: a gun layer (forend, cylinder, arrow...) gets a local Weld we can drive.
+-- Every client builds its own, so everyone sees the same motion.
+local function movePart(model, layer, offset, aboutCentre)
+	local grip = model.PrimaryPart
+	local mp = model:FindFirstChild("Mesh_" .. layer)
+	if not (grip and mp and mp:IsA("BasePart")) then
+		return nil
+	end
+	local w = mp:FindFirstChild("AnimWeld")
+	if not w then
+		local rest = grip.CFrame:ToObjectSpace(mp.CFrame)
+		for _, c in mp:GetChildren() do
+			if c:IsA("WeldConstraint") then
+				c.Enabled = false
+			end
+		end
+		w = Instance.new("Weld")
+		w.Name = "AnimWeld"
+		w.Part0, w.Part1, w.C0 = grip, mp, rest
+		w:SetAttribute("Rest", rest) -- kept on the weld (a weak Lua table can lose it)
+		w.Parent = mp
+	end
+	local rest = w:GetAttribute("Rest") or w.C0
+	if aboutCentre then
+		w.C0 = CFrame.new(rest.Position) * offset * CFrame.new(-rest.Position) * rest
+	else
+		w.C0 = offset * rest
+	end
+	return mp, rest
+end
+
+local function bell(t, a, b)
+	if t <= a or t >= b then
+		return 0
+	end
+	return math.sin((t - a) / (b - a) * math.pi)
+end
+local function ramp(t, a, b)
+	local k = math.clamp((t - a) / (b - a), 0, 1)
+	return k * k * (3 - 2 * k)
+end
+
+-- Per-weapon action after a shot and during a reload. Returns:
+--   poseMul  (applied to the gun pose), rightOff / leftAt (grip-space hand targets or nil),
+--   leftWorld (a world hand target, e.g. the ammo pouch on the belt), handled (left hand set)
+local function weaponAction(char, rig, model, id, since, reloading, rk, a, lowerCF)
+	local poseMul, rightOff, leftAt, leftWorld = CFrame.new(), nil, nil, nil
+	local now = os.clock()
+	local belt = (lowerCF * CFrame.new(-0.42, -0.05, -0.38)).Position -- ammo pouch, left front
+	local function loadCycle(rate, target)
+		-- left hand: pouch -> port -> pouch, over and over
+		local c = (now * rate) % 1
+		local k = c < 0.5 and ramp(c, 0, 0.5) or 1 - ramp(c, 0.5, 1)
+		return k, target
+	end
+	if id == "revolver" then
+		-- the cylinder turns one chamber per shot; the muzzle flips up
+		local stamp = shotAt[char]
+		if stamp and rig.lastShotStamp ~= stamp then
+			rig.lastShotStamp = stamp
+			rig.cylTarget = (rig.cylTarget or 0) + math.pi / 3
+		end
+		rig.cyl = (rig.cyl or 0) + ((rig.cylTarget or 0) - (rig.cyl or 0)) * 0.35
+		poseMul = CFrame.Angles(0.32 * bell(since, 0, 0.32), 0, 0)
+		local out = reloading and (ramp(rk, 0, 0.15) * (1 - ramp(rk, 0.85, 1))) or 0
+		movePart(model, "Cylinder", CFrame.new(-0.16 * out, -0.03 * out, 0) * CFrame.Angles(0, 0, rig.cyl + out * 0.6), true)
+		if reloading then
+			if rk < 0.3 then
+				leftAt = Vector3.new(-0.12, 0.3, -0.2) -- thumb the ejector
+			else
+				local k = loadCycle(3, nil)
+				leftWorld = { belt, Vector3.new(-0.2, 0.22, -0.16), k }
+			end
+		end
+	elseif id == "shotgun" then
+		local pump = bell(since, 0.2, 0.62)
+		movePart(model, "Forend", CFrame.new(0, 0, 0.32 * pump))
+		leftAt = Vector3.new(0, 0.05, -1.03 + 0.32 * pump)
+		if reloading then
+			poseMul = CFrame.Angles(0, 0, 1.1) -- loading port up
+			local k = loadCycle(1.7, nil)
+			leftWorld = { belt, Vector3.new(0, -0.12, -0.38), k }
+		end
+	elseif id == "carbine" then
+		local lever = bell(since, 0.12, 0.5)
+		poseMul = CFrame.Angles(0.12 * lever, 0, 0) * CFrame.new(0, -0.04 * lever, 0)
+		rightOff = Vector3.new(0, -0.22 * lever, 0.06 * lever)
+		if reloading then
+			poseMul = CFrame.Angles(0, 0, -0.55) -- gate side towards you
+			local k = loadCycle(1.5, nil)
+			leftWorld = { belt, Vector3.new(0.12, 0.02, -0.22), k }
+		end
+	elseif id == "rifle" then
+		local reach = bell(since, 0.3, 1.15)
+		local pull = bell(since, 0.48, 0.98)
+		if reloading then
+			reach = ramp(rk, 0, 0.1) * (1 - ramp(rk, 0.9, 1))
+			pull = reach
+			local k = loadCycle(1.4, nil)
+			leftWorld = { belt, Vector3.new(0, 0.24, -0.2), k }
+		end
+		rightOff = Vector3.new(0.2 * reach, 0.16 * reach, 0.28 * pull)
+		poseMul = CFrame.Angles(0, 0, 0.22 * reach)
+	elseif id == "bow" then
+		-- draw while aiming; the arrow is gone after a shot until the next is nocked
+		local nock = ramp(since, 0.55, 0.95)
+		local draw = a * nock
+		local arrow = movePart(model, "Arrow", CFrame.new(0, 0, 0.38 * draw))
+		if arrow then
+			arrow.LocalTransparencyModifier = (since < 0.55 or reloading) and 1 or 0
+		end
+		leftAt = Vector3.new(0, 0.08, 0.05 + 0.36 * draw)
+		if reloading or since < 0.55 then
+			-- reach back over the shoulder for an arrow
+			leftWorld = { (lowerCF * CFrame.new(-0.35, 2.1, 0.55)).Position, Vector3.new(0, 0.08, 0.05), 1 - math.abs(((now * 1.4) % 1) * 2 - 1) }
+		end
+	end
+	return poseMul, rightOff, leftAt, leftWorld
+end
+
 -- Places the held gun (client-side, every frame) and IKs both hands onto it.
 local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch)
 	local torso = char:FindFirstChild("UpperTorso")
@@ -18471,6 +18596,23 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 		pose = pose * CFrame.new(0, 0.03 * k, 0.18 * k) * CFrame.Angles(0.14 * k, 0, 0)
 	end
 	local upperCF, lowerCF = posedTorso(J)
+	-- the gun's own action: lever / pump / bolt / cylinder / bow draw, and per-gun reloads
+	local id = char:GetAttribute("Equipped")
+	local serverNow = Workspace:GetServerTimeNow()
+	local rk = 0
+	if reloading then
+		local untilT = char:GetAttribute("ReloadUntil") or 0
+		if untilT > serverNow then
+			rk = math.clamp(1 - (untilT - serverNow) / math.max(char:GetAttribute("ReloadDur") or 2.5, 0.1), 0, 1)
+		else
+			rk = (now * 0.5) % 1 -- shell by shell: keep cycling
+		end
+	end
+	local okAct, poseMul, rightOff, leftAt, leftWorld = pcall(weaponAction, char, rig, model, id, since, reloading, rk, a, lowerCF)
+	if not okAct then
+		poseMul, rightOff, leftAt, leftWorld = CFrame.new(), nil, nil, nil
+	end
+	pose = pose * (poseMul or CFrame.new())
 	-- drawing: from where it was holstered into the hands
 	if drawK < 1 then
 		local holster = slot == "long" and WeaponModels.BackOffset or (upperCF:ToObjectSpace(lowerCF) * WeaponModels.HipOffset)
@@ -18490,10 +18632,16 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	rig.posedWeld = weld
 	-- hands onto the gun
 	local gripWorld = anchorCF * pose
-	local rightTarget = gripWorld.Position
+	local rightTarget = rightOff and (gripWorld * rightOff) or gripWorld.Position
 	local support = grip:FindFirstChild("Support")
 	local leftTarget = support and (gripWorld * support.CFrame).Position or nil
-	if reloading then
+	if leftAt then
+		leftTarget = gripWorld * leftAt
+	end
+	if leftWorld then
+		-- between the ammo pouch (world) and the gun (grip space)
+		leftTarget = leftWorld[1]:Lerp(gripWorld * leftWorld[2], leftWorld[3])
+	elseif reloading and not leftAt then
 		local cycle = (math.sin(now * 5) * 0.5 + 0.5)
 		leftTarget = (gripWorld * CFrame.new(RELOAD_HAND[slot] + Vector3.new(0, -0.25 * cycle, 0.1 * cycle))).Position
 	elseif drawK < 0.6 then
@@ -18764,7 +18912,24 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		lShZ, rShZ = mix(lShZ, -0.35), mix(rShZ, 0.35)
 	end
 
-	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3 + 1.15 * pk
+	-- hit flinch: the body jolts away from the hit and the head snaps, then recovers
+	local hurt = since(char, "HurtAt", serverNow)
+	local hurtNeck = 0
+	if hurt < 0.45 and not downed then
+		local k = math.sin(math.min(1, hurt / 0.45) * math.pi) * (1 - hurt / 0.45 * 0.5)
+		local from = char:GetAttribute("HurtFrom")
+		local sideSign = 1
+		if typeof(from) == "Vector3" then
+			sideSign = root.CFrame:PointToObjectSpace(from).X > 0 and -1 or 1
+		end
+		waistLean += 0.28 * k
+		rootY += 0.22 * k * sideSign
+		rootZ += 0.08 * k * sideSign
+		hurtNeck = 0.3 * k
+		lSh, rSh = lSh + 0.25 * k, rSh + 0.25 * k
+	end
+
+	local neckPitch = pitch * (0.35 + 0.25 * a) - waistLean * 0.5 + shift * 0.3 + 1.15 * pk + hurtNeck
 	J.root.Transform = CFrame.new(rootOffset) * ang(rootX, rootY + shift, rootZ)
 	J.waist.Transform = ang(waistLean, -twist + rootY * -0.3, shift * 0.5)
 	J.neck.Transform = ang(neckPitch, twist * 0.5, 0)
@@ -18836,6 +19001,11 @@ end
 -- Test hook: run one animation frame on a rig (used by the engine tests) and report errors.
 -- The rig state is kept between calls (like the live loop), so blends settle over frames.
 -- `settled` skips the draw-from-holster timer (test frames run faster than real time).
+-- Test hook: pretend this character fired `age` seconds ago (engine pose tests).
+function PlayerAnimator.debugShotAge(char, age)
+	shotAt[char] = os.clock() - age
+end
+
 function PlayerAnimator.debugAnimate(char, isLocal, settled)
 	local rig = rigs[char] or setup(char)
 	if not rig then

@@ -363,6 +363,7 @@ function WeaponService.reload(player, info)
 	s.reloadId += 1
 	local id = s.reloadId
 	char:SetAttribute("ReloadUntil", Workspace:GetServerTimeNow() + duration)
+	char:SetAttribute("ReloadDur", duration) -- lets every client play the reload in step
 	Sfx.at(info.root.Position, "Reload", 0.4, 30)
 	task.delay(duration, function()
 		if s.reloadId ~= id or not char.Parent then
