@@ -175,6 +175,8 @@ local function step(dt)
 		target = S.Downed
 	elseif busy then
 		target = 1.5
+	elseif char:GetAttribute("Grabbing") then
+		target = 5 -- dragging someone
 	elseif State.prone then
 		target = State.aiming and S.Prone * 0.5 or S.Prone
 	elseif State.aiming then

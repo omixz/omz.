@@ -8,7 +8,8 @@
 --   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
 --   throwNoiseMult, craftTimeMult, craftYieldBonus (+n on traps/spikes/arrows),
 --   ammoBonus (+n starting revolver rounds), aimSpreadMult
--- loadout.weapons = { long = <Weapons id>, sidearm = <Weapons id> }; loadout.items = reserve ammo + items.
+-- loadout.weapons = { sidearm = <Weapons id> }: EVERY crew member starts a crossing with only the
+-- Service Revolver. Long guns are unlocked at the Quartermaster (Scrip) and chosen there.
 
 local Characters = {}
 
@@ -36,8 +37,8 @@ Characters.List = {
 			duration = 4,
 		},
 		loadout = {
-			weapons = { long = "bow", sidearm = "revolver" },
-			items = { arrows = 6, pistolAmmo = 6, bottle = 2, dressing = 1, cloth = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
 		},
 		innate = {
 			id = "ShallowStep",
@@ -73,8 +74,8 @@ Characters.List = {
 			duration = 9,
 		},
 		loadout = {
-			weapons = { long = "shotgun", sidearm = "revolver" },
-			items = { shells = 4, pistolAmmo = 6, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
 		},
 		innate = {
 			id = "Tinkerer",
@@ -110,8 +111,8 @@ Characters.List = {
 			duration = 6,
 		},
 		loadout = {
-			weapons = { long = "rifle", sidearm = "revolver" },
-			items = { rifleAmmo = 4, pistolAmmo = 6, dressing = 2, cloth = 1, alcohol = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, dressing = 2, cloth = 1, alcohol = 1 },
 		},
 		innate = {
 			id = "FieldMedic",
@@ -147,8 +148,8 @@ Characters.List = {
 			duration = 5,
 		},
 		loadout = {
-			weapons = { long = "carbine", sidearm = "revolver" },
-			items = { rifleAmmo = 7, pistolAmmo = 6, bottle = 3, fogPot = 1, dressing = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, bottle = 3, fogPot = 1, dressing = 1 },
 		},
 		innate = {
 			id = "DeepPockets",

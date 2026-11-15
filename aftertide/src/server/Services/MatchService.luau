@@ -28,8 +28,9 @@ MatchService.modifier = Modifiers.None
 
 local run = nil -- { id, index, pall, options, participants = { [Player] = true } }
 -- mission types where you complete N objectives and then extract
-local COLLECT = { Salvage = true, Medicine = true, Relay = true, Nests = true }
-local OBJECTIVE_NOUN = { Salvage = "Supply crate", Medicine = "Medical cache", Relay = "Relay", Nests = "Nest" }
+local survivor = nil -- Bring Them Home: { model, humanoid, root, hp, follow }
+local COLLECT = { Salvage = true, Medicine = true, Relay = true, Nests = true, Hunt = true, Rescue = true }
+local OBJECTIVE_NOUN = { Salvage = "Supply crate", Medicine = "Medical cache", Relay = "Relay", Nests = "Nest", Hunt = "Target", Rescue = "Survivor" }
 local enc = nil -- current encounter state
 local resultsAcknowledged = {}
 local rng = Random.new()
@@ -182,6 +183,13 @@ local function generateOptions()
 				for _, m in p.unlocks.maps or {} do
 					table.insert(maps, m)
 				end
+			end
+		end
+		-- never offer the mission type you just played (when there's anything else to offer)
+		if run.lastType and #types > 3 then
+			local at = table.find(types, run.lastType)
+			if at then
+				table.remove(types, at)
 			end
 		end
 		for i = #types, 2, -1 do
@@ -385,6 +393,8 @@ function MatchService.beginEncounter(option)
 	end
 
 	MatchService.encounterId = (MatchService.encounterId or 0) + 1
+	run.lastType = option.type
+	survivor = nil
 	enc = {
 		type = kind,
 		finale = isFinale,
@@ -428,7 +438,21 @@ function MatchService.beginEncounter(option)
 	end
 
 	local budget = enemyBudget()
-	if COLLECT[kind] then
+	if kind == "Hunt" then
+		local def2 = Encounters.Types.Hunt
+		local pick = def2.elite[option.faction or "Hushed"] or def2.elite.Hushed
+		local spots = Services.MapService.SupplyCandidates
+		local at = spots[rng:NextInteger(1, #spots)]
+		Services.EnemyService.spawn(pick.type, at, { elite = pick.title, hpMult = def2.hpMult, route = { at, at + Vector3.new(10, 0, 0), at + Vector3.new(0, 0, 10) } })
+		for k = 1, 2 do -- escorts
+			Services.EnemyService.spawn(Services.EnemyService.pickType(weightsForPall()), at + Vector3.new(k * 4, 0, -3), { route = { at } })
+		end
+		spawnPatrols(math.max(2, budget - 3))
+		enc.objective = ("%s: %s"):format(def.name, pick.title)
+	elseif kind == "Rescue" then
+		Services.MatchService.spawnSurvivor(rng)
+		spawnPatrols(budget)
+	elseif COLLECT[kind] then
 		spawnPatrols(budget)
 	elseif kind == "LanternWatch" then
 		spawnPatrols(math.ceil(budget * 0.4))
@@ -541,6 +565,115 @@ function MatchService.damageNestsNear(position, radius, amount, player)
 	end
 end
 
+-- Bring Them Home: a survivor NPC who follows whoever finds them.
+function MatchService.spawnSurvivor(rng)
+	local spots = Services.MapService.LootSpots
+	local at = spots[rng:NextInteger(1, #spots)]
+	local desc = Instance.new("HumanoidDescription")
+	local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+	model.Name = "Survivor"
+	local Characters = require(Shared.Config.Characters)
+	local kit = "Crew_" .. Characters.Order[rng:NextInteger(1, #Characters.Order)]
+	local MeshKit = require(Shared.MeshKit)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if Services.AssetService.hasKit(kit) then
+		local meta = Services.AssetService.meta(kit)
+		local okFit, hip = pcall(MeshKit.conformSkeleton, model, meta, "r15", 0.88)
+		if okFit and hip then
+			humanoid.HipHeight = hip
+			model:SetAttribute("BaseHipHeight", hip)
+		end
+		pcall(MeshKit.applyRig, model, meta, Services.AssetService.part, "r15", nil, {
+			Jacket = Color3.fromRGB(110, 96, 80), Sleeve = Color3.fromRGB(110, 96, 80), Pants = Color3.fromRGB(70, 66, 60),
+		})
+	end
+	Services.CharacterService.stripAnimator(model)
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.WalkSpeed = 14
+	model:SetAttribute("Procedural", true)
+	model:SetAttribute("Stance", "Crouch")
+	model:PivotTo(CFrame.new(at + Vector3.new(0, 4, 0)))
+	model.Parent = Services.MapService.getEncounterFolder()
+	game:GetService("CollectionService"):AddTag(model, "Survivor")
+	local root = model:FindFirstChild("HumanoidRootPart")
+	survivor = { model = model, humanoid = humanoid, root = root, hp = Encounters.Types.Rescue.hp, follow = nil, hurtAt = {} }
+	local p = Instance.new("ProximityPrompt")
+	p.ActionText = "Lead them out"
+	p.ObjectText = "Survivor"
+	p.HoldDuration = 0.6
+	p.MaxActivationDistance = 8
+	p.RequiresLineOfSight = false
+	p.Parent = root
+	p.Triggered:Connect(function(player)
+		if not survivor or survivor.follow then
+			return
+		end
+		survivor.follow = player
+		model:SetAttribute("Stance", "Stand")
+		p:Destroy()
+		enc.crates = 1
+		enc.extractionOpen = true
+		Services.MapService.activateExtraction()
+		Net.notifyAll("Toast", { text = player.DisplayName .. " found the survivor. Get them to the Slipway flare." })
+		publish()
+	end)
+	task.spawn(function() -- walk with their rescuer
+		while survivor and survivor.model == model and model.Parent do
+			local s = survivor
+			if s.follow then
+				local info = MatchService.getActiveInfo(s.follow)
+				if not info then -- rescuer went down: follow anyone standing
+					local others = MatchService.getActivePlayers()
+					info = others[1]
+					s.follow = info and info.player or s.follow
+				end
+				if info then
+					local d = (info.root.Position - s.root.Position).Magnitude
+					if d > 5 then
+						s.humanoid.WalkSpeed = d > 16 and 18 or 13
+						s.humanoid:MoveTo(info.root.Position - info.root.CFrame.LookVector * 3)
+					else
+						s.humanoid:MoveTo(s.root.Position)
+					end
+				end
+			end
+			task.wait(0.25)
+		end
+	end)
+end
+
+-- The Hushed hurt a survivor they get their hands on.
+function MatchService.tickSurvivor()
+	local s = survivor
+	if not s or not enc or not s.model.Parent then
+		return
+	end
+	local now = os.clock()
+	for _, entry in Services.EnemyService.findNear(s.root.Position, 3.6) do
+		local e = entry.enemy
+		if not e.cfg.human and e.state ~= "Stunned" and e.state ~= "Quieted" and now > (s.hurtAt[e] or 0) then
+			s.hurtAt[e] = now + 2
+			s.hp -= Encounters.Types.Rescue.grabDamage
+			Sfx.at(s.root.Position, "Hurt", 0.8, 60)
+			Net.notifyAll("Toast", { text = ("The survivor is hurt! (%d%%)"):format(math.max(0, s.hp)) })
+		end
+	end
+	s.model:SetAttribute("HP", math.max(0, s.hp))
+	if s.hp <= 0 then
+		enc.survivorDead = true
+		s.model:SetAttribute("Downed", true)
+	end
+end
+
+function MatchService.survivorAtExtraction()
+	local s = survivor
+	if not s or not s.root.Parent then
+		return false
+	end
+	local x = Services.MapService.ExtractionPos
+	return Vector3.new(s.root.Position.X - x.X, 0, s.root.Position.Z - x.Z).Magnitude <= Game.ExtractionRadius + 4
+end
+
 function MatchService.onSpotted(player, enemy)
 	local session = Services.CharacterService.getSession(player)
 	if session then
@@ -552,6 +685,14 @@ function MatchService.onSpotted(player, enemy)
 end
 
 function MatchService.onEnemyKilled(player, e)
+	if e and e.isTarget and enc and enc.type == "Hunt" and not enc.targetDown then
+		enc.targetDown = true
+		enc.crates = 1
+		enc.extractionOpen = true
+		Services.MapService.activateExtraction()
+		Net.notifyAll("Toast", { text = "The target is down. The Slipway flare is lit: get out." })
+		publish()
+	end
 	if not player or not player.Parent then
 		return
 	end
@@ -630,7 +771,8 @@ function MatchService.endEncounter(win)
 					local salvage = R.salvagePerEncounter + 5 * run.pall + (enc.option.bonus or 0)
 					Services.InventoryService.add(player, "salvage", salvage)
 					table.insert(rewards, ("+%d Salvage"):format(salvage))
-					local scrip = math.floor((R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) + 0.5)
+					local morale = Services.PlayerDataService.hasRepair(player, "lights") and 1.1 or 1 -- Deck Lights
+					local scrip = math.floor((R.scripPerEncounter + 10 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) * morale + 0.5)
 					Services.PlayerDataService.addScrip(player, scrip)
 					Services.AnalyticsHelper.economy(player, "source", scrip, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, enc.finale and "CrossingComplete" or "Encounter")
 					table.insert(rewards, ("+%d Scrip"):format(scrip))
@@ -645,7 +787,8 @@ function MatchService.endEncounter(win)
 				-- Materials for Meridian projects (half for a failed encounter)
 				local Projects = require(Shared.Config.Projects)
 				local m = Projects.Materials
-				local mats = math.floor((m.perWin + m.perPall * run.pall + (enc.finale and m.runComplete or 0)) * (win and 1 or m.lossShare) + 0.5)
+				local charts = Services.PlayerDataService.hasRepair(player, "chartroom") and 1.15 or 1 -- Chart Room
+				local mats = math.floor((m.perWin + m.perPall * run.pall + (enc.finale and m.runComplete or 0)) * (win and 1 or m.lossShare) * charts + 0.5)
 				if runOver then
 					local leftover = player:GetAttribute("Salvage") or 0
 					mats += math.floor(leftover * m.salvageToMaterials)
@@ -755,8 +898,16 @@ local function tickEncounter()
 	local t = now()
 	local def = enc.finale and Encounters.Finale or Encounters.Types[enc.type]
 
+	if enc.type == "Rescue" then
+		MatchService.tickSurvivor()
+		if enc.survivorDead then
+			Net.notifyAll("Toast", { text = "The survivor didn't make it." })
+			MatchService.endEncounter(false)
+			return
+		end
+	end
 	if COLLECT[enc.type] then
-		if enc.extractionOpen and allStandingAtExtraction() then
+		if enc.extractionOpen and allStandingAtExtraction() and (enc.type ~= "Rescue" or MatchService.survivorAtExtraction()) then
 			MatchService.endEncounter(true)
 		end
 	elseif enc.type == "LanternWatch" then

@@ -3,7 +3,7 @@
 </Item>
 <Item class="Lighting" referent="RBX00000003"><Properties><string name="Name">Lighting</string><token name="Technology">4</token></Properties></Item>
 <Item class="Players" referent="RBX00000004"><Properties><string name="Name">Players</string><bool name="CharacterAutoLoads">false</bool></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX00000023"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000022"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ReplicatedStorage" referent="RBX00000024"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000023"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000005"><Properties><string name="Name">BodyBuilder</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds a sculpted, clothed body over the (hidden) R15 skeleton so the crew don't look like
 -- Roblox avatars: tapered limbs, shaped torso, jacket, trousers, boots, backpack, a hat or
 -- hood, and a fog mask over the lower face (everyone wears one against the Pall).
@@ -183,7 +183,7 @@ end
 
 return BodyBuilder
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000019"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000001A"><Properties><string name="Name">Config</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">AssetIds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Roblox asset IDs of the uploaded 3D packs (aftertide/assets/*.glb). Filled in by
 -- tools/upload_assets.py (Open Cloud) or by hand after importing them in Studio.
 -- 0 = not uploaded yet: the game falls back to its built-in part models.
@@ -215,7 +215,8 @@ return {
 --   abilityDurationMult, sprintSpeedMult, reviveHPBonus (+n), bleedOutBonus (+s),
 --   throwNoiseMult, craftTimeMult, craftYieldBonus (+n on traps/spikes/arrows),
 --   ammoBonus (+n starting revolver rounds), aimSpreadMult
--- loadout.weapons = { long = <Weapons id>, sidearm = <Weapons id> }; loadout.items = reserve ammo + items.
+-- loadout.weapons = { sidearm = <Weapons id> }: EVERY crew member starts a crossing with only the
+-- Service Revolver. Long guns are unlocked at the Quartermaster (Scrip) and chosen there.
 
 local Characters = {}
 
@@ -243,8 +244,8 @@ Characters.List = {
 			duration = 4,
 		},
 		loadout = {
-			weapons = { long = "bow", sidearm = "revolver" },
-			items = { arrows = 6, pistolAmmo = 6, bottle = 2, dressing = 1, cloth = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, bottle = 2, dressing = 1, cloth = 1 },
 		},
 		innate = {
 			id = "ShallowStep",
@@ -280,8 +281,8 @@ Characters.List = {
 			duration = 9,
 		},
 		loadout = {
-			weapons = { long = "shotgun", sidearm = "revolver" },
-			items = { shells = 4, pistolAmmo = 6, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, scrap = 2, tape = 1, saltBomb = 1, bottle = 1 },
 		},
 		innate = {
 			id = "Tinkerer",
@@ -317,8 +318,8 @@ Characters.List = {
 			duration = 6,
 		},
 		loadout = {
-			weapons = { long = "rifle", sidearm = "revolver" },
-			items = { rifleAmmo = 4, pistolAmmo = 6, dressing = 2, cloth = 1, alcohol = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, dressing = 2, cloth = 1, alcohol = 1 },
 		},
 		innate = {
 			id = "FieldMedic",
@@ -354,8 +355,8 @@ Characters.List = {
 			duration = 5,
 		},
 		loadout = {
-			weapons = { long = "carbine", sidearm = "revolver" },
-			items = { rifleAmmo = 7, pistolAmmo = 6, bottle = 3, fogPot = 1, dressing = 1 },
+			weapons = { sidearm = "revolver" },
+			items = { pistolAmmo = 4, bottle = 3, fogPot = 1, dressing = 1 },
 		},
 		innate = {
 			id = "DeepPockets",
@@ -583,6 +584,17 @@ return {
 			desc = "Keep the signal lantern lit until the tide turns.",
 			waves = 3, waveTime = 40, perWave = 4, lanternHP = 400, dps = 18,
 		},
+		Hunt = {
+			name = "Cut the Head Off",
+			desc = "A marked leader is out there (%d). Find them, put them down, then reach the flare.",
+			count = 1, hpMult = 3,
+			elite = { Watch = { type = "WatchRifleman", title = "Watch Captain" }, Tidebound = { type = "TideboundHook", title = "Tidebound Priest" }, Hushed = { type = "Bellwether", title = "The Matriarch" } },
+		},
+		Rescue = {
+			name = "Bring Them Home",
+			desc = "A survivor is hiding out there (%d). Find them and lead them to the Slipway flare alive.",
+			count = 1, hp = 100, grabDamage = 22,
+		},
 		Medicine = {
 			name = "Medicine Run",
 			desc = "Find %d medical caches (look inside buildings), then reach the Slipway flare.",
@@ -630,8 +642,8 @@ return {
 	},
 	Rewards = {
 		salvagePerEncounter = 15, -- +5 per Pall
-		scripPerEncounter = 10, -- +5 per encounter index
-		scripRunComplete = 50,
+		scripPerEncounter = 25, -- +10 per encounter index (spent at the Quartermaster)
+		scripRunComplete = 80,
 	},
 }
 ]]></ProtectedString></Properties></Item>
@@ -766,7 +778,7 @@ local Game = {
 	DailyWinReward = { secondWind = 1 }, -- first successful crossing each UTC day
 
 	-- Ammo Cache: reserve ammo added per weapon ammo type (once per encounter).
-	AmmoCache = { pistolAmmo = 12, rifleAmmo = 8, shells = 6, arrows = 6 },
+	AmmoCache = { pistolAmmo = 6, rifleAmmo = 4, shells = 3, arrows = 4 },
 
 	FerryOrigin = Vector3.new(0, 0, 700),
 }
@@ -787,10 +799,10 @@ return {
 		tape = { name = "Tape", kind = "part", cap = 3 },
 		canister = { name = "Canister", kind = "part", cap = 3 },
 		-- ammunition (reserve; magazines live on the weapon)
-		pistolAmmo = { name = "Revolver rounds", kind = "ammo", cap = 18 },
-		rifleAmmo = { name = "Rifle rounds", kind = "ammo", cap = 12 },
-		shells = { name = "Shells", kind = "ammo", cap = 8 },
-		arrows = { name = "Arrows", kind = "ammo", cap = 10 },
+		pistolAmmo = { name = "Revolver rounds", kind = "ammo", cap = 12 },
+		rifleAmmo = { name = "Rifle rounds", kind = "ammo", cap = 8 },
+		shells = { name = "Shells", kind = "ammo", cap = 6 },
+		arrows = { name = "Arrows", kind = "ammo", cap = 8 },
 		-- consumables, throwables, tools
 		dressing = { name = "Field Dressing", kind = "consumable", cap = 2 },
 		bottle = { name = "Bottle", kind = "throwable", cap = 3 },
@@ -830,7 +842,7 @@ return {
 	Shove = { range = 5.5, cooldown = 4, stun = 2.2, noise = 12 },
 
 	-- What one Resupply token gives (fixed, never random).
-	Resupply = { pistolAmmo = 6, dressing = 1, bottle = 1 },
+	Resupply = { pistolAmmo = 4, dressing = 1, bottle = 1 },
 
 	-- Satchel upgrades (workbench) raise these.
 	CapBonus = { satchel = 1, ammoPouch = 0.5 },
@@ -838,6 +850,7 @@ return {
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">Loot</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Searchable containers and loose items. Loot rolls are free and random (never paid).
+-- Ammo is deliberately scarce: a box gives 1 to 3 rounds, so every shot is a decision.
 -- entry = { item, weight, min, max }; item "salvage" is the run currency.
 return {
 	Containers = {
@@ -849,19 +862,19 @@ return {
 	Tables = {
 		household = {
 			{ "cloth", 30, 1, 1 }, { "alcohol", 26, 1, 1 }, { "tape", 14, 1, 1 }, { "canister", 10, 1, 1 },
-			{ "dressing", 4, 1, 1 }, { "bottle", 12, 1, 1 }, { "salvage", 22, 4, 9 }, { "pistolAmmo", 10, 2, 4 },
+			{ "dressing", 4, 1, 1 }, { "bottle", 12, 1, 1 }, { "salvage", 22, 4, 9 }, { "pistolAmmo", 6, 1, 2 },
 		},
 		workshop = {
 			{ "scrap", 30, 1, 1 }, { "tape", 22, 1, 1 }, { "powder", 18, 1, 1 }, { "canister", 14, 1, 1 },
-			{ "salvage", 26, 6, 12 }, { "arrows", 8, 2, 3 },
+			{ "salvage", 26, 6, 12 }, { "arrows", 6, 1, 2 },
 		},
 		ammo = {
-			{ "pistolAmmo", 30, 3, 6 }, { "rifleAmmo", 18, 2, 3 }, { "shells", 16, 2, 3 }, { "arrows", 14, 2, 4 },
-			{ "powder", 10, 1, 1 }, { "salvage", 12, 5, 10 },
+			{ "pistolAmmo", 24, 1, 3 }, { "rifleAmmo", 14, 1, 2 }, { "shells", 12, 1, 2 }, { "arrows", 12, 1, 3 },
+			{ "powder", 14, 1, 1 }, { "salvage", 18, 5, 10 },
 		},
 		loose = {
 			{ "cloth", 18, 1, 1 }, { "alcohol", 16, 1, 1 }, { "scrap", 18, 1, 1 }, { "tape", 10, 1, 1 },
-			{ "powder", 8, 1, 1 }, { "canister", 8, 1, 1 }, { "bottle", 14, 1, 1 }, { "pistolAmmo", 10, 2, 3 },
+			{ "powder", 8, 1, 1 }, { "canister", 8, 1, 1 }, { "bottle", 14, 1, 1 }, { "pistolAmmo", 5, 1, 2 },
 			{ "salvage", 12, 3, 6 },
 		},
 	},
@@ -5287,8 +5300,8 @@ return {
 }
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX00000012"><Properties><string name="Name">Projects</string><ProtectedString name="Source"><![CDATA[--!nonstrict
--- Meridian projects: permanent upgrades to the homebase, paid with Scrip and Materials
--- (both earned by playing missions). Each one physically adds a room or fitting to the ferry,
+-- Meridian projects: permanent upgrades to the homebase, paid with Materials (earned at the end
+-- of every mission; Scrip is for the Quartermaster store). Each one physically adds a room or fitting to the ferry,
 -- and many unlock new mission types or maps. A Shipwright's Crew token (earned, or bought with
 -- Robux) completes one project instantly without the materials.
 --
@@ -5297,18 +5310,19 @@ return {
 local Projects = {}
 
 Projects.List = {
-	{ id = "lights", name = "Deck Lights", desc = "String the Meridian with lights again.", scrip = 20, materials = 10 },
-	{ id = "generator", name = "Generator Room", desc = "Power below decks. Start every crossing with +15 Salvage.", scrip = 40, materials = 25 },
-	{ id = "workshop", name = "Workshop", desc = "A proper shed for the workbench. Workbench upgrades cost 15% less.", scrip = 60, materials = 40, requires = "generator" },
-	{ id = "sickbay", name = "Infirmary", desc = "Start every crossing with an extra Field Dressing. Unlocks Medicine Run missions.", scrip = 80, materials = 60, unlocks = { missions = { "Medicine" } } },
-	{ id = "radio", name = "Radio Room", desc = "The tide chart offers 3 routes. Unlocks Restore the Signal missions.", scrip = 100, materials = 80, requires = "generator", unlocks = { missions = { "Relay" } } },
-	{ id = "armory", name = "Armory", desc = "Choose your long gun before a crossing. Unlocks Burn the Nests missions.", scrip = 120, materials = 100, requires = "workshop", unlocks = { missions = { "Nests" } } },
-	{ id = "chartroom", name = "Chart Room", desc = "Old survey charts. Unlocks Hollow Pines on the tide chart.", scrip = 150, materials = 120, requires = "radio", unlocks = { maps = { "HollowPines" } } },
-	{ id = "lookout", name = "Lookout Tower", desc = "Spot trouble early: every encounter opens with a Tide Sense pulse for the whole crew.", scrip = 200, materials = 160, requires = "chartroom" },
+	{ id = "lights", name = "Deck Lights", desc = "Crew morale: +10% Scrip from every mission.", scrip = 0, materials = 20 },
+	{ id = "generator", name = "Generator Room", desc = "Start every crossing with +20 Salvage for the workbench.", scrip = 0, materials = 45 },
+	{ id = "workshop", name = "Workshop", desc = "Workbench upgrades 25% cheaper; +1 from every arrow, spike and salt bomb you craft.", scrip = 0, materials = 70, requires = "generator" },
+	{ id = "sickbay", name = "Infirmary", desc = "+15 max health and an extra Field Dressing every crossing. Unlocks Medicine Run missions.", scrip = 0, materials = 90, unlocks = { missions = { "Medicine" } } },
+	{ id = "radio", name = "Radio Room", desc = "The tide chart offers 3 routes. Unlocks Restore the Signal missions.", scrip = 0, materials = 110, requires = "generator", unlocks = { missions = { "Relay" } } },
+	{ id = "armory", name = "Armory", desc = "+1 backpack gun slot and 15% off at the Quartermaster. Unlocks Burn the Nests missions.", scrip = 0, materials = 140, requires = "workshop", unlocks = { missions = { "Nests" } } },
+	{ id = "chartroom", name = "Chart Room", desc = "Unlocks Hollow Pines and +15% Materials from every mission.", scrip = 0, materials = 170, requires = "radio", unlocks = { maps = { "HollowPines" } } },
+	{ id = "lookout", name = "Lookout Tower", desc = "Every encounter opens with a Tide Sense pulse for the whole crew: you see the Hushed through walls.", scrip = 0, materials = 220, requires = "chartroom" },
 }
 
+
 -- Mission types / maps available without any project.
-Projects.BaseMissions = { "Salvage", "LanternWatch", "Drift" }
+Projects.BaseMissions = { "Salvage", "LanternWatch", "Drift", "Hunt", "Rescue" }
 Projects.BaseMaps = { "CanneryRow", "LarkspurStreet" }
 
 -- How Materials are earned (MatchService).
@@ -5331,7 +5345,30 @@ end
 
 return Projects
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000013"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Quartermaster: the Meridian's store, paid with Scrip (earned at the end of every mission).
+-- Separate from Meridian projects (Materials). Nothing here is sold for Robux.
+--   Guns: permanent unlocks. Everyone starts with only the Service Revolver.
+--   Kits: supplies delivered at the start of your NEXT crossing (up to 2 of each).
+-- The Armory project takes 15% off.
+return {
+	Guns = {
+		{ id = "carbine", price = 150, desc = "Lever carbine: steady, mid-range, 6 rounds." },
+		{ id = "bow", price = 180, desc = "Recurve bow: silent; arrows can be recovered and crafted." },
+		{ id = "shotgun", price = 220, desc = "Pump shotgun: devastating up close, 4 shells, reload shell by shell." },
+		{ id = "rifle", price = 300, desc = "Bolt rifle: long range and powerful, 4 rounds; takes a scope at the workbench." },
+	},
+	Kits = {
+		{ id = "rounds", name = "Spare rounds", desc = "+4 revolver rounds", price = 20, items = { pistolAmmo = 4 } },
+		{ id = "longrounds", name = "Long-gun ammunition", desc = "+3 rifle rounds, +2 shells, +3 arrows", price = 35, items = { rifleAmmo = 3, shells = 2, arrows = 3 } },
+		{ id = "medkit", name = "Field kit", desc = "+1 Field Dressing, +1 Cloth", price = 30, items = { dressing = 1, cloth = 1 } },
+		{ id = "throwables", name = "Throwables", desc = "+1 Bottle, +1 Flare Pot", price = 35, items = { bottle = 1, flarePot = 1 } },
+	},
+	MaxKitsEach = 2,
+	BackpackSlots = 1, -- +1 with the Armory project
+}
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Quest board challenges on the Meridian. Three dailies and two weeklies, picked the same for
 -- everyone each day / week. Progress counts from encounters; rewards pay out automatically.
 -- stat: takedowns | kills | objectives | wins | unseenWins | crossings | breakwater
@@ -5354,7 +5391,7 @@ return {
 	WeeklyCount = 2,
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000014"><Properties><string name="Name">Rigs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000015"><Properties><string name="Name">Rigs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Realistic characters. Three ways to give a crew member a realistic body, best first:
 --   1. Custom rig: put an R15-compatible Model named e.g. "Mara" in ServerStorage > Rigs
 --      (made in Blender from a MakeHuman/your own mesh, then Studio's Avatar Setup tool).
@@ -5385,7 +5422,7 @@ return {
 	},
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000015"><Properties><string name="Name">Skies</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">Skies</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Skybox image IDs (generated by tools/make_skies.py, uploaded via Open Cloud).
 -- The four side faces share one image (seamless whatever the face order).
 return {
@@ -5396,7 +5433,7 @@ return {
 	night = { Side = 113770266487869, Up = 122006218340804, Dn = 133935145366936 },
 }
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000016"><Properties><string name="Name">Sounds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Sounds</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every sound in the game. The audio itself is our own (generated by tools/make_sounds.py
 -- into aftertide/audio/*.ogg). Upload those files to Roblox (docs/08-audio.md) and paste
 -- each ID here as "rbxassetid://123456". An empty ID is silent; the noise the Hushed hear
@@ -5492,7 +5529,7 @@ Sounds.Volume = VOLUME
 
 return Sounds
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000017"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Upgrades</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Two kinds of upgrade:
 --   * Workbench (per run, paid with Salvage found in the run): weapon parts, satchel, perks.
 --   * Meridian repairs (permanent, paid with Scrip earned by playing): the homebase.
@@ -5546,7 +5583,7 @@ Upgrades.Repairs = require(script.Parent.Projects).List
 
 return Upgrades
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000018"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000019"><Properties><string name="Name">Weapons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fictional, stylised weapons (no real brands or real-world specs). Damage is against the
 -- Hushed (Drifter = 100 HP). Gunshots are LOUD: every shot is a noise event, so going loud
 -- is a choice with consequences. The bow is the quiet option.
@@ -5559,52 +5596,53 @@ return {
 		revolver = {
 			name = "Service Revolver", slot = "sidearm", ammo = "pistolAmmo",
 			mag = 6, damage = 38, headMult = 2.5, pellets = 1,
-			fireDelay = 0.42, reload = 2.2, range = 180,
-			spreadHip = 4, spreadAim = 0.7, moveSpread = 2.5, recoil = 3.2,
-			impact = 1.2, recoilPattern = { 0.15, -0.2, 0.25, -0.1, 0.2, -0.25 }, adsTime = 0.16,
+			fireDelay = 0.42, reload = 2.5, range = 180,
+			spreadHip = 5.2, spreadAim = 0.7, moveSpread = 3.4, recoil = 3.7,
+			impact = 1.2, recoilPattern = { 0.15, -0.2, 0.25, -0.1, 0.2, -0.25 }, adsTime = 0.24,
 			noise = 75, aimFov = 52,
 		},
 		rifle = {
 			name = "Bolt Rifle", slot = "long", ammo = "rifleAmmo",
 			mag = 4, damage = 95, headMult = 2.2, pellets = 1,
-			fireDelay = 1.25, reload = 3.0, range = 320,
-			spreadHip = 7, spreadAim = 0.12, moveSpread = 4, recoil = 7,
-			impact = 2.2, recoilPattern = { 0.1 }, adsTime = 0.3,
+			fireDelay = 1.25, reload = 3.4, range = 320,
+			spreadHip = 9.1, spreadAim = 0.12, moveSpread = 5.4, recoil = 8.0,
+			impact = 2.2, recoilPattern = { 0.1 }, adsTime = 0.38,
 			noise = 115, aimFov = 42,
 		},
 		carbine = {
 			name = "Lever Carbine", slot = "long", ammo = "rifleAmmo",
-			mag = 7, damage = 55, headMult = 2.0, pellets = 1,
-			fireDelay = 0.55, reload = 3.2, range = 240,
-			spreadHip = 5, spreadAim = 0.4, moveSpread = 3, recoil = 4.5,
-			impact = 1.4, recoilPattern = { 0.2, 0.3, -0.1, 0.35, 0.1, -0.2, 0.3 }, adsTime = 0.22,
+			mag = 6, damage = 55, headMult = 2.0, pellets = 1,
+			fireDelay = 0.55, reload = 3.6, range = 240,
+			spreadHip = 6.5, spreadAim = 0.4, moveSpread = 4.1, recoil = 5.2,
+			impact = 1.4, recoilPattern = { 0.2, 0.3, -0.1, 0.35, 0.1, -0.2, 0.3 }, adsTime = 0.3,
 			noise = 95, aimFov = 48,
 		},
 		shotgun = {
 			name = "Pump Shotgun", slot = "long", ammo = "shells",
 			mag = 4, damage = 16, headMult = 1.5, pellets = 9, falloff = true, perShell = true,
-			fireDelay = 0.95, reload = 3.2, range = 55,
-			spreadHip = 7.5, spreadAim = 5, moveSpread = 2, recoil = 8,
-			impact = 2.6, recoilPattern = { -0.25, 0.3, -0.2, 0.25 }, adsTime = 0.24,
+			fireDelay = 0.95, reload = 3.6, range = 55,
+			spreadHip = 9.8, spreadAim = 5, moveSpread = 2.7, recoil = 9.2,
+			impact = 2.6, recoilPattern = { -0.25, 0.3, -0.2, 0.25 }, adsTime = 0.32,
 			noise = 100, aimFov = 56,
 		},
 		bow = {
 			name = "Recurve Bow", slot = "long", ammo = "arrows",
 			mag = 1, damage = 70, headMult = 2.2, pellets = 1, autoReload = true,
-			fireDelay = 0.85, reload = 0.6, range = 220,
-			spreadHip = 3, spreadAim = 0.35, moveSpread = 1.5, recoil = 1.5,
-			impact = 1.6, recoilPattern = { 0 }, adsTime = 0.26,
+			fireDelay = 0.85, reload = 0.7, range = 220,
+			spreadHip = 3.9, spreadAim = 0.35, moveSpread = 2.0, recoil = 1.7,
+			impact = 1.6, recoilPattern = { 0 }, adsTime = 0.34,
 			noise = 5, aimFov = 50, projectile = { speed = 170, gravityScale = 0.35 },
 		},
 	},
 	Order = { "revolver", "carbine", "rifle", "shotgun", "bow" },
 	LongGuns = { "carbine", "rifle", "shotgun", "bow" },
-	SwapTime = 0.45,
+	SwapTime = 0.6, -- holster <-> hands
+	PackSwapTime = 2.4, -- digging a gun out of the backpack (TLOU-style holster system)
 	HeadshotNoiseMult = 1,
 }
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX0000001A"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">MeshKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Fits sculpted meshes (from tools/build_assets.py) onto a live skeleton.
 --
 -- Each segment mesh was sculpted around canonical joints (MeshMeta: top / bottom anchors).
@@ -5971,7 +6009,7 @@ end
 
 return MeshKit
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001B"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">Net</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every client<->server message goes through these RemoteEvents. The server creates them;
 -- clients wait for them. Server handlers are rate-limited and wrapped in pcall so a bad
 -- payload can never crash a service. Validate EVERY argument in the handler.
@@ -6061,7 +6099,7 @@ end
 
 return Net
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001C"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">Stats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Combines a character's innate perk and chosen perk into one modifier table.
 local Characters = require(script.Parent.Config.Characters)
 
@@ -6146,7 +6184,7 @@ end
 
 return Stats
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000020"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000001D"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000021"><Properties><string name="Name">Util</string></Properties><Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">Geometry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 local CollectionService = game:GetService("CollectionService")
 
 local Geometry = {}
@@ -6189,7 +6227,7 @@ end
 
 return Geometry
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001E"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- One-shot 3D sounds and attached loops, mixed through four SoundGroups (SFX, Ambience,
 -- Music, UI).
 --
@@ -6332,7 +6370,7 @@ end
 
 return Sfx
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000001F"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000020"><Properties><string name="Name">Spring</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Critically damped spring. Works for numbers and Vector3s.
 -- frequency = how quickly it settles (higher = snappier).
 local Spring = {}
@@ -6366,7 +6404,7 @@ end
 return Spring
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="ModuleScript" referent="RBX00000021"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000022"><Properties><string name="Name">WeaponModels</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds stylised weapon models from parts (placeholders until Stage 5 meshes).
 -- Each model: PrimaryPart "Grip" (held in the right hand), barrel along -Z, and an
 -- Attachment "Muzzle" at the barrel tip. Parts are massless and ignored by raycasts.
@@ -6531,7 +6569,7 @@ return WeaponModels
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX0000003F"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003E"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000024"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ServerScriptService" referent="RBX00000040"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000003F"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000025"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE server bootstrap. Every service exposes optional init(registry) and start().
 -- init wires dependencies (no yielding); start begins loops and connections.
 local Players = game:GetService("Players")
@@ -6599,7 +6637,7 @@ end)
 
 print("[AFTERTIDE] server ready")
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000029"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000025"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000002A"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- CANNERY ROW: a coastal fish cannery, container yard, net shed and tidal shallows.
 -- Bright overcast midday. Terrain ground (asphalt yard, concrete, grass verges, mud),
 -- real terrain water in the shallows, reeds and tall grass to hide in.
@@ -6806,7 +6844,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000026"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- HOLLOW PINES: forest hills above the coast. Pines, rocks, ferns, a creek, meadows of tall
 -- grass, three cabins and an old ranger lookout. Misty morning.
 local MapKit = require(script.Parent.MapKit)
@@ -6975,7 +7013,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000027"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- LARKSPUR STREET: an overgrown suburban street. Weatherboard houses you can enter, yards
 -- gone to tall grass, wrecked cars, power poles, a corner store. Warm golden afternoon.
 local MapKit = require(script.Parent.MapKit)
@@ -7114,7 +7152,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared building blocks for the encounter maps: parts, volumes, walls, lights, terrain,
 -- grass, props (sculpted meshes when loaded, part fallbacks otherwise) and houses.
 local CollectionService = game:GetService("CollectionService")
@@ -7844,7 +7882,7 @@ end
 return MapKit
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="Folder" referent="RBX0000003D"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000003E"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every non-gun player action, validated server-side. The client only sends intent:
 --   Action("Quiet")                     Quieting from behind / with a Tide Spike, else shove
 --   Action("Throw", {dir, item})        bottle / flare pot / fog pot / salt bomb
@@ -7948,10 +7986,18 @@ local function melee(player, info)
 			local e = entry.enemy
 			local to = Geometry.flat(e.root.Position - pos)
 			if to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.35 then
-				local damage = MELEE.damage[combo] * (e.cfg.shoveable and 1 or 0.5)
-				local killed = Services.EnemyService.damage(e, damage, player, false)
-				Sfx.at(e.root.Position, "MeleeHit", 0.7, 50, 0.1)
-				Net.notify(player, "Hit", { kill = killed, melee = true })
+				-- sneak strike: an enemy that hasn't noticed you, hit from behind
+				local unaware = e.state ~= "Chase" and e.state ~= "Grabbed" and e.root.CFrame.LookVector:Dot(to.Unit) > 0.2
+				local damage = MELEE.damage[combo] * (e.cfg.shoveable and 1 or 0.5) * (unaware and 3 or 1)
+				local killed = Services.EnemyService.damage(e, damage, unaware and nil or player, false, { zone = "torso", direction = to.Unit, force = unaware and 1.8 or 1 })
+				if unaware and not killed then
+					Services.EnemyService.stun(e, 1.2, player)
+				end
+				Sfx.at(e.root.Position, "MeleeHit", unaware and 0.4 or 0.7, unaware and 20 or 50, 0.1)
+				Net.notify(player, "Hit", { kill = killed, melee = true, headshot = unaware })
+				if killed and unaware then
+					Services.MatchService.onEnemyKilled(player, e)
+				end
 				if not killed and combo == 3 and e.cfg.shoveable then
 					Services.EnemyService.stun(e, Items.Shove.stun, player)
 					e.root.AssemblyLinearVelocity = to.Unit * 34
@@ -7963,6 +8009,7 @@ local function melee(player, info)
 	end)
 	Services.PerceptionService.emitNoise(pos, MELEE.noise, "melee", player)
 end
+
 
 local function dodge(player, info, direction)
 	local session = info.session
@@ -7995,8 +8042,55 @@ local function quietEnemy(player, info, e, duration)
 	Services.InventoryService.add(player, "salvage", Items.Quieting.salvage)
 end
 
+-- Grab (human shield) -----------------------------------------------------------------------
+-- Sneak up behind a human enemy and grab them: you move slowly and can still fire your
+-- revolver; their friends hesitate to shoot through them; F again = silent takedown; after a
+-- few seconds you shove them away, stunned. The Hushed don't care about hostages.
+local GRAB_TIME = 8
+
+local function releaseGrab(player, info, takedown)
+	local session = info.session
+	local e = session.grabbing
+	session.grabbing = nil
+	info.char:SetAttribute("Grabbing", false)
+	if not e or e.dead then
+		return
+	end
+	Services.EnemyService.release(e)
+	if takedown then
+		local duration = Items.Quieting.time * session.mods.takedownTimeMult
+		quietEnemy(player, info, e, duration)
+	else
+		local away = info.root.CFrame.LookVector
+		e.root.AssemblyLinearVelocity = away * 30
+		Services.EnemyService.stun(e, 1.8, player)
+	end
+end
+ActionService.releaseGrab = releaseGrab
+
+local function grab(player, info, e)
+	local session = info.session
+	session.grabbing = e
+	info.char:SetAttribute("Grabbing", true)
+	cue(info, "GrabAt")
+	Services.EnemyService.grab(e, player, info.root)
+	Sfx.at(info.root.Position, "MeleeHit", 0.3, 20)
+	local id = os.clock()
+	session.grabId = id
+	task.delay(GRAB_TIME, function()
+		if session.grabbing == e and session.grabId == id then
+			releaseGrab(player, info, false)
+		end
+	end)
+	toast(player, "Grabbed! Their friends won't shoot through them. F: silent takedown")
+end
+
 local function quiet(player, info)
 	if isBusy(info) then
+		return
+	end
+	if info.session.grabbing then
+		releaseGrab(player, info, true)
 		return
 	end
 	local pos = info.root.Position
@@ -8006,7 +8100,11 @@ local function quiet(player, info)
 	for _, entry in near do
 		local e = entry.enemy
 		if entry.distance <= Items.Quieting.range and Services.EnemyService.canQuiet(e, pos) then
-			quietEnemy(player, info, e, duration)
+			if e.cfg.human then
+				grab(player, info, e)
+			else
+				quietEnemy(player, info, e, duration)
+			end
 			return
 		end
 	end
@@ -8351,7 +8449,7 @@ local function heal(player, info)
 	if isBusy(info) then
 		return
 	end
-	if info.session.hp >= Game.MaxHP then
+	if info.session.hp >= (info.session.maxHp or Game.MaxHP) then
 		toast(player, "Already at full health")
 		return
 	end
@@ -8473,6 +8571,29 @@ function ActionService.useAmmoCache(player)
 	return true
 end
 
+-- Holster system: get a gun out of the backpack (kneel and dig; can't shoot meanwhile).
+local function swapPack(player, info, index)
+	index = tonumber(index) or 1
+	if isBusy(info) or info.session.grabbing then
+		return
+	end
+	local pack = Services.InventoryService.packList(player)
+	if not pack[math.floor(index)] then
+		toast(player, "Nothing else in your backpack")
+		return
+	end
+	Services.WeaponService.holster(player)
+	cue(info, "PackAt")
+	Sfx.at(info.root.Position, "Search", 0.5, 25)
+	Services.PerceptionService.emitNoise(info.root.Position, 6, "pack", player)
+	channel(info, Weapons.PackSwapTime, function()
+		if Services.InventoryService.swapPack(player, math.floor(index)) then
+			Services.WeaponService.onSpawn(player, info.char)
+			Services.WeaponService.equip(player, "long")
+		end
+	end)
+end
+
 -- Dispatcher ---------------------------------------------------------------------------------
 
 local HANDLERS = {
@@ -8495,10 +8616,11 @@ local HANDLERS = {
 	Dodge = function(player, info, direction)
 		dodge(player, info, direction)
 	end,
+	SwapPack = swapPack,
 }
 
 -- Actions allowed on the Meridian (no encounter running).
-local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true }
+local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true, SwapPack = true }
 
 function ActionService.init(registry)
 	Services = registry
@@ -8542,7 +8664,7 @@ end
 
 return ActionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Thin wrapper over AnalyticsService so we can see (Creator Hub > Analytics) where Scrip is
 -- earned and spent and which products sell. Never throws: analytics must not break gameplay.
 local AnalyticsService = game:GetService("AnalyticsService")
@@ -8586,7 +8708,7 @@ end
 
 return AnalyticsHelper
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Lightweight movement sanity checks. Roblox lets clients simulate their own character, so
 -- speed hacks are possible; we detect impossible displacement and pull the player back.
 -- PvE-only design keeps the stakes low (docs/02-technical-architecture.md section 2.4).
@@ -8662,7 +8784,7 @@ end
 
 return AntiCheatService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Loads the sculpted mesh packs (Config/AssetIds) once at server start and hands out clones.
 -- Sources, in order: ServerStorage > Assets > <Pack> (imported in Studio), then
 -- InsertService:LoadAsset(id) for uploaded packs. Missing packs => built-in fallbacks.
@@ -8949,7 +9071,7 @@ end
 
 return AssetService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
 -- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
 --
@@ -9230,7 +9352,7 @@ local function setupCharacter(player, char, session, isCustomRig)
 	CharacterService.addFlashlight(char)
 
 	char:SetAttribute("HP", session.hp)
-	char:SetAttribute("MaxHP", Game.MaxHP)
+	char:SetAttribute("MaxHP", session.maxHp or Game.MaxHP)
 	char:SetAttribute("Downed", false)
 	char:SetAttribute("Out", false)
 	char:SetAttribute("Torch", false)
@@ -9258,7 +9380,8 @@ function CharacterService.spawn(player, cframe, resetInventory)
 	end
 	local def = Characters.List[session.charId]
 
-	session.hp = Game.MaxHP
+	session.maxHp = Game.MaxHP + (Services.PlayerDataService.hasRepair(player, "sickbay") and 15 or 0) -- Infirmary
+	session.hp = session.maxHp
 	session.downed = false
 	session.out = false
 	session.busyUntil = 0
@@ -9378,7 +9501,7 @@ function CharacterService.heal(player, amount)
 	if not session or not char or session.downed or session.out then
 		return
 	end
-	session.hp = math.min(Game.MaxHP, session.hp + amount)
+	session.hp = math.min(session.maxHp or Game.MaxHP, session.hp + amount)
 	char:SetAttribute("HP", session.hp)
 end
 
@@ -9397,7 +9520,7 @@ function CharacterService.revive(player, hp)
 		return false
 	end
 	session.downed = false
-	session.hp = math.clamp(hp, 1, Game.MaxHP)
+	session.hp = math.clamp(hp, 1, session.maxHp or Game.MaxHP)
 	char:SetAttribute("Downed", false)
 	char:SetAttribute("HP", session.hp)
 	removeRevivePrompt(char)
@@ -9425,6 +9548,10 @@ function CharacterService.down(player)
 	local char = player.Character
 	if not session or not char or session.downed then
 		return
+	end
+	if session.grabbing then
+		local info = { session = session, char = char, root = char:FindFirstChild("HumanoidRootPart") }
+		pcall(Services.ActionService.releaseGrab, player, info, false)
 	end
 	session.downed = true
 	session.hp = 0
@@ -9544,7 +9671,7 @@ end
 
 return CharacterService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Developer product receipts. Rules that matter:
 --   * Idempotent: a receipt (PurchaseId) is granted exactly once, even if Roblox retries.
 --   * Only report PurchaseGranted once the grant is saved (or we're in memory-only Studio mode).
@@ -9646,7 +9773,7 @@ end
 
 return CommerceService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Wardrobe (server side): who owns which outfit, buying outfits with Scrip, equipping,
 -- the Supporter game pass, and the colours a crew member should be dressed in.
 -- Cosmetic only: nothing here touches stats.
@@ -9781,7 +9908,7 @@ end
 
 return CosmeticsService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Hushed. Server-simulated, one state machine per enemy:
 --   Patrol -> (notice) -> Investigate -> Search -> Patrol
 --   any    -> (suspicion >= 1 or shot) -> Chase -> (lost sight) -> Search
@@ -10192,6 +10319,25 @@ local function humanAttack(e, info, dist, seen, now)
 				chance *= 0.7
 			end
 			local aim = info.root.Position + Vector3.new(0, 0.8, 0)
+			-- their friend is in the way: hold fire and flank instead of shooting through them
+			local hostage = EnemyService.hostageOf(info.player)
+			if hostage then
+				local line = aim - muzzle
+				local toH = hostage.root.Position - muzzle
+				local t = toH:Dot(line.Unit)
+				if t > 0 and t < line.Magnitude + 1 and (toH - line.Unit * t).Magnitude < 2.8 then
+					e.nextShotAt = now + 0.7
+					e.flank = e.flank or (rng:NextNumber() < 0.5 and -1 or 1)
+					e.humanoid.WalkSpeed = cfg.investigateSpeed
+					e.humanoid:MoveTo(e.root.Position + e.root.CFrame.RightVector * e.flank * 9)
+					e.model:SetAttribute("Aiming", false)
+					if now > (e.nextHoldFire or 0) then
+						e.nextHoldFire = now + 6
+						Sfx.at(e.root.Position, cfg.callout or "Radio_Callout", 0.7, 90)
+					end
+					return
+				end
+			end
 			local hit = rng:NextNumber() < chance
 			if not hit then
 				aim += Vector3.new(rng:NextNumber(-3, 3), rng:NextNumber(-1, 2), rng:NextNumber(-3, 3))
@@ -10221,6 +10367,10 @@ end
 
 local function update(e, dt, now, active)
 	local cfg = e.cfg
+	if e.state == "Grabbed" then
+		publishSuspicion(e, active)
+		return
+	end
 
 	if now < e.stunUntil then
 		stop(e)
@@ -10441,6 +10591,12 @@ function EnemyService.spawn(typeName, position, opts)
 		state = "",
 		stateTime = os.clock(),
 	}
+	if opts.elite then
+		e.hp = cfg.hp * (opts.hpMult or 3)
+		e.maxHp = e.hp
+		e.isTarget = true
+		model:SetAttribute("Elite", opts.elite)
+	end
 	setState(e, "Patrol")
 	table.insert(enemies, e)
 	byModel[model] = e
@@ -10545,6 +10701,50 @@ function EnemyService.stun(e, duration, byPlayer, newState)
 	stop(e)
 end
 
+-- Grabbed (human shield): held in front of the grabber until released.
+local hostages = {} -- [Player] = enemy
+function EnemyService.grab(e, player, grabberRoot)
+	if e.dead then
+		return
+	end
+	e.grabbedBy = grabberRoot
+	hostages[player] = e
+	e.stunUntil = math.huge
+	e.target = nil
+	setState(e, "Grabbed")
+	stop(e)
+	e.root.Anchored = true
+	for _, p in e.model:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.CanCollide = false
+		end
+	end
+	Services.CharacterService.setFlashlight(e.model, false)
+end
+
+function EnemyService.release(e)
+	for player, h in hostages do
+		if h == e then
+			hostages[player] = nil
+		end
+	end
+	e.grabbedBy = nil
+	if e.dead then
+		return
+	end
+	e.root.Anchored = false
+	e.root.CanCollide = true
+	e.stunUntil = os.clock()
+	pcall(function()
+		e.root:SetNetworkOwner(nil)
+	end)
+end
+
+function EnemyService.hostageOf(player)
+	local e = hostages[player]
+	return e and not e.dead and e or nil
+end
+
 function EnemyService.pin(e, duration)
 	EnemyService.stun(e, duration, nil, "Pinned")
 	local net = Instance.new("Part")
@@ -10595,6 +10795,14 @@ function EnemyService.disperse(e, byPlayer)
 		e.model:SetAttribute("State", "Ragdoll")
 		Services.CharacterService.setFlashlight(e.model, false)
 		Services.MatchService.onEnemyKilled(byPlayer, e)
+		-- sometimes they drop a few rounds of whatever they carried
+		local drop = ({ rifle = "rifleAmmo", revolver = "pistolAmmo", bow = "arrows" })[e.cfg.attack and e.cfg.attack.weapon or ""]
+		if drop and rng:NextNumber() < 0.55 then
+			local folder = Services.MapService.getEncounterFolder()
+			if folder then
+				Services.LootService.dropPickup(folder, e.root.Position - Vector3.new(0, 2.5, 0), drop, rng:NextInteger(1, 2))
+			end
+		end
 		local ok, err = pcall(EnemyService.ragdoll, e)
 		if not ok then
 			warn("[EnemyService] ragdoll failed: " .. tostring(err))
@@ -10707,7 +10915,7 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 		return false
 	end
 	e.hp -= amount
-	e.model:SetAttribute("HP", math.max(0, e.hp / e.cfg.hp))
+	e.model:SetAttribute("HP", math.max(0, e.hp / (e.maxHp or e.cfg.hp)))
 	if hit then
 		e.lastHit = hit
 		local _, side = EnemyService.zoneOf(hit.instance or e.root)
@@ -10723,9 +10931,14 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
 	if hit then
 		local force = hit.force or 1
-		if hit.zone == "leg" then
-			stagger = math.max(stagger, 0.55 * force) -- the leg buckles
-			e.limpUntil = os.clock() + 3.5
+		if hit.zone == "leg" and e.state ~= "Grabbed" then
+			-- shot in the leg: down on one knee for a moment, then a limp
+			stagger = math.max(stagger, 1.0 + 0.3 * force)
+			e.limpUntil = os.clock() + 4.5
+			e.model:SetAttribute("LegStunAt", Workspace:GetServerTimeNow())
+			if e.state ~= "Quieted" then
+				setState(e, "Stunned")
+			end
 		elseif hit.zone == "head" then
 			stagger = math.max(stagger, 0.45 * force)
 		elseif force >= 2 and e.cfg.shoveable ~= false then
@@ -10838,6 +11051,17 @@ function EnemyService.start()
 
 	local step = 1 / EnemyConfig.TickRate
 	local accumulator = 0
+	RunService.Heartbeat:Connect(function()
+		for _, e in enemies do
+			if e.grabbedBy and not e.dead then
+				if e.grabbedBy.Parent then
+					e.root.CFrame = e.grabbedBy.CFrame * CFrame.new(0.25, 0, -1.7)
+				else
+					EnemyService.release(e)
+				end
+			end
+		end
+	end)
 	RunService.Heartbeat:Connect(function(dt)
 		accumulator += dt
 		if accumulator < step then
@@ -10867,7 +11091,7 @@ end
 
 return EnemyService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian as a homebase that persists between crossings:
 --   * Repairs bought with Scrip (earned only by playing) unlock permanent bonuses and change
 --     how the ferry looks (deck lights, generator, radio mast, sick bay, armory rack).
@@ -10880,6 +11104,7 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Upgrades = require(Shared.Config.Upgrades)
 local Projects = require(Shared.Config.Projects)
+local Quartermaster = require(Shared.Config.Quartermaster)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
@@ -10897,18 +11122,125 @@ function HomebaseService.bonusesFor(player)
 	local has = function(id)
 		return Services.PlayerDataService.hasRepair(player, id)
 	end
-	local bonus = { salvage = 0, items = {} }
+	local bonus = { salvage = 0, items = {}, pack = {}, kit = {} }
 	if has("generator") then
-		bonus.salvage += 15
+		bonus.salvage += 20
 	end
 	if has("sickbay") then
 		bonus.items.dressing = 1
 	end
-	local choice = player:GetAttribute("LongGunChoice")
-	if has("armory") and type(choice) == "string" and Weapons.List[choice] and Weapons.List[choice].slot == "long" then
-		bonus.longGun = choice
+	-- the loadout chosen at the Quartermaster (only guns you've unlocked)
+	local data = Services.PlayerDataService.get(player)
+	if data then
+		local guns = data.guns or {}
+		local loadout = data.loadout or {}
+		if type(loadout.long) == "string" and guns[loadout.long] and Weapons.List[loadout.long] and Weapons.List[loadout.long].slot == "long" then
+			bonus.longGun = loadout.long
+		end
+		local slots = Quartermaster.BackpackSlots + (has("armory") and 1 or 0)
+		for _, id in loadout.pack or {} do
+			if #bonus.pack < slots and guns[id] and id ~= bonus.longGun and Weapons.List[id] and Weapons.List[id].slot == "long" then
+				table.insert(bonus.pack, id)
+			end
+		end
+		-- crossing kits bought at the Quartermaster: delivered now, then used up
+		for kitId, count in data.kit or {} do
+			for _, k in Quartermaster.Kits do
+				if k.id == kitId then
+					for itemId, amount in k.items do
+						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * count
+					end
+				end
+			end
+		end
+		data.kit = {}
+		Services.PlayerDataService.publish(player)
 	end
 	return bonus
+end
+
+-- Quartermaster -------------------------------------------------------------------------------
+
+local function qmPrice(player, price)
+	return math.floor(price * (Services.PlayerDataService.hasRepair(player, "armory") and 0.85 or 1) + 0.5)
+end
+
+local function unlockGun(player, gunId)
+	local data = Services.PlayerDataService.get(player)
+	if not data or type(gunId) ~= "string" then
+		return
+	end
+	for _, g in Quartermaster.Guns do
+		if g.id == gunId then
+			data.guns = data.guns or { revolver = true }
+			if data.guns[gunId] then
+				return
+			end
+			local price = qmPrice(player, g.price)
+			if not Services.PlayerDataService.spendScrip(player, price) then
+				toast(player, ("Need %d Scrip. Earn it by finishing missions."):format(price))
+				return
+			end
+			data.guns[gunId] = true
+			-- first long gun: put it straight in the holster
+			data.loadout = data.loadout or { long = "", pack = {} }
+			if data.loadout.long == "" or data.loadout.long == nil then
+				data.loadout.long = gunId
+			end
+			Services.PlayerDataService.publish(player)
+			Services.AnalyticsHelper.economy(player, "sink", price, Enum.AnalyticsEconomyTransactionType.Shop.Name, "Gun_" .. gunId)
+			toast(player, ("Unlocked: %s. Set your loadout at the Quartermaster."):format(Weapons.List[gunId].name))
+			task.spawn(Services.PlayerDataService.save, player)
+			return
+		end
+	end
+end
+
+local function setLoadout(player, long, pack)
+	local data = Services.PlayerDataService.get(player)
+	if not data then
+		return
+	end
+	local guns = data.guns or {}
+	local clean = { long = "", pack = {} }
+	if type(long) == "string" and guns[long] and Weapons.List[long] and Weapons.List[long].slot == "long" then
+		clean.long = long
+	end
+	local slots = Quartermaster.BackpackSlots + (Services.PlayerDataService.hasRepair(player, "armory") and 1 or 0)
+	if type(pack) == "table" then
+		for _, id in pack do
+			if #clean.pack < slots and type(id) == "string" and guns[id] and id ~= clean.long and Weapons.List[id] and Weapons.List[id].slot == "long" and not table.find(clean.pack, id) then
+				table.insert(clean.pack, id)
+			end
+		end
+	end
+	data.loadout = clean
+	Services.PlayerDataService.publish(player)
+end
+
+local function buyKit(player, kitId)
+	local data = Services.PlayerDataService.get(player)
+	if not data or type(kitId) ~= "string" then
+		return
+	end
+	for _, k in Quartermaster.Kits do
+		if k.id == kitId then
+			data.kit = data.kit or {}
+			if (data.kit[kitId] or 0) >= Quartermaster.MaxKitsEach then
+				toast(player, "That's as many as the Quartermaster will pack for one crossing.")
+				return
+			end
+			local price = qmPrice(player, k.price)
+			if not Services.PlayerDataService.spendScrip(player, price) then
+				toast(player, ("Need %d Scrip."):format(price))
+				return
+			end
+			data.kit[kitId] = (data.kit[kitId] or 0) + 1
+			Services.PlayerDataService.publish(player)
+			toast(player, k.name .. " packed for your next crossing.")
+			return
+		end
+	end
 end
 
 -- A repair is "visible" on the shared ferry if anyone in the server owns it.
@@ -11014,6 +11346,9 @@ function HomebaseService.start()
 			Services.WorkbenchService.buyPerk(player, a)
 		end,
 		Repair = repair,
+		UnlockGun = unlockGun,
+		SetLoadout = setLoadout,
+		BuyKit = buyKit,
 		OpenProjects = function(player)
 			Net.notify(player, "OpenRepairs", {})
 		end,
@@ -11046,7 +11381,7 @@ end
 
 return HomebaseService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: items, reserve ammo, two weapon slots (long gun + sidearm, with magazines)
 -- and Salvage (run currency). Server-owned; replicated to the owner as player attributes:
 --   Inv_<item>, Cap_<item>, W_long, W_longMag, W_sidearm, W_sidearmMag, Salvage
@@ -11104,12 +11439,17 @@ function InventoryService.publish(player)
 		player:SetAttribute("W_" .. slot .. "Mag", w and w.mag or 0)
 	end
 	player:SetAttribute("Salvage", inv.salvage)
+	local pack = {}
+	for _, w in inv.pack or {} do
+		table.insert(pack, w.id .. ":" .. w.mag)
+	end
+	player:SetAttribute("Pack", table.concat(pack, ","))
 end
 
 -- loadout = { weapons = {long, sidearm}, items = {...} }; bonus = { salvage, items, longGun }
 function InventoryService.reset(player, loadout, mods, bonus)
 	bonus = bonus or {}
-	local inv = { items = {}, weapons = {}, salvage = bonus.salvage or 0 }
+	local inv = { items = {}, weapons = {}, salvage = bonus.salvage or 0, pack = {} }
 	for _, itemId in Items.Order do
 		inv.items[itemId] = 0
 	end
@@ -11120,7 +11460,17 @@ function InventoryService.reset(player, loadout, mods, bonus)
 			inv.weapons[slot] = { id = weaponId, mag = Weapons.List[weaponId].mag }
 		end
 	end
+	-- backpack guns (holster system): carried, but slow to get out
+	for _, weaponId in bonus.pack or {} do
+		if Weapons.List[weaponId] and Weapons.List[weaponId].slot == "long" and weaponId ~= long then
+			table.insert(inv.pack, { id = weaponId, mag = Weapons.List[weaponId].mag })
+		end
+	end
 	for itemId, amount in loadout.items do
+		InventoryService.add(player, itemId, amount)
+	end
+	-- a crossing kit bought at the Quartermaster
+	for itemId, amount in bonus.kit or {} do
 		InventoryService.add(player, itemId, amount)
 	end
 	if bonus.items then
@@ -11132,6 +11482,30 @@ function InventoryService.reset(player, loadout, mods, bonus)
 		InventoryService.add(player, "pistolAmmo", mods.ammoBonus)
 	end
 	InventoryService.publish(player)
+end
+
+-- Holster system: swap backpack gun #index into the long-gun holster (the holstered one goes
+-- into the backpack). The timing (kneel and dig) is enforced by ActionService.
+function InventoryService.packList(player)
+	local inv = inventories[player]
+	return inv and inv.pack or {}
+end
+
+function InventoryService.swapPack(player, index)
+	local inv = inventories[player]
+	local entry = inv and inv.pack[index]
+	if not entry then
+		return false
+	end
+	local current = inv.weapons.long
+	inv.weapons.long = { id = entry.id, mag = entry.mag }
+	if current then
+		inv.pack[index] = current
+	else
+		table.remove(inv.pack, index)
+	end
+	InventoryService.publish(player)
+	return true
 end
 
 function InventoryService.has(player)
@@ -11211,6 +11585,9 @@ end
 function InventoryService.recipeYield(player, recipe)
 	local session = Services.CharacterService.getSession(player)
 	local bonus = (recipe.perkYield and session and session.mods) and session.mods.craftYieldBonus or 0
+	if recipe.perkYield and Services.PlayerDataService.hasRepair(player, "workshop") then
+		bonus += 1 -- the Workshop's proper tools
+	end
 	return recipe.amount + bonus
 end
 
@@ -11304,7 +11681,7 @@ end
 
 return InventoryService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Leaderboards:
 --   * leaderstats (Roblox's player list): Wins and Best Pall for everyone in the server
 --   * a global top 10 (most wins) on the Meridian's board, from an OrderedDataStore
@@ -11480,7 +11857,7 @@ end
 
 return LeaderboardService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Scavenging: searchable containers (drawers, lockers, toolboxes, ammo crates) that open
 -- with a short animation, and loose items that glint in the fog. Loot is rolled from
 -- Config/Loot tables (free, never paid). What doesn't fit your satchel is dropped on the
@@ -11700,7 +12077,7 @@ end
 
 return LootService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds the grey-box world in code so the project is fully self-contained:
 --   * The Meridian (ferry hideout deck) far from the encounter
 --   * the encounter maps (src/server/Maps/*), one loaded at a time
@@ -11940,6 +12317,17 @@ local function buildFerry(parent)
 	boothLight.Parent = booth
 	prompt(booth, "Open the ledger", "The Purser's Office", function(player)
 		Services.MatchService.openShop(player)
+	end)
+
+	-- the Quartermaster's stall (Scrip store: guns, loadout, kits)
+	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(92, 78, 60), M.WoodPlanks)
+	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(70, 60, 48), M.WoodPlanks)
+	local qmLight = Instance.new("PointLight")
+	qmLight.Range = 10
+	qmLight.Color = C.warm
+	qmLight.Parent = qm
+	prompt(qm, "Trade", "The Quartermaster", function(player)
+		Services.MatchService.openMenu(player, "OpenQuartermaster")
 	end)
 
 	-- cargo
@@ -12360,6 +12748,10 @@ end
 -- Encounter objects -----------------------------------------------------------------------
 
 local encounterFolder
+
+function MapService.getEncounterFolder()
+	return encounterFolder
+end
 local extraction
 
 local function shuffled(list, rng)
@@ -12682,7 +13074,7 @@ end
 
 return MapService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Crossing director (the roguelike run):
 --   Ferry      no crossing; pick crew, shop, repairs. Tide chart -> start a crossing.
 --   Planning   at the Meridian mid-crossing: workbench, crafting, choose the next route.
@@ -12712,8 +13104,9 @@ MatchService.modifier = Modifiers.None
 
 local run = nil -- { id, index, pall, options, participants = { [Player] = true } }
 -- mission types where you complete N objectives and then extract
-local COLLECT = { Salvage = true, Medicine = true, Relay = true, Nests = true }
-local OBJECTIVE_NOUN = { Salvage = "Supply crate", Medicine = "Medical cache", Relay = "Relay", Nests = "Nest" }
+local survivor = nil -- Bring Them Home: { model, humanoid, root, hp, follow }
+local COLLECT = { Salvage = true, Medicine = true, Relay = true, Nests = true, Hunt = true, Rescue = true }
+local OBJECTIVE_NOUN = { Salvage = "Supply crate", Medicine = "Medical cache", Relay = "Relay", Nests = "Nest", Hunt = "Target", Rescue = "Survivor" }
 local enc = nil -- current encounter state
 local resultsAcknowledged = {}
 local rng = Random.new()
@@ -12866,6 +13259,13 @@ local function generateOptions()
 				for _, m in p.unlocks.maps or {} do
 					table.insert(maps, m)
 				end
+			end
+		end
+		-- never offer the mission type you just played (when there's anything else to offer)
+		if run.lastType and #types > 3 then
+			local at = table.find(types, run.lastType)
+			if at then
+				table.remove(types, at)
 			end
 		end
 		for i = #types, 2, -1 do
@@ -13069,6 +13469,8 @@ function MatchService.beginEncounter(option)
 	end
 
 	MatchService.encounterId = (MatchService.encounterId or 0) + 1
+	run.lastType = option.type
+	survivor = nil
 	enc = {
 		type = kind,
 		finale = isFinale,
@@ -13112,7 +13514,21 @@ function MatchService.beginEncounter(option)
 	end
 
 	local budget = enemyBudget()
-	if COLLECT[kind] then
+	if kind == "Hunt" then
+		local def2 = Encounters.Types.Hunt
+		local pick = def2.elite[option.faction or "Hushed"] or def2.elite.Hushed
+		local spots = Services.MapService.SupplyCandidates
+		local at = spots[rng:NextInteger(1, #spots)]
+		Services.EnemyService.spawn(pick.type, at, { elite = pick.title, hpMult = def2.hpMult, route = { at, at + Vector3.new(10, 0, 0), at + Vector3.new(0, 0, 10) } })
+		for k = 1, 2 do -- escorts
+			Services.EnemyService.spawn(Services.EnemyService.pickType(weightsForPall()), at + Vector3.new(k * 4, 0, -3), { route = { at } })
+		end
+		spawnPatrols(math.max(2, budget - 3))
+		enc.objective = ("%s: %s"):format(def.name, pick.title)
+	elseif kind == "Rescue" then
+		Services.MatchService.spawnSurvivor(rng)
+		spawnPatrols(budget)
+	elseif COLLECT[kind] then
 		spawnPatrols(budget)
 	elseif kind == "LanternWatch" then
 		spawnPatrols(math.ceil(budget * 0.4))
@@ -13225,6 +13641,115 @@ function MatchService.damageNestsNear(position, radius, amount, player)
 	end
 end
 
+-- Bring Them Home: a survivor NPC who follows whoever finds them.
+function MatchService.spawnSurvivor(rng)
+	local spots = Services.MapService.LootSpots
+	local at = spots[rng:NextInteger(1, #spots)]
+	local desc = Instance.new("HumanoidDescription")
+	local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+	model.Name = "Survivor"
+	local Characters = require(Shared.Config.Characters)
+	local kit = "Crew_" .. Characters.Order[rng:NextInteger(1, #Characters.Order)]
+	local MeshKit = require(Shared.MeshKit)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if Services.AssetService.hasKit(kit) then
+		local meta = Services.AssetService.meta(kit)
+		local okFit, hip = pcall(MeshKit.conformSkeleton, model, meta, "r15", 0.88)
+		if okFit and hip then
+			humanoid.HipHeight = hip
+			model:SetAttribute("BaseHipHeight", hip)
+		end
+		pcall(MeshKit.applyRig, model, meta, Services.AssetService.part, "r15", nil, {
+			Jacket = Color3.fromRGB(110, 96, 80), Sleeve = Color3.fromRGB(110, 96, 80), Pants = Color3.fromRGB(70, 66, 60),
+		})
+	end
+	Services.CharacterService.stripAnimator(model)
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.WalkSpeed = 14
+	model:SetAttribute("Procedural", true)
+	model:SetAttribute("Stance", "Crouch")
+	model:PivotTo(CFrame.new(at + Vector3.new(0, 4, 0)))
+	model.Parent = Services.MapService.getEncounterFolder()
+	game:GetService("CollectionService"):AddTag(model, "Survivor")
+	local root = model:FindFirstChild("HumanoidRootPart")
+	survivor = { model = model, humanoid = humanoid, root = root, hp = Encounters.Types.Rescue.hp, follow = nil, hurtAt = {} }
+	local p = Instance.new("ProximityPrompt")
+	p.ActionText = "Lead them out"
+	p.ObjectText = "Survivor"
+	p.HoldDuration = 0.6
+	p.MaxActivationDistance = 8
+	p.RequiresLineOfSight = false
+	p.Parent = root
+	p.Triggered:Connect(function(player)
+		if not survivor or survivor.follow then
+			return
+		end
+		survivor.follow = player
+		model:SetAttribute("Stance", "Stand")
+		p:Destroy()
+		enc.crates = 1
+		enc.extractionOpen = true
+		Services.MapService.activateExtraction()
+		Net.notifyAll("Toast", { text = player.DisplayName .. " found the survivor. Get them to the Slipway flare." })
+		publish()
+	end)
+	task.spawn(function() -- walk with their rescuer
+		while survivor and survivor.model == model and model.Parent do
+			local s = survivor
+			if s.follow then
+				local info = MatchService.getActiveInfo(s.follow)
+				if not info then -- rescuer went down: follow anyone standing
+					local others = MatchService.getActivePlayers()
+					info = others[1]
+					s.follow = info and info.player or s.follow
+				end
+				if info then
+					local d = (info.root.Position - s.root.Position).Magnitude
+					if d > 5 then
+						s.humanoid.WalkSpeed = d > 16 and 18 or 13
+						s.humanoid:MoveTo(info.root.Position - info.root.CFrame.LookVector * 3)
+					else
+						s.humanoid:MoveTo(s.root.Position)
+					end
+				end
+			end
+			task.wait(0.25)
+		end
+	end)
+end
+
+-- The Hushed hurt a survivor they get their hands on.
+function MatchService.tickSurvivor()
+	local s = survivor
+	if not s or not enc or not s.model.Parent then
+		return
+	end
+	local now = os.clock()
+	for _, entry in Services.EnemyService.findNear(s.root.Position, 3.6) do
+		local e = entry.enemy
+		if not e.cfg.human and e.state ~= "Stunned" and e.state ~= "Quieted" and now > (s.hurtAt[e] or 0) then
+			s.hurtAt[e] = now + 2
+			s.hp -= Encounters.Types.Rescue.grabDamage
+			Sfx.at(s.root.Position, "Hurt", 0.8, 60)
+			Net.notifyAll("Toast", { text = ("The survivor is hurt! (%d%%)"):format(math.max(0, s.hp)) })
+		end
+	end
+	s.model:SetAttribute("HP", math.max(0, s.hp))
+	if s.hp <= 0 then
+		enc.survivorDead = true
+		s.model:SetAttribute("Downed", true)
+	end
+end
+
+function MatchService.survivorAtExtraction()
+	local s = survivor
+	if not s or not s.root.Parent then
+		return false
+	end
+	local x = Services.MapService.ExtractionPos
+	return Vector3.new(s.root.Position.X - x.X, 0, s.root.Position.Z - x.Z).Magnitude <= Game.ExtractionRadius + 4
+end
+
 function MatchService.onSpotted(player, enemy)
 	local session = Services.CharacterService.getSession(player)
 	if session then
@@ -13236,6 +13761,14 @@ function MatchService.onSpotted(player, enemy)
 end
 
 function MatchService.onEnemyKilled(player, e)
+	if e and e.isTarget and enc and enc.type == "Hunt" and not enc.targetDown then
+		enc.targetDown = true
+		enc.crates = 1
+		enc.extractionOpen = true
+		Services.MapService.activateExtraction()
+		Net.notifyAll("Toast", { text = "The target is down. The Slipway flare is lit: get out." })
+		publish()
+	end
 	if not player or not player.Parent then
 		return
 	end
@@ -13314,7 +13847,8 @@ function MatchService.endEncounter(win)
 					local salvage = R.salvagePerEncounter + 5 * run.pall + (enc.option.bonus or 0)
 					Services.InventoryService.add(player, "salvage", salvage)
 					table.insert(rewards, ("+%d Salvage"):format(salvage))
-					local scrip = math.floor((R.scripPerEncounter + 5 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) + 0.5)
+					local morale = Services.PlayerDataService.hasRepair(player, "lights") and 1.1 or 1 -- Deck Lights
+					local scrip = math.floor((R.scripPerEncounter + 10 * run.index + (enc.finale and R.scripRunComplete or 0)) * Services.CosmeticsService.scripMult(player) * morale + 0.5)
 					Services.PlayerDataService.addScrip(player, scrip)
 					Services.AnalyticsHelper.economy(player, "source", scrip, Enum.AnalyticsEconomyTransactionType.Gameplay.Name, enc.finale and "CrossingComplete" or "Encounter")
 					table.insert(rewards, ("+%d Scrip"):format(scrip))
@@ -13329,7 +13863,8 @@ function MatchService.endEncounter(win)
 				-- Materials for Meridian projects (half for a failed encounter)
 				local Projects = require(Shared.Config.Projects)
 				local m = Projects.Materials
-				local mats = math.floor((m.perWin + m.perPall * run.pall + (enc.finale and m.runComplete or 0)) * (win and 1 or m.lossShare) + 0.5)
+				local charts = Services.PlayerDataService.hasRepair(player, "chartroom") and 1.15 or 1 -- Chart Room
+				local mats = math.floor((m.perWin + m.perPall * run.pall + (enc.finale and m.runComplete or 0)) * (win and 1 or m.lossShare) * charts + 0.5)
 				if runOver then
 					local leftover = player:GetAttribute("Salvage") or 0
 					mats += math.floor(leftover * m.salvageToMaterials)
@@ -13439,8 +13974,16 @@ local function tickEncounter()
 	local t = now()
 	local def = enc.finale and Encounters.Finale or Encounters.Types[enc.type]
 
+	if enc.type == "Rescue" then
+		MatchService.tickSurvivor()
+		if enc.survivorDead then
+			Net.notifyAll("Toast", { text = "The survivor didn't make it." })
+			MatchService.endEncounter(false)
+			return
+		end
+	end
 	if COLLECT[enc.type] then
-		if enc.extractionOpen and allStandingAtExtraction() then
+		if enc.extractionOpen and allStandingAtExtraction() and (enc.type ~= "Rescue" or MatchService.survivorAtExtraction()) then
 			MatchService.endEncounter(true)
 		end
 	elseif enc.type == "LanternWatch" then
@@ -13541,7 +14084,7 @@ end
 
 return MatchService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- How the Hushed sense players.
 --   Sight: range + field-of-view cone + line-of-sight raycasts, scaled by stance, cover (reeds),
 --          light (lamp pools, your torch), movement and fog.
@@ -13737,7 +14280,7 @@ end
 
 return PerceptionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Persistent player data (tokens, stats, purchase receipts) in a DataStore.
 -- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
 -- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
@@ -13776,6 +14319,9 @@ local function defaultData()
 		oneTime = {}, -- [productKey] = true (Starter Pack)
 		spent = 0, -- Robux spent (for thank-you messaging only; never affects gameplay)
 		quests = {}, -- QuestService state (daily / weekly challenges)
+		guns = { revolver = true }, -- unlocked at the Quartermaster
+		loadout = { long = "", pack = {} }, -- chosen at the Quartermaster
+		kit = {}, -- [kitId] = count, delivered at the start of the next crossing
 		firstFinaleWin = false,
 	}
 end
@@ -13785,7 +14331,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -13813,6 +14359,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
 	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
 	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))
+	player:SetAttribute("Guns", HttpService:JSONEncode(data.guns or { revolver = true }))
+	player:SetAttribute("Loadout", HttpService:JSONEncode(data.loadout or {}))
+	player:SetAttribute("Kit", HttpService:JSONEncode(data.kit or {}))
 end
 
 function PlayerDataService.publish(player)
@@ -14080,7 +14629,7 @@ end
 
 return PlayerDataService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Quest board: daily and weekly challenges (Config/Quests). The same picks for everyone that
 -- day / week; progress from encounters; rewards (Scrip + Materials) pay out on completion.
 -- Published to the client as the JSON attribute "Quests".
@@ -14264,7 +14813,7 @@ end
 
 return QuestService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Guns and the bow, fully server-authoritative:
 --   * equip/holster (long gun on the back, sidearm on the hip; models replicate to everyone)
 --   * fire: client sends only aim direction + whether it's aiming; the server applies spread
@@ -14778,7 +15327,7 @@ end
 
 return WeaponService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian's workbench, used between encounters (Planning phase) with Salvage found in
 -- the run: weapon parts, satchel upgrades, and your character's other perks.
 -- Upgrades last for the current crossing only (roguelike), like everything in the satchel.
@@ -14795,7 +15344,7 @@ local function toast(player, text)
 end
 
 local function cost(player, base)
-	local discount = Services.PlayerDataService.hasRepair(player, "workshop") and 0.85 or 1
+	local discount = Services.PlayerDataService.hasRepair(player, "workshop") and 0.75 or 1
 	return math.ceil(base * discount)
 end
 
@@ -14897,7 +15446,7 @@ return WorkbenchService
 </Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX0000005D"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX0000005C"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX0000005B"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004B"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="StarterPlayer" referent="RBX0000005F"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX0000005E"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX0000005D"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000004C"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
 --   Keyboard/mouse                     Gamepad
@@ -15179,6 +15728,12 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.B)
 
+	bind("Backpack", function(state)
+		if state == Begin and State.character and not State.downed and not State.uiOpen() then
+			act("SwapPack", 1) -- dig the backpack gun out (slow; you can't shoot meanwhile)
+		end
+	end, Enum.KeyCode.Four)
+
 	bind("AmmoCache", function(state)
 		if state == Begin and canAct() then
 			act("AmmoCache")
@@ -15196,7 +15751,7 @@ end
 
 return ActionController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Locomotion for custom realistic rigs that don't carry Roblox's default "Animate" script:
 -- blends idle / walk / run (and crouch variants) by speed using the animation IDs in
 -- Config/Rigs.Animations. Characters with an Animate script (the placeholder mannequin,
@@ -15272,7 +15827,7 @@ end
 
 return AnimationController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
 -- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
 -- swap, and mouse / gamepad / touch look.
@@ -15584,7 +16139,7 @@ end
 
 return CameraController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client-only feedback: Tide Sense highlights, knockback, hit flash, low-health grade,
 -- takedown framing, Squall lightning, and hiding your own revive prompt.
 local Lighting = game:GetService("Lighting")
@@ -15867,7 +16422,7 @@ end
 
 return EffectsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural animation for the Hushed (no animation assets needed). Drives each enemy's
 -- Motor6D skeleton from its replicated velocity, State and Gait:
 --   shamble (Drifter)   uneven, dragging steps, arms hanging and swaying
@@ -16080,11 +16635,23 @@ local function animate(model, rig, dt, now)
 	end
 
 	-- states that override the gait
-	if state == "Stunned" or state == "Pinned" then
+	local legStun = Workspace:GetServerTimeNow() - (model:GetAttribute("LegStunAt") or -100)
+	if state == "Stunned" and legStun < 1.6 then
+		-- shot in the leg: dropped to one knee, a hand down to catch themselves
+		lean, roll = 0.35, 0.1
+		lHip, rHip, lKnee, rKnee = 1.2, -0.1, -1.6, -2.0
+		lArm, rArm = 0.9, 0.3
+	elseif state == "Stunned" or state == "Pinned" then
 		local wobble = math.sin(now * 9 + rig.seed) * 0.15
 		lean, roll = -0.25, wobble
 		lArm, rArm = 0.6 + wobble, 0.5 - wobble
 		lHip, rHip, lKnee, rKnee = -0.15, 0.2, -0.3, -0.35
+	elseif state == "Grabbed" then
+		-- held from behind: clawing at the arm round their neck, feet dragging
+		local fight = math.sin(now * 11 + rig.seed) * 0.25
+		lArm, rArm, elbow = 2.3 + fight, 2.2 - fight, 1.5
+		lean, roll = -0.2, fight * 0.3
+		lHip, rHip, lKnee, rKnee = 0.2 + fight * 0.4, 0.15 - fight * 0.4, -0.3, -0.35
 	elseif state == "Quieted" or state == "Dispersed" or state == "Down" then
 		lean, roll = 0.5, 0.1
 		lHip, rHip, lKnee, rKnee = 0.9, 0.85, -1.6, -1.5
@@ -16189,7 +16756,7 @@ end
 
 return EnemyAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Graphics presets. Roblox decides the core render quality per device (from the player's
 -- graphics slider); these presets layer extra effects on top and decide how many costly
 -- things run:
@@ -16463,7 +17030,7 @@ end
 
 return GraphicsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Stances, speed states with acceleration, wading, aim-facing (strafe while aiming), and the
 -- dodge / sprint-dive movement. Poses are drawn by PlayerAnimator.
 local Players = game:GetService("Players")
@@ -16640,6 +17207,8 @@ local function step(dt)
 		target = S.Downed
 	elseif busy then
 		target = 1.5
+	elseif char:GetAttribute("Grabbing") then
+		target = 5 -- dragging someone
 	elseif State.prone then
 		target = State.aiming and S.Prone * 0.5 or S.Prone
 	elseif State.aiming then
@@ -16703,7 +17272,7 @@ end
 
 return MovementController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural full-body animation for every crew character (replaces Roblox's default
 -- Animate script, so movement doesn't look like a Roblox avatar). Runs on each client for
 -- all characters from replicated velocity + attributes:
@@ -17144,6 +17713,27 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		waistLean -= 0.15 * k
 	end
 
+	-- digging a gun out of the backpack: down on one knee, both hands behind
+	local packT = since(char, "PackAt", serverNow)
+	if packT < 2.4 then
+		local k = math.min(1, packT / 0.3) * math.max(0, math.min(1, (2.4 - packT) / 0.3))
+		lHip, rHip = lHip + 1.4 * k, rHip + 0.3 * k
+		lKnee, rKnee = lKnee - 1.7 * k, rKnee - 1.9 * k
+		rootOffset += Vector3.new(0, -1.0 * k, 0)
+		lSh, rSh = lSh * (1 - k) - 0.8 * k, rSh * (1 - k) - 0.9 * k
+		lEl, rEl = 1.4 * k, 1.5 * k
+		waistLean -= 0.3 * k
+	end
+
+	-- holding someone: left arm round their neck, right arm in front
+	if char:GetAttribute("Grabbing") then
+		lSh, lEl, lShZ = 1.6, 1.9, 0.6
+		if not armed then
+			rSh, rEl, rShZ = 1.3, 1.6, -0.4
+		end
+		waistLean -= 0.05
+	end
+
 	if downed then
 		-- slumped, crawling on one arm
 		local crawl = math.sin(p) * 0.4 * moving
@@ -17250,8 +17840,20 @@ function PlayerAnimator.start()
 		local camPos = Workspace.CurrentCamera.CFrame.Position
 		diag.frames += 1
 		local animated = 0
+		-- players, plus any rescued survivors (same rig, same procedural animation)
+		local subjects = {}
 		for _, p in Players:GetPlayers() do
-			local char = p.Character
+			if p.Character then
+				table.insert(subjects, { char = p.Character, isLocal = p == player })
+			end
+		end
+		for _, m in game:GetService("CollectionService"):GetTagged("Survivor") do
+			table.insert(subjects, { char = m, isLocal = false })
+		end
+		for _, subject in subjects do
+			local char = subject.char
+			local p = { } -- kept for the isLocal flag below
+			p.isLocal = subject.isLocal
 			if char then
 				local rig = rigs[char]
 				if rig == nil then
@@ -17259,7 +17861,7 @@ function PlayerAnimator.start()
 					rigs[char] = rig
 				end
 				if rig and rig.root.Parent and (rig.root.Position - camPos).Magnitude < 220 then
-					local ok, err = pcall(animate, char, rig, dt, serverNow, p == player)
+					local ok, err = pcall(animate, char, rig, dt, serverNow, p.isLocal)
 					if ok then
 						animated += 1
 					else
@@ -17287,7 +17889,7 @@ end
 
 return PlayerAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- All client-side audio:
 --   ambience     wind + sea + low drone, mixed by where you are (ferry vs encounter)
 --   music        a tension loop that swells when Hushed are suspicious of / hunting you,
@@ -17514,7 +18116,7 @@ end
 
 return SoundController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Owns the ScreenGui and routes server notifications to the UI modules.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17536,6 +18138,7 @@ local Workbench = require(UI:WaitForChild("Workbench"))
 local Repairs = require(UI:WaitForChild("Repairs"))
 local Settings = require(UI:WaitForChild("Settings"))
 local Quests = require(UI:WaitForChild("Quests"))
+local Quartermaster = require(UI:WaitForChild("Quartermaster"))
 
 local UIController = {}
 local Controllers
@@ -17576,6 +18179,7 @@ local function closeMenus()
 	Satchel.close()
 	CharacterSelect.close()
 	Quests.close()
+	Quartermaster.close()
 end
 
 function UIController.init(registry)
@@ -17634,6 +18238,9 @@ function UIController.start()
 	end)
 	build("Quests", function()
 		Quests.build(gui)
+	end)
+	build("Quartermaster", function()
+		Quartermaster.build(gui, request)
 	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")
@@ -17724,6 +18331,8 @@ function UIController.start()
 			Repairs.open()
 		elseif kind == "OpenQuests" then
 			Quests.open()
+		elseif kind == "OpenQuartermaster" then
+			Quartermaster.open()
 		elseif kind == "CloseMenus" then
 			closeMenus()
 		elseif kind == "Hit" then
@@ -17776,7 +18385,7 @@ end
 
 return UIController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client side of the gun system: input -> server intents, plus instant local feedback
 -- (muzzle flash, recoil kick, crosshair bloom) so shooting feels responsive. The server
 -- decides every hit (WeaponService).
@@ -18064,7 +18673,7 @@ end
 return WeaponController
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="LocalScript" referent="RBX0000004C"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="LocalScript" referent="RBX0000004D"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE client bootstrap.
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -18133,7 +18742,7 @@ if player.Character then
 	task.spawn(bindCharacter, player.Character)
 end
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004D"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared client-side state for controllers and UI.
 local State = {
 	character = nil,
@@ -18166,7 +18775,7 @@ end
 
 return State
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000005A"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000005C"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
 local Players = game:GetService("Players")
 
@@ -18262,7 +18871,7 @@ function CharacterSelect.build(gui)
 	local panel
 	backdrop, panel = Theme.modal(gui, "CharacterSelect", UDim2.new(0.96, 0, 0.92, 0), Vector2.new(1120, 640))
 	Theme.heading({ Text = "THE CREW", TextSize = 30, Size = UDim2.new(1, -120, 0, 34), Parent = panel })
-	Theme.label({ Text = "Every crew member is free. Each plays differently: own ability, loadout and perks.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
+	Theme.label({ Text = "Every crew member is free and plays differently (ability and perks). Everyone starts a crossing with only the Service Revolver: unlock more guns at the Quartermaster.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
 	closeButton = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
 	closeButton.Activated:Connect(CharacterSelect.close)
 
@@ -18302,7 +18911,7 @@ end
 
 return CharacterSelect
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The tide chart: choose the next encounter route (type, conditions, bonus).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18408,7 +19017,7 @@ end
 
 return Chart
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- F2 diagnostics: what the game is actually doing on your machine, so problems can be fixed
 -- from facts instead of guesses. Shows client + server warnings/errors, the animator's
 -- state, the last keys / actions received, open menus, and the asset-fitting report.
@@ -18537,7 +19146,7 @@ end
 
 return Diagnostics
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The HUD, designed to stay out of the way (survival-game minimal, not a Roblox overlay):
 --   top        compass bar with objective / teammate markers and distances; one-line objective
 --   bottom-right  fading cluster: segmented health, weapon + ammo pips, throwable;
@@ -18584,8 +19193,9 @@ local CONTROLS = {
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
 	{ "FIRE", "Left mouse", "R2" },
 	{ "RELOAD", "R", "X (no enemy near)" },
-	{ "WEAPONS", "1 long gun · 2 sidearm · 3 holster", "D-pad right" },
-	{ "QUIETING · MELEE", "F", "X" },
+	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-pad right" },
+	{ "BACKPACK GUN (slow)", "4", "" },
+	{ "QUIETING · GRAB · MELEE", "F (from behind: Quiet / grab)", "X" },
 	{ "THROW · NEXT ITEM", "G · Z", "R1 · D-pad down" },
 	{ "ABILITY", "Q", "Y" },
 	{ "HEAL", "H", "D-pad up" },
@@ -18822,6 +19432,8 @@ local function objectiveTargets()
 					table.insert(list, { pos = p.Position, color = C.lantern, text = "◆" })
 				elseif p.Name == "Nest" and p:IsA("Model") and p.PrimaryPart then
 					table.insert(list, { pos = p.PrimaryPart.Position, color = C.danger, text = "✕" })
+				elseif p.Name == "Survivor" and p:IsA("Model") and p:FindFirstChild("HumanoidRootPart") then
+					table.insert(list, { pos = p.HumanoidRootPart.Position, color = C.ok, text = "✚", label = "SURVIVOR" })
 				elseif p.Name == "Flare" and R:GetAttribute("ExtractionOpen") then
 					table.insert(list, { pos = p.Position, color = C.danger, text = "▼", label = "FLARE" })
 				elseif p.Name == "SignalLantern" then
@@ -18838,6 +19450,16 @@ local function objectiveTargets()
 		end
 		if bench and R:GetAttribute("MatchState") == "Planning" then
 			table.insert(list, { pos = bench.Position, color = C.salt, text = "◇", label = "WORKBENCH" })
+		end
+	end
+	-- a hunt target is marked once you know who you're after
+	local enemies = Workspace:FindFirstChild("Enemies")
+	if enemies and R:GetAttribute("MatchState") == "Encounter" then
+		for _, m in enemies:GetChildren() do
+			local r = m:FindFirstChild("HumanoidRootPart")
+			if r and m:GetAttribute("Elite") then
+				table.insert(list, { pos = r.Position, color = C.danger, text = "☠", label = string.upper(tostring(m:GetAttribute("Elite"))) })
+			end
 		end
 	end
 	for _, p in Players:GetPlayers() do
@@ -18928,7 +19550,7 @@ local function objectiveText(matchState, inEncounter)
 		local kind = R:GetAttribute("EncounterType")
 		local left = (R:GetAttribute("EndsAt") or 0) - Workspace:GetServerTimeNow()
 		local name = string.upper(R:GetAttribute("EncounterName") or "")
-		local noun = ({ Salvage = "CRATES", Medicine = "CACHES", Relay = "RELAYS", Nests = "NESTS" })[kind]
+		local noun = ({ Salvage = "CRATES", Medicine = "CACHES", Relay = "RELAYS", Nests = "NESTS", Hunt = "TARGET", Rescue = "SURVIVOR" })[kind]
 		if noun then
 			return R:GetAttribute("ExtractionOpen") and (name .. "  ·  REACH THE FLARE")
 				or ("%s  ·  %s %d / %d"):format(name, noun, R:GetAttribute("Crates") or 0, R:GetAttribute("CratesRequired") or 0)
@@ -19003,7 +19625,13 @@ function HUD.update(dt)
 			pip.Visible = false
 		end
 	end
-	throwLabel.Text = ("%s  %d"):format(string.upper(Items.Items[State.throwable].name), inv(State.throwable))
+	local packText = ""
+	local pack = player:GetAttribute("Pack") or ""
+	if pack ~= "" then
+		local first = pack:match("^([^:,]+)")
+		packText = first and Weapons.List[first] and ("   ·   BACKPACK: %s [4]"):format(string.upper(Weapons.List[first].name)) or ""
+	end
+	throwLabel.Text = ("%s  %d%s"):format(string.upper(Items.Items[State.throwable].name), inv(State.throwable), packText)
 	local charId = player:GetAttribute("CharId")
 	local cdef = charId and Characters.List[charId]
 	if cdef and char then
@@ -19090,7 +19718,180 @@ end
 
 return HUD
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
+-- and buy kits for your next crossing. Everyone starts with only the Service Revolver.
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Quartermaster = require(Shared.Config.Quartermaster)
+local Weapons = require(Shared.Config.Weapons)
+local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
+
+local QM = {}
+local C = Theme.Colors
+local player = Players.LocalPlayer
+local backdrop, list, header
+local request
+
+local function decode(attr, default)
+	local ok, v = pcall(function()
+		return HttpService:JSONDecode(player:GetAttribute(attr) or "")
+	end)
+	return ok and v or default
+end
+
+local function hasArmory()
+	local repairs = decode("Repairs", {})
+	return repairs.armory == true
+end
+
+local function price(p)
+	return math.floor(p * (hasArmory() and 0.85 or 1) + 0.5)
+end
+
+local function section(order, text)
+	Theme.heading({ LayoutOrder = order, Text = text, TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, -8, 0, 22), Parent = list })
+end
+
+local function row(order, title, desc)
+	local r = Theme.panel({ LayoutOrder = order, Size = UDim2.new(1, -8, 0, 58), BackgroundColor3 = C.panelHi, Parent = list })
+	Theme.padding(8).Parent = r
+	Theme.heading({ Text = string.upper(title), TextSize = 14, Size = UDim2.new(1, -280, 0, 18), Parent = r })
+	Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 20), Size = UDim2.new(1, -280, 0, 28), TextSize = 11, TextWrapped = true, Parent = r })
+	local holder = Theme.make("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 272, 0, 32), BackgroundTransparency = 1, Parent = r })
+	local l = Theme.list(Enum.FillDirection.Horizontal, 6)
+	l.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	l.Parent = holder
+	return holder
+end
+
+local function button(parent, text, enabled, accent, onClick)
+	local b = Theme.button({ Text = text, Size = UDim2.new(0, 130, 1, 0), TextSize = 12, AutoButtonColor = enabled, Parent = parent })
+	if not enabled then
+		b.TextTransparency = 0.5
+	elseif accent then
+		b.BackgroundColor3 = C.lantern
+		b.TextColor3 = C.panel
+	end
+	if enabled then
+		b.Activated:Connect(onClick)
+	end
+	return b
+end
+
+local function rebuild()
+	Theme.clear(list)
+	local scrip = player:GetAttribute("Scrip") or 0
+	header.Text = ("SCRIP %d%s   ·   everyone starts a crossing with only the Service Revolver"):format(scrip, hasArmory() and "   ·   ARMORY: 15% OFF" or "")
+	local guns = decode("Guns", { revolver = true })
+	local loadout = decode("Loadout", { long = "", pack = {} })
+	loadout.pack = loadout.pack or {}
+	local slots = Quartermaster.BackpackSlots + (hasArmory() and 1 or 0)
+	local order = 0
+
+	section(1, "GUNS")
+	order = 1
+	for _, g in Quartermaster.Guns do
+		order += 1
+		local holder = row(order, Weapons.List[g.id].name, g.desc)
+		if guns[g.id] then
+			local inHolster = loadout.long == g.id
+			local inPack = table.find(loadout.pack, g.id) ~= nil
+			button(holder, inHolster and "HOLSTERED" or "HOLSTER", not inHolster, false, function()
+				local pack = {}
+				for _, id in loadout.pack do
+					if id ~= g.id then
+						table.insert(pack, id)
+					end
+				end
+				if loadout.long ~= "" and loadout.long ~= g.id then
+					table.insert(pack, 1, loadout.long)
+				end
+				request("SetLoadout", g.id, pack)
+			end)
+			button(holder, inPack and "IN BACKPACK ✓" or "BACKPACK", not inHolster and (inPack or #loadout.pack < slots), false, function()
+				local pack = table.clone(loadout.pack)
+				local at = table.find(pack, g.id)
+				if at then
+					table.remove(pack, at)
+				else
+					table.insert(pack, g.id)
+				end
+				request("SetLoadout", loadout.long, pack)
+			end)
+		else
+			local cost = price(g.price)
+			button(holder, ("UNLOCK  %d SCRIP"):format(cost), scrip >= cost, true, function()
+				request("UnlockGun", g.id)
+			end)
+		end
+	end
+	order += 1
+	Theme.label({ LayoutOrder = order, Text = ("Holster: one long gun, quick to draw (1). Backpack: %d more gun%s, but digging one out (4) takes a few seconds and you can't shoot meanwhile."):format(slots, slots == 1 and "" or "s"), TextSize = 12, TextWrapped = true, TextColor3 = C.dim, Size = UDim2.new(1, -8, 0, 32), Parent = list })
+
+	order += 1
+	section(order, "KITS FOR YOUR NEXT CROSSING")
+	local kit = decode("Kit", {})
+	for _, k in Quartermaster.Kits do
+		order += 1
+		local have = kit[k.id] or 0
+		local holder = row(order, k.name .. (have > 0 and ("  ·  PACKED x" .. have) or ""), k.desc)
+		local cost = price(k.price)
+		button(holder, ("BUY  %d SCRIP"):format(cost), scrip >= cost and have < Quartermaster.MaxKitsEach, true, function()
+			request("BuyKit", k.id)
+		end)
+	end
+end
+
+function QM.build(gui, requestFn)
+	request = requestFn
+	local panel
+	backdrop, panel = Theme.modal(gui, "Quartermaster", UDim2.new(0.94, 0, 0.9, 0), Vector2.new(760, 640))
+	Theme.heading({ Text = "THE QUARTERMASTER", TextSize = 26, Size = UDim2.new(1, -120, 0, 32), Parent = panel })
+	header = Theme.label({ Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, -120, 0, 18), TextSize = 12, TextColor3 = C.lantern, Parent = panel })
+	local close = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
+	close.Activated:Connect(QM.close)
+	list = Theme.make("ScrollingFrame", {
+		Position = UDim2.new(0, 0, 0, 60),
+		Size = UDim2.new(1, 0, 1, -60),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = panel,
+	})
+	Theme.list(Enum.FillDirection.Vertical, 6).Parent = list
+	for _, attr in { "Scrip", "Guns", "Loadout", "Kit", "Repairs" } do
+		player:GetAttributeChangedSignal(attr):Connect(function()
+			if backdrop.Visible then
+				rebuild()
+			end
+		end)
+	end
+end
+
+function QM.open()
+	if backdrop then
+		backdrop.Visible = true
+		State.setModal("quartermaster", true)
+		rebuild()
+	end
+end
+
+function QM.close()
+	if backdrop then
+		backdrop.Visible = false
+		State.setModal("quartermaster", false)
+	end
+end
+
+return QM
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The quest board: today's three challenges and this week's two, with progress.
 -- Data comes from the server as the JSON attribute "Quests" (QuestService).
 local HttpService = game:GetService("HttpService")
@@ -19175,7 +19976,7 @@ end
 
 return Quests
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian projects board: permanent homebase upgrades built with Scrip + Materials (both
 -- earned from missions) or a Shipwright's Crew token, plus the armory once it's built.
 local HttpService = game:GetService("HttpService")
@@ -19227,7 +20028,7 @@ local function rebuild()
 			b.TextColor3 = C.ok
 		else
 			local afford = (player:GetAttribute("Scrip") or 0) >= r.scrip and (player:GetAttribute("Materials") or 0) >= r.materials
-			local build = Theme.button({ LayoutOrder = 1, Text = ("%d S · %d M"):format(r.scrip, r.materials), Size = UDim2.new(0, 128, 1, 0), TextSize = 13, AutoButtonColor = afford and not locked, Parent = buttons })
+			local build = Theme.button({ LayoutOrder = 1, Text = ("%d MATERIALS"):format(r.materials), Size = UDim2.new(0, 128, 1, 0), TextSize = 13, AutoButtonColor = afford and not locked, Parent = buttons })
 			if not afford or locked then
 				build.TextTransparency = 0.45
 			end
@@ -19246,23 +20047,6 @@ local function rebuild()
 				end
 			end)
 			first = first or build
-		end
-	end
-	if have.armory then
-		Theme.heading({ LayoutOrder = 50, Text = "ARMORY: LONG GUN FOR YOUR NEXT CROSSING", TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 24), Parent = list })
-		local rowFrame = Theme.make("Frame", { LayoutOrder = 51, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, Parent = list })
-		Theme.list(Enum.FillDirection.Horizontal, 6).Parent = rowFrame
-		local choice = player:GetAttribute("LongGunChoice")
-		for i, id in Weapons.LongGuns do
-			local b = Theme.button({ LayoutOrder = i, Text = Weapons.List[id].name, TextSize = 13, Size = UDim2.new(0.25, -5, 1, 0), Parent = rowFrame })
-			if choice == id then
-				b.BackgroundColor3 = C.lantern
-				b.TextColor3 = C.backdrop
-			end
-			b.Activated:Connect(function()
-				request("SetLongGun", id)
-				task.delay(0.3, rebuild)
-			end)
 		end
 	end
 	Theme.focus(first)
@@ -19313,7 +20097,7 @@ end
 
 return Repairs
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- End-of-encounter debrief.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -19385,7 +20169,7 @@ end
 
 return Results
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: everything you carry, throwable selection, field crafting and run aids.
 local Players = game:GetService("Players")
 
@@ -19526,7 +20310,7 @@ end
 
 return Satchel
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Settings: graphics preset (Auto / Performance / Balanced / Cinematic), look sensitivity,
 -- reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
@@ -19627,7 +20411,7 @@ end
 
 return Settings
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Purser's Office ledger: the in-world shop, in three tabs.
 --   SUPPLIES   run aids (tokens) and the one-time Starter Pack. Fixed contents, never random.
 --   WARDROBE   outfits for each crew member: equip, buy with Scrip, or buy with Robux.
@@ -19941,7 +20725,7 @@ end
 
 return Shop
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
 -- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
 local Theme = {}
@@ -20119,7 +20903,7 @@ end
 
 return Theme
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The workbench: spend Salvage (found during the crossing) on weapon parts, satchel upgrades
 -- and your character's other perks. Upgrades last for this crossing.
 local HttpService = game:GetService("HttpService")

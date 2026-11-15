@@ -409,6 +409,25 @@ local function humanAttack(e, info, dist, seen, now)
 				chance *= 0.7
 			end
 			local aim = info.root.Position + Vector3.new(0, 0.8, 0)
+			-- their friend is in the way: hold fire and flank instead of shooting through them
+			local hostage = EnemyService.hostageOf(info.player)
+			if hostage then
+				local line = aim - muzzle
+				local toH = hostage.root.Position - muzzle
+				local t = toH:Dot(line.Unit)
+				if t > 0 and t < line.Magnitude + 1 and (toH - line.Unit * t).Magnitude < 2.8 then
+					e.nextShotAt = now + 0.7
+					e.flank = e.flank or (rng:NextNumber() < 0.5 and -1 or 1)
+					e.humanoid.WalkSpeed = cfg.investigateSpeed
+					e.humanoid:MoveTo(e.root.Position + e.root.CFrame.RightVector * e.flank * 9)
+					e.model:SetAttribute("Aiming", false)
+					if now > (e.nextHoldFire or 0) then
+						e.nextHoldFire = now + 6
+						Sfx.at(e.root.Position, cfg.callout or "Radio_Callout", 0.7, 90)
+					end
+					return
+				end
+			end
 			local hit = rng:NextNumber() < chance
 			if not hit then
 				aim += Vector3.new(rng:NextNumber(-3, 3), rng:NextNumber(-1, 2), rng:NextNumber(-3, 3))
@@ -438,6 +457,10 @@ end
 
 local function update(e, dt, now, active)
 	local cfg = e.cfg
+	if e.state == "Grabbed" then
+		publishSuspicion(e, active)
+		return
+	end
 
 	if now < e.stunUntil then
 		stop(e)
@@ -658,6 +681,12 @@ function EnemyService.spawn(typeName, position, opts)
 		state = "",
 		stateTime = os.clock(),
 	}
+	if opts.elite then
+		e.hp = cfg.hp * (opts.hpMult or 3)
+		e.maxHp = e.hp
+		e.isTarget = true
+		model:SetAttribute("Elite", opts.elite)
+	end
 	setState(e, "Patrol")
 	table.insert(enemies, e)
 	byModel[model] = e
@@ -762,6 +791,50 @@ function EnemyService.stun(e, duration, byPlayer, newState)
 	stop(e)
 end
 
+-- Grabbed (human shield): held in front of the grabber until released.
+local hostages = {} -- [Player] = enemy
+function EnemyService.grab(e, player, grabberRoot)
+	if e.dead then
+		return
+	end
+	e.grabbedBy = grabberRoot
+	hostages[player] = e
+	e.stunUntil = math.huge
+	e.target = nil
+	setState(e, "Grabbed")
+	stop(e)
+	e.root.Anchored = true
+	for _, p in e.model:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.CanCollide = false
+		end
+	end
+	Services.CharacterService.setFlashlight(e.model, false)
+end
+
+function EnemyService.release(e)
+	for player, h in hostages do
+		if h == e then
+			hostages[player] = nil
+		end
+	end
+	e.grabbedBy = nil
+	if e.dead then
+		return
+	end
+	e.root.Anchored = false
+	e.root.CanCollide = true
+	e.stunUntil = os.clock()
+	pcall(function()
+		e.root:SetNetworkOwner(nil)
+	end)
+end
+
+function EnemyService.hostageOf(player)
+	local e = hostages[player]
+	return e and not e.dead and e or nil
+end
+
 function EnemyService.pin(e, duration)
 	EnemyService.stun(e, duration, nil, "Pinned")
 	local net = Instance.new("Part")
@@ -812,6 +885,14 @@ function EnemyService.disperse(e, byPlayer)
 		e.model:SetAttribute("State", "Ragdoll")
 		Services.CharacterService.setFlashlight(e.model, false)
 		Services.MatchService.onEnemyKilled(byPlayer, e)
+		-- sometimes they drop a few rounds of whatever they carried
+		local drop = ({ rifle = "rifleAmmo", revolver = "pistolAmmo", bow = "arrows" })[e.cfg.attack and e.cfg.attack.weapon or ""]
+		if drop and rng:NextNumber() < 0.55 then
+			local folder = Services.MapService.getEncounterFolder()
+			if folder then
+				Services.LootService.dropPickup(folder, e.root.Position - Vector3.new(0, 2.5, 0), drop, rng:NextInteger(1, 2))
+			end
+		end
 		local ok, err = pcall(EnemyService.ragdoll, e)
 		if not ok then
 			warn("[EnemyService] ragdoll failed: " .. tostring(err))
@@ -924,7 +1005,7 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 		return false
 	end
 	e.hp -= amount
-	e.model:SetAttribute("HP", math.max(0, e.hp / e.cfg.hp))
+	e.model:SetAttribute("HP", math.max(0, e.hp / (e.maxHp or e.cfg.hp)))
 	if hit then
 		e.lastHit = hit
 		local _, side = EnemyService.zoneOf(hit.instance or e.root)
@@ -940,9 +1021,14 @@ function EnemyService.damage(e, amount, byPlayer, headshot, hit)
 	local stagger = e.cfg.staggerTime * (headshot and 2 or 1)
 	if hit then
 		local force = hit.force or 1
-		if hit.zone == "leg" then
-			stagger = math.max(stagger, 0.55 * force) -- the leg buckles
-			e.limpUntil = os.clock() + 3.5
+		if hit.zone == "leg" and e.state ~= "Grabbed" then
+			-- shot in the leg: down on one knee for a moment, then a limp
+			stagger = math.max(stagger, 1.0 + 0.3 * force)
+			e.limpUntil = os.clock() + 4.5
+			e.model:SetAttribute("LegStunAt", Workspace:GetServerTimeNow())
+			if e.state ~= "Quieted" then
+				setState(e, "Stunned")
+			end
 		elseif hit.zone == "head" then
 			stagger = math.max(stagger, 0.45 * force)
 		elseif force >= 2 and e.cfg.shoveable ~= false then
@@ -1055,6 +1141,17 @@ function EnemyService.start()
 
 	local step = 1 / EnemyConfig.TickRate
 	local accumulator = 0
+	RunService.Heartbeat:Connect(function()
+		for _, e in enemies do
+			if e.grabbedBy and not e.dead then
+				if e.grabbedBy.Parent then
+					e.root.CFrame = e.grabbedBy.CFrame * CFrame.new(0.25, 0, -1.7)
+				else
+					EnemyService.release(e)
+				end
+			end
+		end
+	end)
 	RunService.Heartbeat:Connect(function(dt)
 		accumulator += dt
 		if accumulator < step then

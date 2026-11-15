@@ -45,8 +45,9 @@ local CONTROLS = {
 	{ "HOLD BREATH", "Shift while aiming", "L3 while aiming" },
 	{ "FIRE", "Left mouse", "R2" },
 	{ "RELOAD", "R", "X (no enemy near)" },
-	{ "WEAPONS", "1 long gun · 2 sidearm · 3 holster", "D-pad right" },
-	{ "QUIETING · MELEE", "F", "X" },
+	{ "WEAPONS", "1 long gun · 2 revolver · 3 holster", "D-pad right" },
+	{ "BACKPACK GUN (slow)", "4", "" },
+	{ "QUIETING · GRAB · MELEE", "F (from behind: Quiet / grab)", "X" },
 	{ "THROW · NEXT ITEM", "G · Z", "R1 · D-pad down" },
 	{ "ABILITY", "Q", "Y" },
 	{ "HEAL", "H", "D-pad up" },
@@ -283,6 +284,8 @@ local function objectiveTargets()
 					table.insert(list, { pos = p.Position, color = C.lantern, text = "◆" })
 				elseif p.Name == "Nest" and p:IsA("Model") and p.PrimaryPart then
 					table.insert(list, { pos = p.PrimaryPart.Position, color = C.danger, text = "✕" })
+				elseif p.Name == "Survivor" and p:IsA("Model") and p:FindFirstChild("HumanoidRootPart") then
+					table.insert(list, { pos = p.HumanoidRootPart.Position, color = C.ok, text = "✚", label = "SURVIVOR" })
 				elseif p.Name == "Flare" and R:GetAttribute("ExtractionOpen") then
 					table.insert(list, { pos = p.Position, color = C.danger, text = "▼", label = "FLARE" })
 				elseif p.Name == "SignalLantern" then
@@ -299,6 +302,16 @@ local function objectiveTargets()
 		end
 		if bench and R:GetAttribute("MatchState") == "Planning" then
 			table.insert(list, { pos = bench.Position, color = C.salt, text = "◇", label = "WORKBENCH" })
+		end
+	end
+	-- a hunt target is marked once you know who you're after
+	local enemies = Workspace:FindFirstChild("Enemies")
+	if enemies and R:GetAttribute("MatchState") == "Encounter" then
+		for _, m in enemies:GetChildren() do
+			local r = m:FindFirstChild("HumanoidRootPart")
+			if r and m:GetAttribute("Elite") then
+				table.insert(list, { pos = r.Position, color = C.danger, text = "☠", label = string.upper(tostring(m:GetAttribute("Elite"))) })
+			end
 		end
 	end
 	for _, p in Players:GetPlayers() do
@@ -389,7 +402,7 @@ local function objectiveText(matchState, inEncounter)
 		local kind = R:GetAttribute("EncounterType")
 		local left = (R:GetAttribute("EndsAt") or 0) - Workspace:GetServerTimeNow()
 		local name = string.upper(R:GetAttribute("EncounterName") or "")
-		local noun = ({ Salvage = "CRATES", Medicine = "CACHES", Relay = "RELAYS", Nests = "NESTS" })[kind]
+		local noun = ({ Salvage = "CRATES", Medicine = "CACHES", Relay = "RELAYS", Nests = "NESTS", Hunt = "TARGET", Rescue = "SURVIVOR" })[kind]
 		if noun then
 			return R:GetAttribute("ExtractionOpen") and (name .. "  ·  REACH THE FLARE")
 				or ("%s  ·  %s %d / %d"):format(name, noun, R:GetAttribute("Crates") or 0, R:GetAttribute("CratesRequired") or 0)
@@ -464,7 +477,13 @@ function HUD.update(dt)
 			pip.Visible = false
 		end
 	end
-	throwLabel.Text = ("%s  %d"):format(string.upper(Items.Items[State.throwable].name), inv(State.throwable))
+	local packText = ""
+	local pack = player:GetAttribute("Pack") or ""
+	if pack ~= "" then
+		local first = pack:match("^([^:,]+)")
+		packText = first and Weapons.List[first] and ("   ·   BACKPACK: %s [4]"):format(string.upper(Weapons.List[first].name)) or ""
+	end
+	throwLabel.Text = ("%s  %d%s"):format(string.upper(Items.Items[State.throwable].name), inv(State.throwable), packText)
 	local charId = player:GetAttribute("CharId")
 	local cdef = charId and Characters.List[charId]
 	if cdef and char then

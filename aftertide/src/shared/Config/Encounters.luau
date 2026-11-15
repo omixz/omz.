@@ -14,6 +14,17 @@ return {
 			desc = "Keep the signal lantern lit until the tide turns.",
 			waves = 3, waveTime = 40, perWave = 4, lanternHP = 400, dps = 18,
 		},
+		Hunt = {
+			name = "Cut the Head Off",
+			desc = "A marked leader is out there (%d). Find them, put them down, then reach the flare.",
+			count = 1, hpMult = 3,
+			elite = { Watch = { type = "WatchRifleman", title = "Watch Captain" }, Tidebound = { type = "TideboundHook", title = "Tidebound Priest" }, Hushed = { type = "Bellwether", title = "The Matriarch" } },
+		},
+		Rescue = {
+			name = "Bring Them Home",
+			desc = "A survivor is hiding out there (%d). Find them and lead them to the Slipway flare alive.",
+			count = 1, hp = 100, grabDamage = 22,
+		},
 		Medicine = {
 			name = "Medicine Run",
 			desc = "Find %d medical caches (look inside buildings), then reach the Slipway flare.",
@@ -61,7 +72,7 @@ return {
 	},
 	Rewards = {
 		salvagePerEncounter = 15, -- +5 per Pall
-		scripPerEncounter = 10, -- +5 per encounter index
-		scripRunComplete = 50,
+		scripPerEncounter = 25, -- +10 per encounter index (spent at the Quartermaster)
+		scripRunComplete = 80,
 	},
 }

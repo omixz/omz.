@@ -56,12 +56,17 @@ function InventoryService.publish(player)
 		player:SetAttribute("W_" .. slot .. "Mag", w and w.mag or 0)
 	end
 	player:SetAttribute("Salvage", inv.salvage)
+	local pack = {}
+	for _, w in inv.pack or {} do
+		table.insert(pack, w.id .. ":" .. w.mag)
+	end
+	player:SetAttribute("Pack", table.concat(pack, ","))
 end
 
 -- loadout = { weapons = {long, sidearm}, items = {...} }; bonus = { salvage, items, longGun }
 function InventoryService.reset(player, loadout, mods, bonus)
 	bonus = bonus or {}
-	local inv = { items = {}, weapons = {}, salvage = bonus.salvage or 0 }
+	local inv = { items = {}, weapons = {}, salvage = bonus.salvage or 0, pack = {} }
 	for _, itemId in Items.Order do
 		inv.items[itemId] = 0
 	end
@@ -72,7 +77,17 @@ function InventoryService.reset(player, loadout, mods, bonus)
 			inv.weapons[slot] = { id = weaponId, mag = Weapons.List[weaponId].mag }
 		end
 	end
+	-- backpack guns (holster system): carried, but slow to get out
+	for _, weaponId in bonus.pack or {} do
+		if Weapons.List[weaponId] and Weapons.List[weaponId].slot == "long" and weaponId ~= long then
+			table.insert(inv.pack, { id = weaponId, mag = Weapons.List[weaponId].mag })
+		end
+	end
 	for itemId, amount in loadout.items do
+		InventoryService.add(player, itemId, amount)
+	end
+	-- a crossing kit bought at the Quartermaster
+	for itemId, amount in bonus.kit or {} do
 		InventoryService.add(player, itemId, amount)
 	end
 	if bonus.items then
@@ -84,6 +99,30 @@ function InventoryService.reset(player, loadout, mods, bonus)
 		InventoryService.add(player, "pistolAmmo", mods.ammoBonus)
 	end
 	InventoryService.publish(player)
+end
+
+-- Holster system: swap backpack gun #index into the long-gun holster (the holstered one goes
+-- into the backpack). The timing (kneel and dig) is enforced by ActionService.
+function InventoryService.packList(player)
+	local inv = inventories[player]
+	return inv and inv.pack or {}
+end
+
+function InventoryService.swapPack(player, index)
+	local inv = inventories[player]
+	local entry = inv and inv.pack[index]
+	if not entry then
+		return false
+	end
+	local current = inv.weapons.long
+	inv.weapons.long = { id = entry.id, mag = entry.mag }
+	if current then
+		inv.pack[index] = current
+	else
+		table.remove(inv.pack, index)
+	end
+	InventoryService.publish(player)
+	return true
 end
 
 function InventoryService.has(player)
@@ -163,6 +202,9 @@ end
 function InventoryService.recipeYield(player, recipe)
 	local session = Services.CharacterService.getSession(player)
 	local bonus = (recipe.perkYield and session and session.mods) and session.mods.craftYieldBonus or 0
+	if recipe.perkYield and Services.PlayerDataService.hasRepair(player, "workshop") then
+		bonus += 1 -- the Workshop's proper tools
+	end
 	return recipe.amount + bonus
 end
 

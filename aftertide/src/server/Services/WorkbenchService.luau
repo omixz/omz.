@@ -15,7 +15,7 @@ local function toast(player, text)
 end
 
 local function cost(player, base)
-	local discount = Services.PlayerDataService.hasRepair(player, "workshop") and 0.85 or 1
+	local discount = Services.PlayerDataService.hasRepair(player, "workshop") and 0.75 or 1
 	return math.ceil(base * discount)
 end
 

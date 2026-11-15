@@ -16,9 +16,13 @@ Solo dev, US$0 budget, 1 to 4 player co-op, Moderate maturity.
 2. **File → Open from File…** → [`build/Aftertide.rbxlx`](build/Aftertide.rbxlx).
 3. Press **Play**. Pick a crew member and a perk, then hold **E** at the tide chart.
 
+**Everyone starts a crossing with only the Service Revolver.** Unlock the carbine, bow,
+shotgun and rifle at the Quartermaster on the Meridian (Scrip from missions), then pick what
+goes in your holster and backpack.
+
 **Controls:** WASD move · Shift sprint · C crouch (hold C: prone) · Space dodge (dive while sprinting) ·
-RMB aim (Shift while aiming = hold breath) · LMB fire · R reload · 1/2/3 long gun / sidearm /
-holster · F Quieting / melee · G throw, Z next throwable · Q ability · H heal · T flashlight ·
+RMB aim (Shift while aiming = hold breath) · LMB fire · R reload · 1/2/3 long gun / revolver /
+holster · 4 backpack gun (slow) · F Quieting / grab (from behind) / melee · G throw, Z next throwable · Q ability · H heal · T flashlight ·
 V Ammo Cache · B Resupply · F2 diagnostics · I / Tab satchel · X swap shoulder · P settings. Gamepad and touch work too.
 
 **Before publishing:** play a full crossing in Studio (with *Game Settings > Security >
@@ -37,6 +41,7 @@ Publishing, products, server size and the free asset pipeline: [doc 6](docs/06-p
 | 6 | [Play, publish & grow for $0](docs/06-publishing.md) | Studio setup, publishing, maturity form, developer products, free assets, launch checklist |
 | 7 | [Realistic characters & graphics](docs/07-characters-and-graphics.md) | Free pipeline for realistic crew models, Cinematic/Balanced/Performance presets, PlayStation/Xbox |
 | 8 | [Audio](docs/08-audio.md) | The original synthesised sound pack (44 sounds) and how to upload it |
+| 11 | [Combat, weapons & economy](docs/11-combat-economy-plan.md) | Revolver start, Quartermaster, holster/backpack, scarce ammo, grabs, leg stuns, 9 missions |
 | 10 | [Fix plan & testing](docs/10-fix-plan.md) | How fixes get proven in the real engine; new missions, projects, quests, leaderboard |
 | 9 | [Models, factions & maps](docs/09-models-factions-maps.md) | The generated 3D model packs, uploading them (Open Cloud), Harbour Watch & Tidebound, the three maps |
 

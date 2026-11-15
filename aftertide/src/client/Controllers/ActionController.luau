@@ -280,6 +280,12 @@ function ActionController.start()
 		end
 	end, Enum.KeyCode.B)
 
+	bind("Backpack", function(state)
+		if state == Begin and State.character and not State.downed and not State.uiOpen() then
+			act("SwapPack", 1) -- dig the backpack gun out (slow; you can't shoot meanwhile)
+		end
+	end, Enum.KeyCode.Four)
+
 	bind("AmmoCache", function(state)
 		if state == Begin and canAct() then
 			act("AmmoCache")

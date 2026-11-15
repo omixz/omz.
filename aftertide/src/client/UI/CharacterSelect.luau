@@ -94,7 +94,7 @@ function CharacterSelect.build(gui)
 	local panel
 	backdrop, panel = Theme.modal(gui, "CharacterSelect", UDim2.new(0.96, 0, 0.92, 0), Vector2.new(1120, 640))
 	Theme.heading({ Text = "THE CREW", TextSize = 30, Size = UDim2.new(1, -120, 0, 34), Parent = panel })
-	Theme.label({ Text = "Every crew member is free. Each plays differently: own ability, loadout and perks.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
+	Theme.label({ Text = "Every crew member is free and plays differently (ability and perks). Everyone starts a crossing with only the Service Revolver: unlock more guns at the Quartermaster.", Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 20), TextColor3 = C.dim, TextSize = 13, Parent = panel })
 	closeButton = Theme.button({ Text = "CLOSE", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 32), Parent = panel })
 	closeButton.Activated:Connect(CharacterSelect.close)
 

@@ -20,6 +20,7 @@ local Workbench = require(UI:WaitForChild("Workbench"))
 local Repairs = require(UI:WaitForChild("Repairs"))
 local Settings = require(UI:WaitForChild("Settings"))
 local Quests = require(UI:WaitForChild("Quests"))
+local Quartermaster = require(UI:WaitForChild("Quartermaster"))
 
 local UIController = {}
 local Controllers
@@ -60,6 +61,7 @@ local function closeMenus()
 	Satchel.close()
 	CharacterSelect.close()
 	Quests.close()
+	Quartermaster.close()
 end
 
 function UIController.init(registry)
@@ -118,6 +120,9 @@ function UIController.start()
 	end)
 	build("Quests", function()
 		Quests.build(gui)
+	end)
+	build("Quartermaster", function()
+		Quartermaster.build(gui, request)
 	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")
@@ -208,6 +213,8 @@ function UIController.start()
 			Repairs.open()
 		elseif kind == "OpenQuests" then
 			Quests.open()
+		elseif kind == "OpenQuartermaster" then
+			Quartermaster.open()
 		elseif kind == "CloseMenus" then
 			closeMenus()
 		elseif kind == "Hit" then

@@ -37,6 +37,9 @@ local function defaultData()
 		oneTime = {}, -- [productKey] = true (Starter Pack)
 		spent = 0, -- Robux spent (for thank-you messaging only; never affects gameplay)
 		quests = {}, -- QuestService state (daily / weekly challenges)
+		guns = { revolver = true }, -- unlocked at the Quartermaster
+		loadout = { long = "", pack = {} }, -- chosen at the Quartermaster
+		kit = {}, -- [kitId] = count, delivered at the start of the next crossing
 		firstFinaleWin = false,
 	}
 end
@@ -46,7 +49,7 @@ local function reconcile(data)
 	for key, value in template do
 		if data[key] == nil then
 			data[key] = value
-		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" then
+		elseif type(value) == "table" and type(data[key]) == "table" and key ~= "receipts" and key ~= "receiptOrder" and key ~= "repairs" and key ~= "outfits" and key ~= "equipped" and key ~= "oneTime" and key ~= "quests" and key ~= "guns" and key ~= "loadout" and key ~= "kit" then
 			for k2, v2 in value do
 				if data[key][k2] == nil then
 					data[key][k2] = v2
@@ -74,6 +77,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
 	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
 	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))
+	player:SetAttribute("Guns", HttpService:JSONEncode(data.guns or { revolver = true }))
+	player:SetAttribute("Loadout", HttpService:JSONEncode(data.loadout or {}))
+	player:SetAttribute("Kit", HttpService:JSONEncode(data.kit or {}))
 end
 
 function PlayerDataService.publish(player)

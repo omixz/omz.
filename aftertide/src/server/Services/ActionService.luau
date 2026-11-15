@@ -102,10 +102,18 @@ local function melee(player, info)
 			local e = entry.enemy
 			local to = Geometry.flat(e.root.Position - pos)
 			if to.Magnitude > 0.01 and look:Dot(to.Unit) > 0.35 then
-				local damage = MELEE.damage[combo] * (e.cfg.shoveable and 1 or 0.5)
-				local killed = Services.EnemyService.damage(e, damage, player, false)
-				Sfx.at(e.root.Position, "MeleeHit", 0.7, 50, 0.1)
-				Net.notify(player, "Hit", { kill = killed, melee = true })
+				-- sneak strike: an enemy that hasn't noticed you, hit from behind
+				local unaware = e.state ~= "Chase" and e.state ~= "Grabbed" and e.root.CFrame.LookVector:Dot(to.Unit) > 0.2
+				local damage = MELEE.damage[combo] * (e.cfg.shoveable and 1 or 0.5) * (unaware and 3 or 1)
+				local killed = Services.EnemyService.damage(e, damage, unaware and nil or player, false, { zone = "torso", direction = to.Unit, force = unaware and 1.8 or 1 })
+				if unaware and not killed then
+					Services.EnemyService.stun(e, 1.2, player)
+				end
+				Sfx.at(e.root.Position, "MeleeHit", unaware and 0.4 or 0.7, unaware and 20 or 50, 0.1)
+				Net.notify(player, "Hit", { kill = killed, melee = true, headshot = unaware })
+				if killed and unaware then
+					Services.MatchService.onEnemyKilled(player, e)
+				end
 				if not killed and combo == 3 and e.cfg.shoveable then
 					Services.EnemyService.stun(e, Items.Shove.stun, player)
 					e.root.AssemblyLinearVelocity = to.Unit * 34
@@ -117,6 +125,7 @@ local function melee(player, info)
 	end)
 	Services.PerceptionService.emitNoise(pos, MELEE.noise, "melee", player)
 end
+
 
 local function dodge(player, info, direction)
 	local session = info.session
@@ -149,8 +158,55 @@ local function quietEnemy(player, info, e, duration)
 	Services.InventoryService.add(player, "salvage", Items.Quieting.salvage)
 end
 
+-- Grab (human shield) -----------------------------------------------------------------------
+-- Sneak up behind a human enemy and grab them: you move slowly and can still fire your
+-- revolver; their friends hesitate to shoot through them; F again = silent takedown; after a
+-- few seconds you shove them away, stunned. The Hushed don't care about hostages.
+local GRAB_TIME = 8
+
+local function releaseGrab(player, info, takedown)
+	local session = info.session
+	local e = session.grabbing
+	session.grabbing = nil
+	info.char:SetAttribute("Grabbing", false)
+	if not e or e.dead then
+		return
+	end
+	Services.EnemyService.release(e)
+	if takedown then
+		local duration = Items.Quieting.time * session.mods.takedownTimeMult
+		quietEnemy(player, info, e, duration)
+	else
+		local away = info.root.CFrame.LookVector
+		e.root.AssemblyLinearVelocity = away * 30
+		Services.EnemyService.stun(e, 1.8, player)
+	end
+end
+ActionService.releaseGrab = releaseGrab
+
+local function grab(player, info, e)
+	local session = info.session
+	session.grabbing = e
+	info.char:SetAttribute("Grabbing", true)
+	cue(info, "GrabAt")
+	Services.EnemyService.grab(e, player, info.root)
+	Sfx.at(info.root.Position, "MeleeHit", 0.3, 20)
+	local id = os.clock()
+	session.grabId = id
+	task.delay(GRAB_TIME, function()
+		if session.grabbing == e and session.grabId == id then
+			releaseGrab(player, info, false)
+		end
+	end)
+	toast(player, "Grabbed! Their friends won't shoot through them. F: silent takedown")
+end
+
 local function quiet(player, info)
 	if isBusy(info) then
+		return
+	end
+	if info.session.grabbing then
+		releaseGrab(player, info, true)
 		return
 	end
 	local pos = info.root.Position
@@ -160,7 +216,11 @@ local function quiet(player, info)
 	for _, entry in near do
 		local e = entry.enemy
 		if entry.distance <= Items.Quieting.range and Services.EnemyService.canQuiet(e, pos) then
-			quietEnemy(player, info, e, duration)
+			if e.cfg.human then
+				grab(player, info, e)
+			else
+				quietEnemy(player, info, e, duration)
+			end
 			return
 		end
 	end
@@ -505,7 +565,7 @@ local function heal(player, info)
 	if isBusy(info) then
 		return
 	end
-	if info.session.hp >= Game.MaxHP then
+	if info.session.hp >= (info.session.maxHp or Game.MaxHP) then
 		toast(player, "Already at full health")
 		return
 	end
@@ -627,6 +687,29 @@ function ActionService.useAmmoCache(player)
 	return true
 end
 
+-- Holster system: get a gun out of the backpack (kneel and dig; can't shoot meanwhile).
+local function swapPack(player, info, index)
+	index = tonumber(index) or 1
+	if isBusy(info) or info.session.grabbing then
+		return
+	end
+	local pack = Services.InventoryService.packList(player)
+	if not pack[math.floor(index)] then
+		toast(player, "Nothing else in your backpack")
+		return
+	end
+	Services.WeaponService.holster(player)
+	cue(info, "PackAt")
+	Sfx.at(info.root.Position, "Search", 0.5, 25)
+	Services.PerceptionService.emitNoise(info.root.Position, 6, "pack", player)
+	channel(info, Weapons.PackSwapTime, function()
+		if Services.InventoryService.swapPack(player, math.floor(index)) then
+			Services.WeaponService.onSpawn(player, info.char)
+			Services.WeaponService.equip(player, "long")
+		end
+	end)
+end
+
 -- Dispatcher ---------------------------------------------------------------------------------
 
 local HANDLERS = {
@@ -649,10 +732,11 @@ local HANDLERS = {
 	Dodge = function(player, info, direction)
 		dodge(player, info, direction)
 	end,
+	SwapPack = swapPack,
 }
 
 -- Actions allowed on the Meridian (no encounter running).
-local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true }
+local FERRY_OK = { Craft = true, Equip = true, Reload = true, Dodge = true, SwapPack = true }
 
 function ActionService.init(registry)
 	Services = registry

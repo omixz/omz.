@@ -279,7 +279,7 @@ local function setupCharacter(player, char, session, isCustomRig)
 	CharacterService.addFlashlight(char)
 
 	char:SetAttribute("HP", session.hp)
-	char:SetAttribute("MaxHP", Game.MaxHP)
+	char:SetAttribute("MaxHP", session.maxHp or Game.MaxHP)
 	char:SetAttribute("Downed", false)
 	char:SetAttribute("Out", false)
 	char:SetAttribute("Torch", false)
@@ -307,7 +307,8 @@ function CharacterService.spawn(player, cframe, resetInventory)
 	end
 	local def = Characters.List[session.charId]
 
-	session.hp = Game.MaxHP
+	session.maxHp = Game.MaxHP + (Services.PlayerDataService.hasRepair(player, "sickbay") and 15 or 0) -- Infirmary
+	session.hp = session.maxHp
 	session.downed = false
 	session.out = false
 	session.busyUntil = 0
@@ -427,7 +428,7 @@ function CharacterService.heal(player, amount)
 	if not session or not char or session.downed or session.out then
 		return
 	end
-	session.hp = math.min(Game.MaxHP, session.hp + amount)
+	session.hp = math.min(session.maxHp or Game.MaxHP, session.hp + amount)
 	char:SetAttribute("HP", session.hp)
 end
 
@@ -446,7 +447,7 @@ function CharacterService.revive(player, hp)
 		return false
 	end
 	session.downed = false
-	session.hp = math.clamp(hp, 1, Game.MaxHP)
+	session.hp = math.clamp(hp, 1, session.maxHp or Game.MaxHP)
 	char:SetAttribute("Downed", false)
 	char:SetAttribute("HP", session.hp)
 	removeRevivePrompt(char)
@@ -474,6 +475,10 @@ function CharacterService.down(player)
 	local char = player.Character
 	if not session or not char or session.downed then
 		return
+	end
+	if session.grabbing then
+		local info = { session = session, char = char, root = char:FindFirstChild("HumanoidRootPart") }
+		pcall(Services.ActionService.releaseGrab, player, info, false)
 	end
 	session.downed = true
 	session.hp = 0

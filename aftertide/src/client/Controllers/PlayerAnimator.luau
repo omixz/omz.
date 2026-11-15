@@ -439,6 +439,27 @@ local function animate(char, rig, dt, serverNow, isLocal)
 		waistLean -= 0.15 * k
 	end
 
+	-- digging a gun out of the backpack: down on one knee, both hands behind
+	local packT = since(char, "PackAt", serverNow)
+	if packT < 2.4 then
+		local k = math.min(1, packT / 0.3) * math.max(0, math.min(1, (2.4 - packT) / 0.3))
+		lHip, rHip = lHip + 1.4 * k, rHip + 0.3 * k
+		lKnee, rKnee = lKnee - 1.7 * k, rKnee - 1.9 * k
+		rootOffset += Vector3.new(0, -1.0 * k, 0)
+		lSh, rSh = lSh * (1 - k) - 0.8 * k, rSh * (1 - k) - 0.9 * k
+		lEl, rEl = 1.4 * k, 1.5 * k
+		waistLean -= 0.3 * k
+	end
+
+	-- holding someone: left arm round their neck, right arm in front
+	if char:GetAttribute("Grabbing") then
+		lSh, lEl, lShZ = 1.6, 1.9, 0.6
+		if not armed then
+			rSh, rEl, rShZ = 1.3, 1.6, -0.4
+		end
+		waistLean -= 0.05
+	end
+
 	if downed then
 		-- slumped, crawling on one arm
 		local crawl = math.sin(p) * 0.4 * moving
@@ -545,8 +566,20 @@ function PlayerAnimator.start()
 		local camPos = Workspace.CurrentCamera.CFrame.Position
 		diag.frames += 1
 		local animated = 0
+		-- players, plus any rescued survivors (same rig, same procedural animation)
+		local subjects = {}
 		for _, p in Players:GetPlayers() do
-			local char = p.Character
+			if p.Character then
+				table.insert(subjects, { char = p.Character, isLocal = p == player })
+			end
+		end
+		for _, m in game:GetService("CollectionService"):GetTagged("Survivor") do
+			table.insert(subjects, { char = m, isLocal = false })
+		end
+		for _, subject in subjects do
+			local char = subject.char
+			local p = { } -- kept for the isLocal flag below
+			p.isLocal = subject.isLocal
 			if char then
 				local rig = rigs[char]
 				if rig == nil then
@@ -554,7 +587,7 @@ function PlayerAnimator.start()
 					rigs[char] = rig
 				end
 				if rig and rig.root.Parent and (rig.root.Position - camPos).Magnitude < 220 then
-					local ok, err = pcall(animate, char, rig, dt, serverNow, p == player)
+					local ok, err = pcall(animate, char, rig, dt, serverNow, p.isLocal)
 					if ok then
 						animated += 1
 					else

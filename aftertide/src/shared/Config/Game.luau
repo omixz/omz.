@@ -18,7 +18,7 @@ local Game = {
 	DailyWinReward = { secondWind = 1 }, -- first successful crossing each UTC day
 
 	-- Ammo Cache: reserve ammo added per weapon ammo type (once per encounter).
-	AmmoCache = { pistolAmmo = 12, rifleAmmo = 8, shells = 6, arrows = 6 },
+	AmmoCache = { pistolAmmo = 6, rifleAmmo = 4, shells = 3, arrows = 4 },
 
 	FerryOrigin = Vector3.new(0, 0, 700),
 }

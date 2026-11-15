@@ -12,10 +12,10 @@ return {
 		tape = { name = "Tape", kind = "part", cap = 3 },
 		canister = { name = "Canister", kind = "part", cap = 3 },
 		-- ammunition (reserve; magazines live on the weapon)
-		pistolAmmo = { name = "Revolver rounds", kind = "ammo", cap = 18 },
-		rifleAmmo = { name = "Rifle rounds", kind = "ammo", cap = 12 },
-		shells = { name = "Shells", kind = "ammo", cap = 8 },
-		arrows = { name = "Arrows", kind = "ammo", cap = 10 },
+		pistolAmmo = { name = "Revolver rounds", kind = "ammo", cap = 12 },
+		rifleAmmo = { name = "Rifle rounds", kind = "ammo", cap = 8 },
+		shells = { name = "Shells", kind = "ammo", cap = 6 },
+		arrows = { name = "Arrows", kind = "ammo", cap = 8 },
 		-- consumables, throwables, tools
 		dressing = { name = "Field Dressing", kind = "consumable", cap = 2 },
 		bottle = { name = "Bottle", kind = "throwable", cap = 3 },
@@ -55,7 +55,7 @@ return {
 	Shove = { range = 5.5, cooldown = 4, stun = 2.2, noise = 12 },
 
 	-- What one Resupply token gives (fixed, never random).
-	Resupply = { pistolAmmo = 6, dressing = 1, bottle = 1 },
+	Resupply = { pistolAmmo = 4, dressing = 1, bottle = 1 },
 
 	-- Satchel upgrades (workbench) raise these.
 	CapBonus = { satchel = 1, ammoPouch = 0.5 },

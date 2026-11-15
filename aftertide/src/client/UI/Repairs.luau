@@ -50,7 +50,7 @@ local function rebuild()
 			b.TextColor3 = C.ok
 		else
 			local afford = (player:GetAttribute("Scrip") or 0) >= r.scrip and (player:GetAttribute("Materials") or 0) >= r.materials
-			local build = Theme.button({ LayoutOrder = 1, Text = ("%d S · %d M"):format(r.scrip, r.materials), Size = UDim2.new(0, 128, 1, 0), TextSize = 13, AutoButtonColor = afford and not locked, Parent = buttons })
+			local build = Theme.button({ LayoutOrder = 1, Text = ("%d MATERIALS"):format(r.materials), Size = UDim2.new(0, 128, 1, 0), TextSize = 13, AutoButtonColor = afford and not locked, Parent = buttons })
 			if not afford or locked then
 				build.TextTransparency = 0.45
 			end
@@ -69,23 +69,6 @@ local function rebuild()
 				end
 			end)
 			first = first or build
-		end
-	end
-	if have.armory then
-		Theme.heading({ LayoutOrder = 50, Text = "ARMORY: LONG GUN FOR YOUR NEXT CROSSING", TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 24), Parent = list })
-		local rowFrame = Theme.make("Frame", { LayoutOrder = 51, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, Parent = list })
-		Theme.list(Enum.FillDirection.Horizontal, 6).Parent = rowFrame
-		local choice = player:GetAttribute("LongGunChoice")
-		for i, id in Weapons.LongGuns do
-			local b = Theme.button({ LayoutOrder = i, Text = Weapons.List[id].name, TextSize = 13, Size = UDim2.new(0.25, -5, 1, 0), Parent = rowFrame })
-			if choice == id then
-				b.BackgroundColor3 = C.lantern
-				b.TextColor3 = C.backdrop
-			end
-			b.Activated:Connect(function()
-				request("SetLongGun", id)
-				task.delay(0.3, rebuild)
-			end)
 		end
 	end
 	Theme.focus(first)

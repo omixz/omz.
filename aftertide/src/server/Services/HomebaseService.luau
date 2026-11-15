@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Upgrades = require(Shared.Config.Upgrades)
 local Projects = require(Shared.Config.Projects)
+local Quartermaster = require(Shared.Config.Quartermaster)
 local Weapons = require(Shared.Config.Weapons)
 local Net = require(Shared.Net)
 
@@ -28,18 +29,125 @@ function HomebaseService.bonusesFor(player)
 	local has = function(id)
 		return Services.PlayerDataService.hasRepair(player, id)
 	end
-	local bonus = { salvage = 0, items = {} }
+	local bonus = { salvage = 0, items = {}, pack = {}, kit = {} }
 	if has("generator") then
-		bonus.salvage += 15
+		bonus.salvage += 20
 	end
 	if has("sickbay") then
 		bonus.items.dressing = 1
 	end
-	local choice = player:GetAttribute("LongGunChoice")
-	if has("armory") and type(choice) == "string" and Weapons.List[choice] and Weapons.List[choice].slot == "long" then
-		bonus.longGun = choice
+	-- the loadout chosen at the Quartermaster (only guns you've unlocked)
+	local data = Services.PlayerDataService.get(player)
+	if data then
+		local guns = data.guns or {}
+		local loadout = data.loadout or {}
+		if type(loadout.long) == "string" and guns[loadout.long] and Weapons.List[loadout.long] and Weapons.List[loadout.long].slot == "long" then
+			bonus.longGun = loadout.long
+		end
+		local slots = Quartermaster.BackpackSlots + (has("armory") and 1 or 0)
+		for _, id in loadout.pack or {} do
+			if #bonus.pack < slots and guns[id] and id ~= bonus.longGun and Weapons.List[id] and Weapons.List[id].slot == "long" then
+				table.insert(bonus.pack, id)
+			end
+		end
+		-- crossing kits bought at the Quartermaster: delivered now, then used up
+		for kitId, count in data.kit or {} do
+			for _, k in Quartermaster.Kits do
+				if k.id == kitId then
+					for itemId, amount in k.items do
+						bonus.kit[itemId] = (bonus.kit[itemId] or 0) + amount * count
+					end
+				end
+			end
+		end
+		data.kit = {}
+		Services.PlayerDataService.publish(player)
 	end
 	return bonus
+end
+
+-- Quartermaster -------------------------------------------------------------------------------
+
+local function qmPrice(player, price)
+	return math.floor(price * (Services.PlayerDataService.hasRepair(player, "armory") and 0.85 or 1) + 0.5)
+end
+
+local function unlockGun(player, gunId)
+	local data = Services.PlayerDataService.get(player)
+	if not data or type(gunId) ~= "string" then
+		return
+	end
+	for _, g in Quartermaster.Guns do
+		if g.id == gunId then
+			data.guns = data.guns or { revolver = true }
+			if data.guns[gunId] then
+				return
+			end
+			local price = qmPrice(player, g.price)
+			if not Services.PlayerDataService.spendScrip(player, price) then
+				toast(player, ("Need %d Scrip. Earn it by finishing missions."):format(price))
+				return
+			end
+			data.guns[gunId] = true
+			-- first long gun: put it straight in the holster
+			data.loadout = data.loadout or { long = "", pack = {} }
+			if data.loadout.long == "" or data.loadout.long == nil then
+				data.loadout.long = gunId
+			end
+			Services.PlayerDataService.publish(player)
+			Services.AnalyticsHelper.economy(player, "sink", price, Enum.AnalyticsEconomyTransactionType.Shop.Name, "Gun_" .. gunId)
+			toast(player, ("Unlocked: %s. Set your loadout at the Quartermaster."):format(Weapons.List[gunId].name))
+			task.spawn(Services.PlayerDataService.save, player)
+			return
+		end
+	end
+end
+
+local function setLoadout(player, long, pack)
+	local data = Services.PlayerDataService.get(player)
+	if not data then
+		return
+	end
+	local guns = data.guns or {}
+	local clean = { long = "", pack = {} }
+	if type(long) == "string" and guns[long] and Weapons.List[long] and Weapons.List[long].slot == "long" then
+		clean.long = long
+	end
+	local slots = Quartermaster.BackpackSlots + (Services.PlayerDataService.hasRepair(player, "armory") and 1 or 0)
+	if type(pack) == "table" then
+		for _, id in pack do
+			if #clean.pack < slots and type(id) == "string" and guns[id] and id ~= clean.long and Weapons.List[id] and Weapons.List[id].slot == "long" and not table.find(clean.pack, id) then
+				table.insert(clean.pack, id)
+			end
+		end
+	end
+	data.loadout = clean
+	Services.PlayerDataService.publish(player)
+end
+
+local function buyKit(player, kitId)
+	local data = Services.PlayerDataService.get(player)
+	if not data or type(kitId) ~= "string" then
+		return
+	end
+	for _, k in Quartermaster.Kits do
+		if k.id == kitId then
+			data.kit = data.kit or {}
+			if (data.kit[kitId] or 0) >= Quartermaster.MaxKitsEach then
+				toast(player, "That's as many as the Quartermaster will pack for one crossing.")
+				return
+			end
+			local price = qmPrice(player, k.price)
+			if not Services.PlayerDataService.spendScrip(player, price) then
+				toast(player, ("Need %d Scrip."):format(price))
+				return
+			end
+			data.kit[kitId] = (data.kit[kitId] or 0) + 1
+			Services.PlayerDataService.publish(player)
+			toast(player, k.name .. " packed for your next crossing.")
+			return
+		end
+	end
 end
 
 -- A repair is "visible" on the shared ferry if anyone in the server owns it.
@@ -145,6 +253,9 @@ function HomebaseService.start()
 			Services.WorkbenchService.buyPerk(player, a)
 		end,
 		Repair = repair,
+		UnlockGun = unlockGun,
+		SetLoadout = setLoadout,
+		BuyKit = buyKit,
 		OpenProjects = function(player)
 			Net.notify(player, "OpenRepairs", {})
 		end,

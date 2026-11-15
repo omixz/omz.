@@ -211,11 +211,23 @@ local function animate(model, rig, dt, now)
 	end
 
 	-- states that override the gait
-	if state == "Stunned" or state == "Pinned" then
+	local legStun = Workspace:GetServerTimeNow() - (model:GetAttribute("LegStunAt") or -100)
+	if state == "Stunned" and legStun < 1.6 then
+		-- shot in the leg: dropped to one knee, a hand down to catch themselves
+		lean, roll = 0.35, 0.1
+		lHip, rHip, lKnee, rKnee = 1.2, -0.1, -1.6, -2.0
+		lArm, rArm = 0.9, 0.3
+	elseif state == "Stunned" or state == "Pinned" then
 		local wobble = math.sin(now * 9 + rig.seed) * 0.15
 		lean, roll = -0.25, wobble
 		lArm, rArm = 0.6 + wobble, 0.5 - wobble
 		lHip, rHip, lKnee, rKnee = -0.15, 0.2, -0.3, -0.35
+	elseif state == "Grabbed" then
+		-- held from behind: clawing at the arm round their neck, feet dragging
+		local fight = math.sin(now * 11 + rig.seed) * 0.25
+		lArm, rArm, elbow = 2.3 + fight, 2.2 - fight, 1.5
+		lean, roll = -0.2, fight * 0.3
+		lHip, rHip, lKnee, rKnee = 0.2 + fight * 0.4, 0.15 - fight * 0.4, -0.3, -0.35
 	elseif state == "Quieted" or state == "Dispersed" or state == "Down" then
 		lean, roll = 0.5, 0.1
 		lHip, rHip, lKnee, rKnee = 0.9, 0.85, -1.6, -1.5

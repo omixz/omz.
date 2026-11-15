@@ -240,6 +240,17 @@ local function buildFerry(parent)
 		Services.MatchService.openShop(player)
 	end)
 
+	-- the Quartermaster's stall (Scrip store: guns, loadout, kits)
+	local qm = fixture(parent, "Quartermaster", Vector3.new(6, 3, 2.4), o + Vector3.new(27, 1.5, 13.6), Color3.fromRGB(92, 78, 60), M.WoodPlanks)
+	fixture(parent, "QuartermasterRack", Vector3.new(6, 6, 0.6), o + Vector3.new(27, 3, 15.4), Color3.fromRGB(70, 60, 48), M.WoodPlanks)
+	local qmLight = Instance.new("PointLight")
+	qmLight.Range = 10
+	qmLight.Color = C.warm
+	qmLight.Parent = qm
+	prompt(qm, "Trade", "The Quartermaster", function(player)
+		Services.MatchService.openMenu(player, "OpenQuartermaster")
+	end)
+
 	-- cargo
 	fixture(parent, "Cargo", Vector3.new(10, 8.6, 6), o + Vector3.new(40, 4.3, 0), C.containers[2], M.CorrodedMetal)
 
@@ -658,6 +669,10 @@ end
 -- Encounter objects -----------------------------------------------------------------------
 
 local encounterFolder
+
+function MapService.getEncounterFolder()
+	return encounterFolder
+end
 local extraction
 
 local function shuffled(list, rng)
