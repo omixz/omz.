@@ -6596,7 +6596,7 @@ end
 WeaponModels.HandOffset = CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
 -- slung diagonally across the back, behind the pack (barrel up over the left shoulder)
 WeaponModels.BackOffset = CFrame.new(0.1, 0.15, 1.02) * CFrame.Angles(0, 0, math.rad(38)) * CFrame.Angles(math.rad(90), 0, 0) * CFrame.new(0, 0, -0.5)
-WeaponModels.HipOffset = CFrame.new(0.95, -0.2, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+WeaponModels.HipOffset = CFrame.new(0.72, -0.2, 0.05) * CFrame.Angles(math.rad(-90), 0, 0)
 
 return WeaponModels
 ]]></ProtectedString></Properties></Item>
@@ -17496,7 +17496,17 @@ end
 -- (positive = forearm forward), the same convention the procedural poses use.
 local POLES = { L = Vector3.new(-0.55, -1, 0.2), R = Vector3.new(0.55, -1, 0.2) } -- elbows down and out
 
-local function solveArm(J, side, target)
+-- This frame's posed CFrames of the torso parts, from the root part through the joints we just
+-- set. (The parts' own CFrames still hold last frame's pose until physics runs: using them made
+-- the hands miss the gun whenever the body moved quickly, e.g. dropping prone.)
+local function posedTorso(J)
+	local hrp = J.root.Part0
+	local lower = hrp.CFrame * J.root.C0 * J.root.Transform * J.root.C1:Inverse()
+	local upper = lower * J.waist.C0 * J.waist.Transform * J.waist.C1:Inverse()
+	return upper, lower
+end
+
+local function solveArm(J, side, target, torsoCF)
 	local shoulder, elbow, wrist = J[side == "L" and "ls" or "rs"], J[side == "L" and "le" or "re"], J[side == "L" and "lw" or "rw"]
 	local torso, upper, lower = shoulder.Part0, shoulder.Part1, elbow.Part1
 	local hand = wrist.Part1
@@ -17505,7 +17515,7 @@ local function solveArm(J, side, target)
 	end
 	local a = (elbow.C0.Position - shoulder.C1.Position).Magnitude
 	local b = (wrist.C0.Position - elbow.C1.Position).Magnitude + hand.Size.Y * 0.45
-	local frame = torso.CFrame * shoulder.C0
+	local frame = (torsoCF or torso.CFrame) * shoulder.C0
 	local t = frame:PointToObjectSpace(target)
 	if t.Magnitude < 1e-3 then
 		return nil
@@ -17587,17 +17597,18 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 		local k = (1 - since / 0.25) ^ 2
 		pose = pose * CFrame.new(0, 0.03 * k, 0.18 * k) * CFrame.Angles(0.14 * k, 0, 0)
 	end
+	local upperCF, lowerCF = posedTorso(J)
 	-- drawing: from where it was holstered into the hands
 	if drawK < 1 then
-		local holster = slot == "long" and WeaponModels.BackOffset or (torso.CFrame:ToObjectSpace((char:FindFirstChild("LowerTorso") or torso).CFrame) * WeaponModels.HipOffset)
+		local holster = slot == "long" and WeaponModels.BackOffset or (upperCF:ToObjectSpace(lowerCF) * WeaponModels.HipOffset)
 		pose = holster:Lerp(pose, drawK * drawK * (3 - 2 * drawK))
 	end
-	local anchor = torso
+	local anchor, anchorCF = torso, upperCF
 	if (rig.prone or 0) > 0.5 then
 		-- prone: the gun rests out in front of you, just off the ground
 		local hrp = rig.root
 		local standH = (rig.baseHip or rig.humanoid.HipHeight) + hrp.Size.Y / 2
-		anchor = hrp
+		anchor, anchorCF = hrp, hrp.CFrame
 		pose = CFrame.new(slot == "long" and 0.35 or 0.2, -(standH - 0.95), slot == "long" and -1.9 or -2.3) * CFrame.Angles(pitch * 0.4, 0, 0)
 	end
 	weld.Part0 = anchor
@@ -17605,7 +17616,7 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	weld.C1 = CFrame.new()
 	rig.posedWeld = weld
 	-- hands onto the gun
-	local gripWorld = anchor.CFrame * pose
+	local gripWorld = anchorCF * pose
 	local rightTarget = gripWorld.Position
 	local support = grip:FindFirstChild("Support")
 	local leftTarget = support and (gripWorld * support.CFrame).Position or nil
@@ -17615,13 +17626,13 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	elseif drawK < 0.6 then
 		leftTarget = nil -- the off hand joins once the gun is out
 	end
-	local ok, rs, re = pcall(solveArm, J, "R", rightTarget)
+	local ok, rs, re = pcall(solveArm, J, "R", rightTarget, upperCF)
 	if ok and rs then
 		J.rs.Transform, J.re.Transform = rs, re
 		J.rw.Transform = CFrame.Angles(-0.2, 0, 0)
 	end
 	if leftTarget and (slot == "long" or a > 0.3 or reloading) then
-		local okL, ls, le = pcall(solveArm, J, "L", leftTarget)
+		local okL, ls, le = pcall(solveArm, J, "L", leftTarget, upperCF)
 		if okL and ls then
 			J.ls.Transform, J.le.Transform = ls, le
 			J.lw.Transform = CFrame.Angles(0.3, 0, 0)
@@ -17819,10 +17830,12 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	local heal = since(char, "HealAt", serverNow)
 	if heal < 2.2 then
 		local k = math.min(1, heal / 0.25) * math.max(0, math.min(1, (2.2 - heal) / 0.3))
+		-- wrapping a dressing round the forearm, hands in front of the stomach, head down
 		local work = math.sin(heal * 9) * 0.12
-		lSh, rSh = 0.9 * k + lSh * (1 - k), 0.8 * k + rSh * (1 - k)
-		lEl, rEl = 1.6 * k + work, 1.5 * k - work
-		lShZ, rShZ = 0.6 * k, -0.6 * k
+		lSh, rSh = 0.5 * k + lSh * (1 - k), 0.42 * k + rSh * (1 - k)
+		lEl, rEl = 1.55 * k + work, 1.45 * k - work
+		lShZ, rShZ = 0.5 * k, -0.5 * k
+		lShY, rShY = 0.25 * k, -0.25 * k
 		waistLean -= 0.15 * k
 	end
 
@@ -17899,12 +17912,29 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	local busyHands = melee < 0.45 or throw < 0.5 or takedown < 1.2 or heal < 2.2 or dodge < dodgeLen
 	local reloading = (reloadUntil > serverNow) or char:GetAttribute("Reloading") == true
 	local drawK = math.clamp((os.clock() - (rig.drawAt or -10)) / 0.4, 0, 1)
+	if armed and not downed and not busyHands and rig.healHolstered then
+		rig.healHolstered = nil
+		rig.drawAt = os.clock() -- draw it again after healing
+		drawK = 0
+	end
 	if armed and not downed and not busyHands then
 		local sprinting = (isLocal and State.sprinting or char:GetAttribute("Sprint") == true) and moving > 0.5
 		local okPose, err = pcall(poseGun, char, rig, J, slot, a, sprinting, reloading, drawK, pitch)
 		if not okPose and not rig.poseWarned then
 			rig.poseWarned = true
 			warn("[PlayerAnimator] gun pose: " .. tostring(err))
+		end
+	elseif armed and not downed and heal < 2.2 then
+		-- both hands on the dressing: the gun goes back in its holster, then is drawn again
+		local model = char:FindFirstChild("Weapon_" .. slot)
+		local w = model and model.PrimaryPart and model.PrimaryPart:FindFirstChild("Mount")
+		local holsterPart = char:FindFirstChild(slot == "long" and "UpperTorso" or "LowerTorso")
+		if w and holsterPart then
+			w.Part0 = holsterPart
+			w.C0 = slot == "long" and WeaponModels.BackOffset or WeaponModels.HipOffset
+			w.C1 = CFrame.new()
+			rig.posedWeld = w
+			rig.healHolstered = true
 		end
 	elseif rig.posedWeld then
 		-- hands busy or holstered: give the weld back to the server's mount (hand / back / hip)

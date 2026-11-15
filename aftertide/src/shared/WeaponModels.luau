@@ -157,6 +157,6 @@ end
 WeaponModels.HandOffset = CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
 -- slung diagonally across the back, behind the pack (barrel up over the left shoulder)
 WeaponModels.BackOffset = CFrame.new(0.1, 0.15, 1.02) * CFrame.Angles(0, 0, math.rad(38)) * CFrame.Angles(math.rad(90), 0, 0) * CFrame.new(0, 0, -0.5)
-WeaponModels.HipOffset = CFrame.new(0.95, -0.2, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+WeaponModels.HipOffset = CFrame.new(0.72, -0.2, 0.05) * CFrame.Angles(math.rad(-90), 0, 0)
 
 return WeaponModels
