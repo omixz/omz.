@@ -55,7 +55,7 @@ def skin_head(P, J, b, f, face=True):
         ears = S.union(S.ellipsoid(P, c + [0.35, 0.0, 0.02], [0.05, 0.12, 0.09]), S.ellipsoid(P, c + [-0.35, 0.0, 0.02], [0.05, 0.12, 0.09]))
         d = S.smooth_union(0.03, d, ears)
         # upper eyelids hooding the eyeballs: the eyes read as looking, not staring
-        lids = S.union(*[S.intersect(S.ellipsoid(P, c + [sx * 0.13, 0.05, -0.335], [0.062, 0.05, 0.045]), -(P[:, 1] - (c[1] + 0.045)), 0.01) for sx in (1, -1)])
+        lids = S.union(*[S.intersect(S.ellipsoid(P, c + [sx * 0.13, 0.06, -0.335], [0.066, 0.05, 0.045]), -(P[:, 1] - (c[1] + 0.058)), 0.01) for sx in (1, -1)])
         d = S.smooth_union(0.012, d, lids)
     neck = S.round_cone(P, J["neck"] + [0, -0.12, 0], c + [0, -0.25, 0.05], 0.165 * b, 0.135)
     return S.smooth_union(0.08, d, neck)
@@ -63,12 +63,26 @@ def skin_head(P, J, b, f, face=True):
 
 def eyes(P, J):
     c = J["head"]
-    return S.union(S.sphere(P, c + [0.13, 0.04, -0.33], 0.048), S.sphere(P, c + [-0.13, 0.04, -0.33], 0.048))
+    return S.union(S.sphere(P, c + [0.13, 0.04, -0.33], 0.052), S.sphere(P, c + [-0.13, 0.04, -0.33], 0.052))
 
 
 def irises(P, J):
+    # big, warm irises sitting on the front of the eyeball (friendly, not staring)
     c = J["head"]
-    return S.union(S.sphere(P, c + [0.13, 0.035, -0.37], 0.017), S.sphere(P, c + [-0.13, 0.035, -0.37], 0.017))
+    return S.union(S.sphere(P, c + [0.128, 0.036, -0.362], 0.025), S.sphere(P, c + [-0.128, 0.036, -0.362], 0.025))
+
+
+def pupils(P, J):
+    c = J["head"]
+    return S.union(S.sphere(P, c + [0.128, 0.036, -0.38], 0.012), S.sphere(P, c + [-0.128, 0.036, -0.38], 0.012))
+
+
+def lips(P, J):
+    # a soft, slightly smiling mouth: the corners lift a little
+    c = J["head"]
+    mouth = S.ellipsoid(P, c + [0, -0.238, -0.388], [0.095, 0.03, 0.03])
+    corners = S.union(*[S.sphere(P, c + [sx * 0.092, -0.222, -0.366], 0.022) for sx in (1, -1)])
+    return S.smooth_union(0.03, mouth, corners)
 
 
 def skin_chest(P, J, b, f):
@@ -187,8 +201,12 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
     head_layers = []
     mask = o.get("mask")
     head_layers.append(("Skin", lambda P: skin_head(P, J, b, f), "SmoothPlastic", skin))
-    head_layers.append(("Eyes", lambda P: eyes(P, J), "SmoothPlastic", (0.86, 0.84, 0.8)))
-    head_layers.append(("Iris", lambda P: irises(P, J), "SmoothPlastic", palette(o, "iris", (0.2, 0.14, 0.1))))
+    head_layers.append(("Eyes", lambda P: eyes(P, J), "SmoothPlastic", (0.93, 0.91, 0.88)))
+    head_layers.append(("Iris", lambda P: irises(P, J), "SmoothPlastic", palette(o, "iris", (0.36, 0.24, 0.14))))
+    if o.get("friendly"):
+        head_layers.append(("Pupil", lambda P: pupils(P, J), "SmoothPlastic", (0.04, 0.04, 0.05)))
+        sk = np.array(skin, float)
+        head_layers.append(("Lips", lambda P: lips(P, J), "SmoothPlastic", tuple(np.clip(sk * np.array([0.85, 0.5, 0.5]) + np.array([0.16, 0.02, 0.04]), 0, 1))))
     head_layers.append(("Brows", lambda P: S.union(*[S.capsule(P, J["head"] + [sx * 0.07, 0.125, -0.395], J["head"] + [sx * 0.19, 0.115, -0.37], 0.017) for sx in (1, -1)]), "Fabric", palette(o, "hair", (0.12, 0.09, 0.07))))
     hc = J["head"]
     if mask:
@@ -205,7 +223,7 @@ def build_segments(o, b=1.0, f=0.0, height=1.0):
     elif hat == "bun":
         head_layers.append(("Hair", lambda P: S.smooth_union(0.05, S.intersect(S.ellipsoid(P, hc + [0, 0.06, 0.06], [0.38, 0.43, 0.43]), S.subtract(above(P, hc[1] - 0.12), S.sphere(P, hc + [0, -0.12, -0.32], 0.4)), 0.03), S.sphere(P, hc + [0, 0.18, 0.44], 0.16)), "Fabric", hair))
     elif hat == "hood":
-        head_layers.append(("Hood", lambda P: cloth(S.subtract(S.ellipsoid(P, hc + [0, 0.04, 0.1], [0.47, 0.55, 0.56]), S.union(S.ellipsoid(P, hc + [0, -0.02, 0.02], [0.4, 0.48, 0.48]), S.ellipsoid(P, hc + [0, -0.05, -0.42], [0.3, 0.38, 0.3]))), 0.0, P, (0, 1, 0.3), 5, 0.01, 6), "Fabric", hatc))
+        head_layers.append(("Hood", lambda P: cloth(S.subtract(S.ellipsoid(P, hc + [0, 0.04, 0.1], [0.5, 0.58, 0.58]), S.union(S.ellipsoid(P, hc + [0, -0.02, 0.02], [0.39, 0.47, 0.47]), S.ellipsoid(P, hc + [0, -0.05, -0.42], [0.3, 0.38, 0.3]))), 0.0, P, (0, 1, 0.3), 5, 0.01, 6), "Fabric", hatc))
     elif hat == "helmet":
         head_layers.append(("Helmet", lambda P: S.union(S.intersect(S.ellipsoid(P, hc + [0, 0.1, 0.03], [0.44, 0.46, 0.5]), above(P, hc[1] + 0.02), 0.02), S.intersect(S.ellipsoid(P, hc + [0, 0.04, 0.06], [0.48, 0.12, 0.54]), above(P, hc[1] + 0.0))), "Plastic", hatc))
         head_layers.append(("Hair", lambda P: S.intersect(S.ellipsoid(P, hc + [0, -0.04, 0.1], [0.36, 0.34, 0.38]), above(P, hc[1] - 0.18), 0.03), "Fabric", hair))
