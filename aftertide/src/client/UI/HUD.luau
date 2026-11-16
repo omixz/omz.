@@ -17,6 +17,7 @@ local Movement = require(Shared.Config.Movement)
 local Weapons = require(Shared.Config.Weapons)
 local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
+local AdOffers = require(script.Parent.AdOffers)
 
 local HUD = {}
 local C = Theme.Colors
@@ -31,7 +32,7 @@ local ticks, dot, hitmarker, breathLabel
 local vignette
 local ring, ringLabel
 local toastHolder
-local downed, downedText, secondWindButton
+local downed, downedText, secondWindButton, adButton
 local indicatorLayer
 local indicators = {}
 local controlsPanel, controlsHint
@@ -224,6 +225,11 @@ function HUD.build(gui, onSecondWind, weaponController)
 	downedText = Theme.heading({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.new(0.9, 0, 0, 80), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, TextSize = 26, Parent = downed })
 	secondWindButton = Theme.button({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.53), Size = UDim2.new(0, 320, 0, 44), Text = "SECOND WIND  [R]", Parent = downed })
 	secondWindButton.Activated:Connect(onSecondWind)
+	adButton = Theme.button({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.53), Size = UDim2.new(0, 420, 0, 44), Text = "WATCH AN AD: GET A FREE SECOND WIND", BackgroundColor3 = Color3.fromRGB(150, 96, 40), Visible = false, Parent = downed })
+	adButton.Position = UDim2.new(0.5, 0, 0.53, 54)
+	adButton.Activated:Connect(function()
+		AdOffers.watch("secondWind")
+	end)
 end
 
 function HUD.toast(text)
@@ -568,11 +574,14 @@ function HUD.update(dt)
 	if isOut then
 		downedText.Text = "LOST TO THE PALL\nWaiting for your crew…"
 		secondWindButton.Visible = false
+		adButton.Visible = false
 	elseif isDowned then
 		local bleed = math.max(0, math.ceil((char:GetAttribute("BleedOutAt") or 0) - Workspace:GetServerTimeNow()))
 		downedText.Text = ("YOU'RE DOWN\nA crewmate can revive you · %ds"):format(bleed)
 		secondWindButton.Visible = true
 		secondWindButton.Text = ("SECOND WIND  [R]   ·   %d"):format(player:GetAttribute("Tokens_secondWind") or 0)
+		AdOffers.refresh(false)
+		adButton.Visible = AdOffers.isAvailable() and (player:GetAttribute("Tokens_secondWind") or 0) == 0
 	end
 
 	updateIndicators(camera, inEncounter)

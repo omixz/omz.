@@ -62,7 +62,10 @@ local function processReceipt(receipt)
 	if grant.oneTime then
 		Services.PlayerDataService.markOneTime(player, entry.key)
 	end
-	data_.spent = (data_.spent or 0) + (receipt.CurrencySpent or entry.product.price or 0)
+	local fromAd = Services.AdsService.takeAdReceipt(player, receipt.ProductId)
+	if not fromAd then
+		data_.spent = (data_.spent or 0) + (receipt.CurrencySpent or entry.product.price or 0)
+	end
 	Services.AnalyticsHelper.purchase(player, entry.key, receipt.CurrencySpent)
 	Services.PlayerDataService.recordReceipt(player, receipt.PurchaseId)
 
@@ -71,7 +74,7 @@ local function processReceipt(receipt)
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
-	Net.notify(player, "Toast", { text = "Thank you! " .. entry.product.name .. " added." })
+	Net.notify(player, "Toast", { text = fromAd and (entry.product.name .. " added: thanks for watching!") or ("Thank you! " .. entry.product.name .. " added.") })
 	if grant.outfit then
 		task.defer(Services.CosmeticsService.equip, player, grant.outfit)
 	end

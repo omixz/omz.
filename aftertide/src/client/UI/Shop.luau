@@ -248,6 +248,11 @@ function Shop.build(gui)
 		end)
 		tabButtons[name] = b
 	end
+	local freeButton = Theme.button({ LayoutOrder = 4, Text = "FREE: WATCH AN AD", Size = UDim2.new(0, 190, 1, 0), BackgroundColor3 = Color3.fromRGB(150, 96, 40), Parent = tabs })
+	freeButton.Activated:Connect(function()
+		Shop.close()
+		require(script.Parent.AdOffers).open()
+	end)
 	scripText = Theme.label({ LayoutOrder = 4, Text = "", TextSize = 13, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 18), Parent = panel })
 
 	body = Theme.make("ScrollingFrame", {

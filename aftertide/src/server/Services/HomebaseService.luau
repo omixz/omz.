@@ -273,6 +273,9 @@ function HomebaseService.start()
 		UnlockGun = unlockGun,
 		SetLoadout = setLoadout,
 		BuyKit = buyKit,
+		WatchAd = function(player, a)
+			Services.AdsService.watch(player, a)
+		end,
 		Spin = function(player)
 			Services.SpinService.spin(player)
 		end,

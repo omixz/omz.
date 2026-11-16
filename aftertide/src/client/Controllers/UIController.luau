@@ -27,6 +27,7 @@ local Spin = require(UI:WaitForChild("Spin"))
 local Guide = require(UI:WaitForChild("Guide"))
 local Logbook = require(UI:WaitForChild("Logbook"))
 local Callouts = require(UI:WaitForChild("Callouts"))
+local AdOffers = require(UI:WaitForChild("AdOffers"))
 
 local UIController = {}
 local Controllers
@@ -78,6 +79,7 @@ local function closeMenus()
 	Quartermaster.close()
 	Spin.close()
 	Logbook.close()
+	AdOffers.close()
 end
 
 function UIController.init(registry)
@@ -175,6 +177,9 @@ function UIController.start()
 	build("Quartermaster", function()
 		Quartermaster.build(ui, request)
 	end)
+	build("AdOffers", function()
+		AdOffers.build(ui, request, HUD.toast)
+	end)
 	build("Callouts", function()
 		Callouts.build(ui)
 	end)
@@ -199,6 +204,9 @@ function UIController.start()
 	Satchel.setMenuHandlers({
 		spin = function()
 			Spin.open()
+		end,
+		freeStuff = function()
+			AdOffers.open()
 		end,
 		logbook = function()
 			Logbook.open()
@@ -307,6 +315,8 @@ function UIController.start()
 			Quests.open()
 		elseif kind == "OpenQuartermaster" then
 			Quartermaster.open()
+		elseif kind == "AdResult" then
+			AdOffers.result(data)
 		elseif kind == "Callout" then
 			Callouts.show(data)
 		elseif kind == "DailyReward" then

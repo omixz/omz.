@@ -141,3 +141,17 @@ Unlocking: Cannery Row, Larkspur Street, Saltmarsh Flats, Old Town Market and Fu
 available from the start; the Chart Room project adds Hollow Pines, Verdant Gardens, Golden
 Vineyard and Dry Dock Yard; the Lookout Tower adds Cinder Quarry, Whiteout Depot, Lighthouse Point
 and Powerworks. Routes still pick maps at random from what the crew has unlocked.
+
+# Round 7: rewarded video ads
+Optional "watch an ad, get it free" for items the shop already sells: **Second Wind** (also
+offered on the down screen), **Ammo Cache**, **Resupply Satchel**, **Pocket Rounds**, **Bandage
+Roll**. Open it from the Satchel (FREE ITEMS) or the shop (FREE: WATCH AN AD). Config in
+`Config/Ads.luau`, server in `AdsService` (cooldown per offer, 10 per hour), client in
+`UI/AdOffers.luau`.
+- Not offered, because Roblox's rewarded-ad rules forbid them: **Lucky Spin** (randomised reward)
+  and **Scrip/Materials** (currency that inflates the economy).
+- To turn it on: Creator Hub > Monetization > Ads > Settings > Rewarded Video > Serving enabled.
+  The experience must be public, have an approved content rating and about 2,000 unique monthly
+  visitors; until then no ad is "available" and the buttons stay hidden.
+- Ad rewards arrive as the normal purchase receipt (Robux spent: 0), so they use the same safe,
+  once-only grant path as purchases.
