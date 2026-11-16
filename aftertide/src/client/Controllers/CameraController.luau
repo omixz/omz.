@@ -1,0 +1,434 @@
+--!nonstrict
+-- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
+-- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
+-- swap, and mouse / gamepad / touch look.
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Game = require(Shared.Config.Game)
+local Spring = require(Shared.Util.Spring)
+local State = require(script.Parent.Parent.State)
+
+local CameraController = {}
+local Controllers
+local player = Players.LocalPlayer
+local recoilYaw = 0
+local recoilPitch = 0 -- temporary kick that springs back (most of it)
+local fovPunch = 0
+
+local SENS_MOUSE = 0.0028
+local SENS_PAD = 3.0
+local SENS_TOUCH = 0.0065
+local PITCH_MIN, PITCH_MAX = -1.2, 0.95
+
+local bobPhase, landDip = 0, 0
+local fpHidden = false
+local fpNext = 0
+
+-- First person hides the head, torso and legs (and anything worn on them) but keeps the arms and
+-- the gun, so you see your own hands. Switched back when you leave first person.
+local function setFirstPersonVisible(on)
+	local char = State.character
+	if not char then
+		return
+	end
+	for _, d in char:GetDescendants() do
+		if d:IsA("BasePart") then
+			local weapon = d:FindFirstAncestorWhichIsA("Model") and d:FindFirstAncestorWhichIsA("Model").Name:sub(1, 7) == "Weapon_"
+			local keep = weapon or d.Name:find("Arm") or d.Name:find("Hand")
+			d.LocalTransparencyModifier = (on and not keep) and 1 or 0
+		end
+	end
+	fpHidden = on
+end
+
+local yaw, pitch = 0, -0.12
+local padLook = Vector2.zero
+local touchInput, lastTouchPos = nil, nil
+
+local focusSpring = Spring.new(Vector3.zero, 7)
+local offsetSpring = Spring.new(Vector3.new(1.7, 0.5, 6.2), 5)
+local fovSpring = Spring.new(70, 4)
+local currentDist = 6
+local needsSnap = true
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Exclude
+local aimParams = RaycastParams.new()
+aimParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- Console aim assist (gamepad only, while aiming): the look slows over a target ("friction")
+-- and drifts gently onto it while you're moving the stick ("magnetism"). Never snaps.
+local lastPad = false
+local assistParams = RaycastParams.new()
+assistParams.FilterType = Enum.RaycastFilterType.Exclude
+local function wrapAngle(a)
+	return (a + math.pi) % (2 * math.pi) - math.pi
+end
+local function aimAssistTarget()
+	local enemies = Workspace:FindFirstChild("Enemies")
+	local cam = Workspace.CurrentCamera
+	if not (enemies and cam) then
+		return nil
+	end
+	local origin = cam.CFrame.Position
+	local look = cam.CFrame.LookVector
+	local best, bestAngle = nil, math.rad(7)
+	for _, model in enemies:GetChildren() do
+		local part = model:FindFirstChild("UpperTorso") or model:FindFirstChild("HumanoidRootPart")
+		if part and model:GetAttribute("State") ~= "Dispersed" and (model:GetAttribute("HP") or 1) > 0 then
+			local to = part.Position - origin
+			local dist = to.Magnitude
+			if dist < 140 then
+				local angle = math.acos(math.clamp(look:Dot(to.Unit), -1, 1))
+				-- a wider cone up close
+				local cone = math.rad(math.clamp(7 * 25 / math.max(dist, 1), 2.5, 9))
+				if angle < cone and angle < bestAngle then
+					assistParams.FilterDescendantsInstances = { State.character, model }
+					if not Workspace:Raycast(origin, to, assistParams) then
+						best, bestAngle = part, angle
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+function CameraController.usingGamepad()
+	return lastPad
+end
+
+function CameraController.getYaw()
+	return yaw
+end
+
+function CameraController.getPitch()
+	return pitch
+end
+
+-- Recoil: the view climbs (you pull it back down), with a little sideways jitter.
+local breath = { holding = false, since = 0, spentUntil = 0 }
+local BREATH_HOLD = 4 -- seconds of steady aim before you have to breathe
+
+-- Hold breath while aiming (sprint key): sway stops for a few seconds, then you gasp.
+function CameraController.holdBreath(on)
+	local now = os.clock()
+	if on and State.aiming and now >= breath.spentUntil then
+		breath.holding, breath.since = true, now
+	elseif not on and breath.holding then
+		breath.holding = false
+		breath.spentUntil = now + 1
+	end
+end
+
+function CameraController.isHoldingBreath()
+	return breath.holding
+end
+
+-- Recoil: the view climbs (you pull it back down); `side` is the gun's pattern step.
+-- The kick is ONLY an offset on top of where you are aiming: it springs back to zero, so the
+-- view never drifts away from where you put it (the old code added the sideways kick to your
+-- aim permanently, which made the screen wander off with every shot).
+function CameraController.kick(degrees, side)
+	local steady = State.firstPerson and 0.8 or 1
+	recoilPitch = math.min(recoilPitch + math.rad(degrees) * 0.45 * steady, math.rad(9))
+	recoilYaw = math.clamp(recoilYaw + math.rad(degrees) * ((side or 0) * 0.3 + (math.random() - 0.5) * 0.05) * steady, -math.rad(5), math.rad(5))
+	fovPunch = math.min(fovPunch + degrees * 0.25, 3)
+end
+
+local function sensitivity()
+	return player:GetAttribute("Set_sensitivity") or 1
+end
+
+-- Direction from the character's head toward whatever is under the screen centre.
+function CameraController.aimDirection()
+	local camera = Workspace.CurrentCamera
+	local origin = camera.CFrame.Position
+	local look = camera.CFrame.LookVector * 250
+	-- enemies must stop this ray: the shot leaves from the head, not the camera, so aiming
+	-- at the wall behind a target would send the bullet past it
+	local hit = Workspace:Raycast(origin, look, aimParams)
+	local point = hit and hit.Position or origin + look
+	local head = State.character and State.character:FindFirstChild("Head")
+	local from = head and head.Position or origin
+	local dir = point - from
+	if dir.Magnitude < 0.5 then
+		return camera.CFrame.LookVector
+	end
+	return dir.Unit
+end
+
+function CameraController.onCharacter(char)
+	needsSnap = true
+	local root = char:WaitForChild("HumanoidRootPart")
+	local _, ry = root.CFrame:ToEulerAnglesYXZ()
+	yaw = ry
+	pitch = -0.12
+end
+
+local function refreshFilter()
+	local list = {}
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(list, p.Character)
+		end
+	end
+	aimParams.FilterDescendantsInstances = table.clone(list)
+	local enemies = Workspace:FindFirstChild("Enemies")
+	if enemies then
+		table.insert(list, enemies)
+	end
+	params.FilterDescendantsInstances = list
+end
+
+local function update(dt)
+	local camera = Workspace.CurrentCamera
+	if camera.CameraType ~= Enum.CameraType.Scriptable then
+		camera.CameraType = Enum.CameraType.Scriptable
+	end
+
+	local root = State.root
+	if not root or not root.Parent then
+		-- No character yet (choosing crew): a slow establishing shot of the Meridian.
+		local o = Game.FerryOrigin
+		local t = os.clock() * 0.05
+		camera.CFrame = CFrame.lookAt(o + Vector3.new(math.cos(t) * 55, 16, math.sin(t) * 55), o + Vector3.new(0, 4, 0))
+		camera.FieldOfView = 60
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
+
+	local uiOpen = State.uiOpen()
+	if uiOpen then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	elseif not UserInputService.TouchEnabled or UserInputService.MouseEnabled then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UserInputService.MouseIconEnabled = false
+	end
+
+	local assist = State.aiming and lastPad and player:GetAttribute("Set_aimAssist") ~= false and aimAssistTarget() or nil
+	if assist and padLook.Magnitude > 0.15 then
+		local d = (assist.Position - Workspace.CurrentCamera.CFrame.Position).Unit
+		local wantYaw, wantPitch = math.atan2(-d.X, -d.Z), math.asin(d.Y)
+		local k = math.min(1, dt * 2.2)
+		yaw += wrapAngle(wantYaw - yaw) * k
+		pitch += (wantPitch - pitch) * k * 0.6
+	end
+	if padLook.Magnitude > 0.15 then
+		local aimSlow = (State.aiming and 0.55 or 1) * (assist and 0.6 or 1)
+		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
+		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
+	end
+	recoilYaw -= recoilYaw * math.min(1, dt * 8)
+	recoilPitch -= recoilPitch * math.min(1, dt * 8)
+	fovPunch -= fovPunch * math.min(1, dt * 10)
+	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
+	State.pitch = pitch
+
+	local takedown = os.clock() < State.takedownUntil
+	State.firstPerson = player:GetAttribute("Set_camera") ~= "Third"
+	local firstPerson = State.firstPerson and not State.downed and not takedown
+	if firstPerson ~= fpHidden then
+		setFirstPersonVisible(firstPerson)
+	elseif firstPerson and os.clock() > fpNext then
+		fpNext = os.clock() + 0.5
+		setFirstPersonVisible(true) -- parts added later (gun swaps) stay correct
+	end
+	local s = State.shoulder
+	local height, offset, fov
+	-- over-the-shoulder framing: character on the left third, tight when aiming
+	if State.downed then
+		height, offset, fov = 0.9, Vector3.new(1.4 * s, 1.3, 6.5), 64
+	elseif takedown then
+		height, offset, fov = 1.8, Vector3.new(2.3 * s, 0.1, 4.0), 56
+	elseif State.prone then
+		local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
+		height, offset, fov = 0.2, Vector3.new(1.4 * s, 0.6, State.aiming and 2.6 or 4.4), weaponFov or 62
+	elseif State.aiming then
+		local weaponFov = Controllers and Controllers.WeaponController.aimFov()
+		local scoped = weaponFov and weaponFov < 40
+		height, offset, fov = State.crouched and 1.45 or 2.25, Vector3.new(2.05 * s, 0.35, scoped and 1.9 or 2.7), weaponFov or 50
+	elseif State.sprinting then
+		height, offset, fov = 2.2, Vector3.new(1.5 * s, 0.55, 6.6), 74
+	elseif State.crouched then
+		height, offset, fov = 1.35, Vector3.new(1.95 * s, 0.6, 4.9), 64
+	else
+		height, offset, fov = 2.3, Vector3.new(1.95 * s, 0.5, 5.6), 66
+	end
+
+	local focusTarget = root.Position + Vector3.new(0, height, 0)
+	if needsSnap or (focusSpring.position - focusTarget).Magnitude > 40 then
+		focusSpring:reset(focusTarget)
+		offsetSpring:reset(offset)
+		currentDist = offset.Magnitude
+		needsSnap = false
+		refreshFilter()
+	end
+	focusSpring.target = focusTarget
+	offsetSpring.target = offset
+	fovSpring.target = fov
+	fovSpring.frequency = State.aiming and 14 or 6 -- snap into the sights, ease back out
+	local focus = focusSpring:update(dt)
+	local off = offsetSpring:update(dt)
+	camera.FieldOfView = fovSpring:update(dt) + fovPunch
+
+	-- subtle breathing sway (scaled down while aiming)
+	local t = os.clock()
+	local reduce = player:GetAttribute("Set_reduceMotion") == true
+	-- the view itself must not wander when you're not aiming: only a hair of breathing when
+	-- standing completely still, none while moving, none with the sway setting off
+	local speed = State.root and Vector3.new(State.root.AssemblyLinearVelocity.X, 0, State.root.AssemblyLinearVelocity.Z).Magnitude or 0
+	local sway = (reduce or speed > 0.5) and 0 or 0.0008
+	local aimSway = 0
+	if State.aiming and not reduce then
+		-- breathing sway: steadier crouched, worse while moving
+		local v = State.root.AssemblyLinearVelocity
+		local moving = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / 8, 0, 1)
+		aimSway = (State.crouched and 0.0008 or 0.0014) * (1 + moving * 1.2)
+		if breath.holding then
+			if os.clock() - breath.since > BREATH_HOLD then
+				breath.holding = false
+				breath.spentUntil = os.clock() + 2.5 -- out of breath: shaky for a moment
+			else
+				aimSway *= 0.08
+			end
+		elseif os.clock() < breath.spentUntil then
+			aimSway *= 2.2
+		end
+	elseif breath.holding then
+		breath.holding = false
+	end
+	State.breath = breath.holding and "hold" or (os.clock() < breath.spentUntil and "spent" or "ready")
+	local rot = CFrame.fromEulerAnglesYXZ(
+		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
+		yaw + recoilYaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
+		0
+	)
+
+	local desired = (CFrame.new(focus) * rot * CFrame.new(off)).Position
+	local dir = desired - focus
+	local dist = dir.Magnitude
+	local allowed = dist
+	if dist > 0.01 then
+		local hit = Workspace:Spherecast(focus, 0.4, dir, params)
+		if hit then
+			allowed = math.max(hit.Distance - 0.15, 0.35)
+		end
+	end
+	if allowed < currentDist then
+		currentDist = allowed -- snap in so walls never block the view
+	else
+		currentDist += (allowed - currentDist) * math.min(1, dt * 3.5) -- ease back out
+	end
+	local position = dist > 0.01 and focus + dir.Unit * currentDist or desired
+	local shake = Controllers and Controllers.EffectsController.getShake() or 0
+	if shake > 0 and player:GetAttribute("Set_reduceMotion") ~= true then
+		local k = shake * 0.03
+		rot = rot * CFrame.Angles((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+	end
+	-- walking weight: a little vertical bob in step with your feet, a dip when you land
+	local flatSpeed = Vector3.new(root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z).Magnitude
+	local run = math.clamp(flatSpeed / 20, 0, 1)
+	local grounded = State.humanoid and State.humanoid.FloorMaterial ~= Enum.Material.Air
+	bobPhase += dt * (5 + flatSpeed * 0.55)
+	local bobScale = (reduce or not grounded) and 0 or (State.aiming and 0.2 or 1) * run
+	if State.landKick then
+		landDip = math.max(landDip, State.landKick)
+		State.landKick = nil
+	end
+	landDip -= landDip * math.min(1, dt * 7)
+	local bobY = math.sin(bobPhase) * 0.045 * bobScale - landDip
+	local bobX = math.cos(bobPhase * 0.5) * 0.03 * bobScale
+	if firstPerson then
+		-- eyes: just in front of the head, looking where the camera looks
+		local head = State.character and State.character:FindFirstChild("Head")
+		if head then
+			local eye = head.Position + rot.LookVector * 0.3 + Vector3.new(0, 0.12, 0)
+			camera.CFrame = CFrame.new(eye + Vector3.new(bobX, bobY * 1.2, 0)) * rot
+			camera.Focus = CFrame.new(eye)
+			local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
+			local baseFov = player:GetAttribute("Set_fov") or 80
+			local want = weaponFov and (weaponFov + 6) or (State.sprinting and baseFov + 6 or baseFov)
+			camera.FieldOfView += (want - camera.FieldOfView) * math.min(1, dt * 10)
+			return
+		end
+	end
+	camera.CFrame = CFrame.new(position + Vector3.new(0, bobY, 0) + rot.RightVector * bobX) * rot
+	camera.Focus = CFrame.new(focus)
+end
+
+function CameraController.toggleFirstPerson(on)
+	if on == nil then
+		on = not State.firstPerson
+	end
+	State.firstPerson = on
+	if Controllers and Controllers.UIController then
+		Controllers.UIController.setSetting("camera", on and "First" or "Third")
+	end
+end
+
+function CameraController.init(registry)
+	Controllers = registry
+end
+
+function CameraController.start()
+	UserInputService.InputChanged:Connect(function(input, processed)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			if not State.uiOpen() and State.root then
+				local k = SENS_MOUSE * sensitivity() * (State.aiming and 0.6 or 1)
+				yaw -= input.Delta.X * k
+				pitch -= input.Delta.Y * k
+			end
+		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
+			padLook = Vector2.new(input.Position.X, input.Position.Y)
+		end
+	end)
+	UserInputService.LastInputTypeChanged:Connect(function(kind)
+		lastPad = kind.Name:sub(1, 7) == "Gamepad"
+		State.gamepad = lastPad
+	end)
+	lastPad = UserInputService:GetLastInputType().Name:sub(1, 7) == "Gamepad"
+	State.gamepad = lastPad
+
+	UserInputService.TouchStarted:Connect(function(input, processed)
+		if processed or touchInput or State.uiOpen() then
+			return
+		end
+		if input.Position.X > Workspace.CurrentCamera.ViewportSize.X * 0.4 then
+			touchInput = input
+			lastTouchPos = input.Position
+		end
+	end)
+	UserInputService.TouchMoved:Connect(function(input)
+		if input == touchInput and lastTouchPos then
+			local delta = input.Position - lastTouchPos
+			lastTouchPos = input.Position
+			yaw -= delta.X * SENS_TOUCH * sensitivity()
+			pitch -= delta.Y * SENS_TOUCH * sensitivity()
+		end
+	end)
+	UserInputService.TouchEnded:Connect(function(input)
+		if input == touchInput then
+			touchInput = nil
+		end
+	end)
+
+	Players.PlayerAdded:Connect(function()
+		task.wait(2)
+		refreshFilter()
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(3)
+			refreshFilter()
+		end
+	end)
+
+	RunService:BindToRenderStep("AftertideCamera", Enum.RenderPriority.Camera.Value + 1, update)
+end
+
+return CameraController
