@@ -5611,14 +5611,15 @@ Projects.List = {
 	{ id = "sickbay", name = "Infirmary", desc = "+15 max health and an extra Field Dressing every crossing. Unlocks Medicine Run missions.", scrip = 0, materials = 90, unlocks = { missions = { "Medicine" } } },
 	{ id = "radio", name = "Radio Room", desc = "The tide chart offers 3 routes. Unlocks Restore the Signal missions.", scrip = 0, materials = 110, requires = "generator", unlocks = { missions = { "Relay" } } },
 	{ id = "armory", name = "Armory", desc = "+1 backpack gun slot and 15% off at the Quartermaster. Unlocks Burn the Nests missions.", scrip = 0, materials = 140, requires = "workshop", unlocks = { missions = { "Nests" } } },
-	{ id = "chartroom", name = "Chart Room", desc = "Unlocks Hollow Pines and +15% Materials from every mission.", scrip = 0, materials = 170, requires = "radio", unlocks = { maps = { "HollowPines" } } },
-	{ id = "lookout", name = "Lookout Tower", desc = "Every encounter opens with a Tide Sense pulse for the whole crew: you see the Hushed through walls.", scrip = 0, materials = 220, requires = "chartroom" },
+	{ id = "chartroom", name = "Chart Room", desc = "Unlocks four more maps (Hollow Pines, Verdant Gardens, Golden Vineyard, Dry Dock Yard) and +15% Materials from every mission.", scrip = 0, materials = 170, requires = "radio", unlocks = { maps = { "HollowPines", "VerdantGardens", "GoldenVineyard", "DryDockYard" } } },
+	{ id = "lookout", name = "Lookout Tower", desc = "Every encounter opens with a Tide Sense pulse for the whole crew: you see the Hushed through walls. Also unlocks four more maps (Cinder Quarry, Whiteout Depot, Lighthouse Point, Powerworks).", scrip = 0, materials = 220, requires = "chartroom", unlocks = { maps = { "CinderQuarry", "WhiteoutDepot", "LighthousePoint", "Powerworks" } } },
 }
 
 
 -- Mission types / maps available without any project.
 Projects.BaseMissions = { "Salvage", "LanternWatch", "Drift", "Hunt", "Rescue" }
-Projects.BaseMaps = { "CanneryRow", "LarkspurStreet" }
+-- Five maps from the start; the Chart Room opens four more, the Lookout Tower the last four.
+Projects.BaseMaps = { "CanneryRow", "LarkspurStreet", "SaltmarshFlats", "OldTownMarket", "FunfairPier" }
 
 -- How Materials are earned (MatchService).
 Projects.Materials = {
@@ -6996,7 +6997,7 @@ return WeaponModels
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX00000044"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000043"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000027"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ServerScriptService" referent="RBX0000004F"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000004E"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX00000027"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE server bootstrap. Every service exposes optional init(registry) and start().
 -- init wires dependencies (no yielding); start begins loops and connections.
 local Players = game:GetService("Players")
@@ -7066,7 +7067,7 @@ end)
 
 print("[BRINEWAKE] server ready")
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX0000002C"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000037"><Properties><string name="Name">Maps</string></Properties><Item class="ModuleScript" referent="RBX00000028"><Properties><string name="Name">CanneryRow</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- CANNERY ROW: a coastal fish cannery, container yard, net shed and tidal shallows.
 -- Bright overcast midday. Terrain ground (asphalt yard, concrete, grass verges, mud),
 -- real terrain water in the shallows, reeds and tall grass to hide in.
@@ -7286,7 +7287,605 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">CinderQuarry</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- CINDER QUARRY: a terraced open pit with a switchback ramp down to a dusty floor, a crusher
+-- building, excavators and dump trucks, conveyors climbing the wall, ore piles and site huts on
+-- the rim. Dry, orange late afternoon.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "CinderQuarry",
+	name = "Cinder Quarry",
+	hilly = true,
+	lighting = { sky = "larkspur", clouds = 0.25, cloudDensity = 0.4, cloudColor = { 255, 226, 190 }, wind = { 9, 0, 2 }, clock = 17.2, brightness = 3.1, ambient = { 118, 100, 88 }, outdoor = { 170, 148, 124 }, fog = 0.28, haze = 1.6, fogColor = { 236, 200, 156 }, tint = { 255, 232, 204 }, saturation = 0.18, contrast = 0.12, shift = { 255, 214, 168 } },
+}
+
+local CX, CZ = -10, 5
+local RAMP = 3.5 -- the direction of the smooth ramp (radians)
+
+local function wrap(a)
+	return (a + math.pi) % (2 * math.pi) - math.pi
+end
+
+local function pitHeight(x, z)
+	local r = math.sqrt((x - CX) ^ 2 + (z - CZ) ^ 2)
+	local t = math.clamp((r - 30) / 62, 0, 1)
+	local h = -8 + 24 * t
+	local ang = math.atan2(z - CZ, x - CX)
+	if math.abs(wrap(ang - RAMP)) > 0.4 then
+		h = math.floor(h / 3 + 0.5) * 3 + math.noise(x / 17, z / 17, 2) * 0.5 -- terraces
+	end
+	return h + math.noise(x / 40, z / 40, 9) * 1.2
+end
+
+local function excavator(gen, x, z, yaw)
+	local y = gen:ground(x, z)
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
+	local yellow = rgb(236, 180, 40)
+	for _, s in { -2.2, 2.2 } do
+		block(gen.parent, V(9, 1.6, 2), cf * CFrame.new(0, 0.8, s), rgb(60, 60, 62), Enum.Material.Metal)
+	end
+	block(gen.parent, V(7, 2.2, 5), cf * CFrame.new(0, 2.7, 0), yellow, Enum.Material.Metal)
+	block(gen.parent, V(3, 3, 3.4), cf * CFrame.new(1.8, 5.2, 0), yellow, Enum.Material.Metal)
+	block(gen.parent, V(0.2, 2.2, 2.8), cf * CFrame.new(3.35, 5.4, 0), rgb(70, 110, 130), Enum.Material.Glass, { Transparency = 0.3 })
+	gen:pipe((cf * CFrame.new(2, 3.5, 0)).Position, (cf * CFrame.new(9, 9, 0)).Position, 0.5, yellow)
+	gen:pipe((cf * CFrame.new(9, 9, 0)).Position, (cf * CFrame.new(13, 4, 0)).Position, 0.4, yellow)
+	block(gen.parent, V(2.6, 2, 3.4), cf * CFrame.new(13.4, 3.6, 0) * CFrame.Angles(0, 0, 0.5), rgb(120, 118, 112), Enum.Material.Metal)
+	gen:zone(x, z, 9)
+end
+
+local function truck(gen, x, z, yaw)
+	local y = gen:ground(x, z)
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
+	block(gen.parent, V(14, 4.6, 7.4), cf * CFrame.new(-1, 4.6, 0) * CFrame.Angles(0, 0, 0.08), rgb(232, 150, 40), Enum.Material.Metal)
+	block(gen.parent, V(4.4, 4.6, 7), cf * CFrame.new(7.6, 3.6, 0), rgb(236, 180, 40), Enum.Material.Metal)
+	block(gen.parent, V(0.2, 2, 5.6), cf * CFrame.new(9.8, 4.4, 0), rgb(70, 110, 130), Enum.Material.Glass, { Transparency = 0.3 })
+	for _, wx in { -4.5, 4, 8 } do
+		for _, wz in { -3.8, 3.8 } do
+			block(gen.parent, V(3, 3, 1.6), cf * CFrame.new(wx, 1.5, wz) * CFrame.Angles(0, 0, math.pi / 2), rgb(30, 30, 32), Enum.Material.Rubber, { Shape = Enum.PartType.Cylinder })
+		end
+	end
+	gen:zone(x, z, 9)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.heightfield(-120, -120, 120, 120, 6, pitHeight, function(x, z, h)
+		if h < -6 then
+			return M.Sand
+		end
+		local n = math.noise(x / 25, z / 25, 4)
+		if h > 12 then
+			return M.Ground
+		end
+		return n > 0.15 and M.Basalt or M.Rock
+	end)
+	gen:rolling()
+
+	-- the crusher building on the pit floor, and a fuel store
+	local crusher = gen:building({ CX - 22, CZ + 2, CX + 6, CZ + 26 }, pitHeight(CX - 8, CZ + 14), { color = rgb(150, 150, 146), inner = rgb(200, 196, 186), material = M.Concrete, h = 12 })
+	-- the conveyor from the crusher up the pit wall to a stockpile on the rim
+	local a = V(CX - 8, pitHeight(CX - 8, CZ + 14) + 12, CZ + 26)
+	local bPoint = V(CX + 6, pitHeight(CX + 6, CZ + 90) + 5, CZ + 90)
+	gen:pipe(a, bPoint, 1.1, rgb(80, 84, 88), M.Metal)
+	for k = 0.2, 0.9, 0.2 do
+		local p = a:Lerp(bPoint, k)
+		block(parent, V(1, p.Y - gen:ground(p.X, p.Z), 1), V(p.X, (p.Y + gen:ground(p.X, p.Z)) / 2, p.Z), rgb(100, 104, 108), M.Metal)
+	end
+	gen:zone(CX + 6, CZ + 58, 6)
+	for i = 1, 5 do -- ore stockpile
+		block(parent, V(10 - i, 5 - i * 0.6, 10 - i), V(CX + 6, pitHeight(CX + 6, CZ + 94) + (5 - i * 0.6) / 2 + (i - 1) * 2, CZ + 94), rgb(70, 66, 64), M.Slate, { Shape = Enum.PartType.Ball })
+	end
+
+	-- machines on the pit floor
+	excavator(gen, CX + 12, CZ - 10, 0.5)
+	excavator(gen, CX - 18, CZ - 14, 2.6)
+	truck(gen, CX + 10, CZ + 14, 1.6)
+	truck(gen, CX - 4, CZ - 24, 0.2)
+	-- ore piles and boulders
+	for _ = 1, 9 do
+		local x, z = gen:open(CX - 22, CZ - 22, CX + 24, CZ + 22, 5)
+		if x then
+			MapKit.prop(parent, ({ "Boulder_1", "Rock_1", "Rock_2" })[rng:NextInteger(1, 3)], CFrame.new(x, gen:ground(x, z) - 0.4, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(1, 2))
+		end
+	end
+
+	-- the site on the northern rim: huts, an office, a fuel tank, a generator
+	for i, x in { -60, -20, 30 } do
+		local y = pitHeight(x, -92)
+		MapKit.clearAbove(x - 16, -112, x + 16, -76, y)
+		MapKit.slab(x - 16, -112, x + 16, -76, M.Ground, y, 16)
+		gen:house(V(x, y, -108), i % 2 == 0 and math.pi or math.pi, { kinds = { "garage", "house", "apartment" } })
+	end
+	local fy = pitHeight(70, -60)
+	MapKit.clearAbove(58, -72, 82, -48, fy)
+	MapKit.slab(58, -72, 82, -48, M.Ground, fy, 16)
+	block(parent, V(8, 8, 8), V(70, fy + 4, -60), rgb(200, 60, 48), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(70, fy + 4, -60) * CFrame.Angles(0, 0, math.pi / 2) })
+	gen:zone(70, -60, 10)
+	gen:container(60, -66, "Toolbox", 0)
+	gen:container(80, -52, "AmmoCrate", 90)
+
+	-- warning signs, barrels, parked wrecks and the road in
+	gen:sign(-60, 95, 0.4, "BLASTING IN PROGRESS", rgb(206, 150, 30))
+	gen:scatter({ "Barrel_1" }, 18, -105, -105, 105, 105, 0.8, 1, 0, 3)
+	gen:car(-80, 80, 0.4, "CarVan_1")
+	gen:car(60, 90, 2.1, "CarSedan_2")
+	gen:scatter({ "Rock_1", "Rock_2", "DeadTree_1", "Bush_1" }, 50, -112, -112, 112, 112, 0.8, 1.6, 0.5, 4)
+	MapKit.tallGrass(parent, V(-90, gen:ground(-90, -20), -20), V(24, 0, 40), rng, MapKit.ground)
+	MapKit.tallGrass(parent, V(90, gen:ground(90, 30), 30), V(24, 0, 40), rng, MapKit.ground)
+	for _, f in { { V(CX, -4, CZ), V(90, 0, 90) } } do
+		MapKit.fog(parent, f[1], f[2])
+	end
+
+	return gen:finish({
+		start = { V(-96, 3, 96), V(-92, 3, 98), V(-100, 3, 92), V(-88, 3, 94) },
+		extraction = V(98, 0, -96),
+		lantern = V(CX, 0, CZ - 4),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">DryDockYard</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- DRY DOCK YARD: a flooded dry dock holding a half-built ship, two gantry cranes on rails,
+-- catwalk bridges, container stacks, chandlery and workshop, a port office. Steel-grey overcast.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "DryDockYard",
+	name = "Dry Dock Yard",
+	lighting = { sky = "cannery", clouds = 0.7, cloudDensity = 0.55, cloudColor = { 226, 232, 238 }, wind = { 11, 0, 4 }, clock = 11.4, brightness = 2.8, ambient = { 104, 112, 122 }, outdoor = { 146, 154, 164 }, fog = 0.26, haze = 1.0, fogColor = { 204, 214, 224 }, tint = { 238, 244, 252 }, saturation = 0.1, contrast = 0.12, shift = { 255, 240, 220 } },
+}
+
+local function crane(gen, x, y)
+	local steel = rgb(226, 170, 40)
+	for _, dz in { -22, 22 } do
+		for _, dx in { -1.6, 1.6 } do
+			block(gen.parent, V(1.4, 34, 1.4), V(x + dx, y + 17, dz), steel, Enum.Material.Metal)
+		end
+	end
+	block(gen.parent, V(5, 1.6, 62), V(x, y + 34, 0), steel, Enum.Material.Metal)
+	block(gen.parent, V(5, 1, 62), V(x, y + 0.5, 0), rgb(70, 72, 76), Enum.Material.Metal, { CanCollide = false })
+	-- the trolley, the hoist cable and a hook block
+	block(gen.parent, V(4, 2.6, 5), V(x, y + 32, -6), rgb(200, 60, 48), Enum.Material.Metal)
+	block(gen.parent, V(0.2, 18, 0.2), V(x, y + 22, -6), rgb(40, 40, 44), Enum.Material.Metal, { CanCollide = false })
+	block(gen.parent, V(2, 1.6, 2), V(x, y + 13, -6), rgb(60, 60, 64), Enum.Material.Metal)
+	gen:zone(x, 0, 4)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.slab(-120, -120, 120, 120, M.Concrete, 0)
+	local y = gen:flat()
+
+	-- the dry dock: a long basin of water with a half-built hull in it
+	local bx0, bx1, bz0, bz1 = -18, 18, -58, 58
+	MapKit.clearAbove(bx0, bz0, bx1, bz1, y - 9)
+	MapKit.slab(bx0, bz0, bx1, bz1, M.Concrete, y - 9.2, 4)
+	MapKit.water(bx0, bz0, bx1, bz1, y - 3, 6)
+	MapKit.volume(parent, V(36, 10, 116), V(0, y - 4, 0), "Shallows")
+	gen:zone(0, 0, 66)
+	local hull = rgb(150, 54, 44)
+	block(parent, V(14, 11, 78), V(0, y - 2.5, 4), hull, M.CorrodedMetal)
+	MapKit.wedge(parent, V(14, 11, 20), CFrame.new(0, y - 2.5, -45) * CFrame.Angles(0, math.pi, 0), hull, M.CorrodedMetal)
+	block(parent, V(14.4, 1, 80), V(0, y + 3.2, 4), rgb(200, 190, 170), M.WoodPlanks) -- deck
+	for z = -30, 40, 7 do -- ribs: the unplated bow
+		for _, sx in { -7, 7 } do
+			block(parent, V(0.5, 8, 0.5), V(sx, y + 7, z), rgb(110, 110, 108), M.Metal)
+		end
+		block(parent, V(14, 0.5, 0.5), V(0, y + 11, z), rgb(110, 110, 108), M.Metal)
+	end
+	block(parent, V(10, 7, 12), V(0, y + 7, 30), rgb(240, 238, 232), M.SmoothPlastic) -- deckhouse
+	block(parent, V(10.2, 1.4, 12.2), V(0, y + 10.8, 30), rgb(40, 52, 80), M.Metal)
+	for _, sx in { -9, 9 } do -- scaffolding along the hull
+		for z = -30, 36, 6 do
+			block(parent, V(0.4, 14, 0.4), V(sx * 1.05, y + 3, z), rgb(150, 150, 146), M.Metal)
+		end
+		block(parent, V(0.4, 0.4, 68), V(sx * 1.05, y + 8, 3), rgb(150, 150, 146), M.Metal)
+		block(parent, V(2.4, 0.3, 68), V(sx * 1.05, y + 4, 3), rgb(176, 130, 86), M.WoodPlanks)
+	end
+
+	-- two catwalk bridges across the basin, and a gangway onto the ship
+	for _, z in { -38, 38 } do
+		block(parent, V(42, 0.5, 4), V(0, y + 1, z), rgb(120, 122, 126), M.DiamondPlate)
+		for _, dz in { -2, 2 } do
+			block(parent, V(42, 0.3, 0.3), V(0, y + 3.2, z + dz), rgb(226, 170, 40), M.Metal, { CanCollide = false })
+		end
+	end
+	block(parent, V(14, 0.5, 3), V(-12, y + 2.6, 4), rgb(120, 122, 126), M.DiamondPlate)
+
+	-- two gantry cranes on rails either side of the dock
+	crane(gen, -32, y)
+	crane(gen, 32, y)
+
+	-- buildings: port office, chandlery, workshop, a tool store
+	gen:building({ -108, -100, -72, -66 }, y, { color = rgb(120, 140, 160), inner = rgb(224, 224, 218), material = M.Concrete, h = 11 })
+	gen:house(V(60, y, 70), math.pi, { kind = "shop", w = 26, d = 18 })
+	gen:house(V(90, y, 70), math.pi, { kind = "garage", w = 28, d = 22 })
+	gen:house(V(-60, y, 70), math.pi, { kind = "garage", w = 28, d = 22 })
+	gen:house(V(-100, y, 40), math.pi / 2, { kind = "apartment", w = 24, d = 22 })
+
+	-- container stacks in coloured rows, with lanes between
+	local colors = { rgb(196, 74, 54), rgb(40, 140, 150), rgb(60, 100, 170), rgb(226, 170, 60), rgb(90, 150, 90), rgb(150, 70, 140) }
+	for row = 0, 3 do
+		for col = 0, 3 do
+			local x, z = 52 + row * 14, -100 + col * 24
+			if gen:free(x, z, 4) and math.random() < 0.85 then
+				local stack = rng:NextInteger(1, 3)
+				for s = 1, stack do
+					block(parent, V(10, 8.6, 20), V(x, y + 4.3 + (s - 1) * 8.7, z), colors[rng:NextInteger(1, #colors)], M.CorrodedMetal)
+				end
+				gen:zone(x, z, 12)
+			end
+		end
+	end
+	for _ = 1, 8 do
+		local x, z = gen:open(-108, -108, 108, 108, 6)
+		if x then
+			gen:crate(x, z, 4)
+		end
+	end
+	gen:scatter({ "Barrel_1", "Rubble_1" }, 26, -108, -108, 108, 108, 0.8, 1.1, 0, 3)
+	gen:car(80, 20, 1.6, "CarVan_1")
+	gen:car(-84, -20, 0.2, "CarSedan_1")
+	for x = -100, 100, 40 do
+		MapKit.lamp(parent, V(x, y, -86), false)
+		MapKit.lamp(parent, V(x, y, 96), false)
+	end
+	gen:fence(rgb(120, 124, 128), 7, 6)
+	MapKit.fog(parent, V(0, 2, 0), V(120, 0, 120))
+
+	return gen:finish({
+		start = { V(-100, 3, -100), V(-96, 3, -102), V(-104, 3, -96), V(-92, 3, -98) },
+		extraction = V(104, 0, 100),
+		lantern = V(0, 0, 80),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">FunfairPier</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- FUNFAIR PIER: a seaside amusement pier at dusk: a slowly turning ferris wheel, carousel, big
+-- top, game stalls, a bumper-car arena, coaster arches and strings of lights over a plank
+-- boardwalk with the sea all round. Pink and violet dusk.
+local CollectionService = game:GetService("CollectionService")
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "FunfairPier",
+	name = "Funfair Pier",
+	lighting = { sky = "larkspur", clouds = 0.4, cloudDensity = 0.5, cloudColor = { 255, 210, 220 }, wind = { 8, 0, 4 }, clock = 18.9, brightness = 2.3, ambient = { 110, 96, 120 }, outdoor = { 150, 130, 156 }, fog = 0.2, haze = 0.9, fogColor = { 232, 196, 214 }, tint = { 255, 236, 244 }, saturation = 0.28, contrast = 0.1, shift = { 255, 198, 180 } },
+}
+
+local COLORS = { rgb(236, 70, 90), rgb(250, 200, 60), rgb(70, 170, 230), rgb(120, 210, 130), rgb(190, 110, 240), rgb(250, 140, 60) }
+
+local function ferrisWheel(gen, cx, cz, y)
+	local R, hubY = 18, y + 22
+	local model = Instance.new("Model")
+	model.Name = "FerrisWheel"
+	model.Parent = gen.parent
+	local hub = block(model, V(2, 2.4, 2.4), V(cx, hubY, cz), rgb(240, 240, 236), Enum.Material.Metal, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+	model.PrimaryPart = hub
+	local n = 24
+	for i = 0, n - 1 do
+		local a = i / n * math.pi * 2
+		local p = V(cx, hubY + math.sin(a) * R, cz + math.cos(a) * R)
+		local q = V(cx, hubY + math.sin(a + math.pi * 2 / n) * R, cz + math.cos(a + math.pi * 2 / n) * R)
+		gen:pipe(p, q, 0.35, rgb(240, 240, 236), Enum.Material.Metal).Parent = model
+		if i % 2 == 0 then
+			local spoke = gen:pipe(V(cx, hubY, cz), p, 0.2, rgb(200, 200, 196), Enum.Material.Metal)
+			spoke.Parent = model
+			local cabin = block(model, V(3, 3.4, 4), V(cx, p.Y - 2.4, p.Z), COLORS[(i / 2) % #COLORS + 1], Enum.Material.SmoothPlastic, { CanCollide = false })
+			cabin.Name = "Gondola"
+		end
+	end
+	for _, sz in { -6, 6 } do -- the A-frame legs
+		gen:pipe(V(cx, y, cz + sz * 1.4), V(cx, hubY, cz), 0.7, rgb(226, 70, 80))
+	end
+	CollectionService:AddTag(model, "SpinWheel")
+	gen:zone(cx, cz, 14)
+end
+
+local function carousel(gen, cx, cz, y)
+	local M = Enum.Material
+	block(gen.parent, V(1, 24, 24), V(cx, y + 0.5, cz), rgb(196, 150, 96), M.WoodPlanks, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(cx, y + 0.5, cz) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(gen.parent, V(14, 1.6, 1.6), V(cx, y + 8, cz), rgb(250, 200, 60), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(cx, y + 5, cz) * CFrame.Angles(0, 0, math.pi / 2) })
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local p = V(cx + math.cos(a) * 8, y, cz + math.sin(a) * 8)
+		gen:pipe(p + V(0, 1, 0), p + V(0, 9, 0), 0.25, rgb(250, 230, 120))
+		block(gen.parent, V(1.2, 1.6, 3), V(p.X, y + 3, p.Z), COLORS[i % #COLORS + 1], M.SmoothPlastic, { CanCollide = false })
+		block(gen.parent, V(0.8, 1.4, 0.8), V(p.X, y + 4.4, p.Z - 0.9), COLORS[i % #COLORS + 1], M.SmoothPlastic, { CanCollide = false })
+	end
+	for i = 1, 5 do -- the striped canopy, stacked
+		block(gen.parent, V(1.2, 26 - i * 4.6, 26 - i * 4.6), V(cx, y + 9 + i * 1.2, cz), i % 2 == 1 and rgb(236, 70, 90) or rgb(250, 248, 240), M.Fabric, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(cx, y + 9 + i * 1.2, cz) * CFrame.Angles(0, 0, math.pi / 2), CanCollide = false })
+	end
+	gen:zone(cx, cz, 15)
+	gen:lootAt(cx + 13, cz)
+end
+
+local function bigTop(gen, cx, cz, y)
+	local M = Enum.Material
+	local R = 22
+	for i = 0, 15 do -- ring of poles and low fabric walls, one gap for the door
+		local a = i / 16 * math.pi * 2
+		local p = V(cx + math.cos(a) * R, y, cz + math.sin(a) * R)
+		gen:pipe(p, p + V(0, 12, 0), 0.4, rgb(250, 248, 240))
+		if i ~= 0 then
+			block(gen.parent, V(2 * math.pi * R / 16 + 0.6, 4, 0.3), CFrame.new(p + V(0, 2, 0)) * CFrame.Angles(0, -a + math.pi / 2, 0), COLORS[i % #COLORS + 1], M.Fabric)
+		end
+	end
+	for i = 1, 8 do -- the cone of the roof, alternating stripes
+		block(gen.parent, V(1.2, 2 * R - i * 5, 2 * R - i * 5), V(cx, y + 12 + i * 1.4, cz), i % 2 == 1 and rgb(236, 70, 90) or rgb(250, 248, 240), M.Fabric, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(cx, y + 12 + i * 1.4, cz) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	block(gen.parent, V(0.4, 4, 0.4), V(cx, y + 26, cz), rgb(250, 200, 60), M.Metal)
+	block(gen.parent, V(10, 1.2, 8), V(cx - 8, y + 0.6, cz), rgb(120, 70, 50), M.WoodPlanks) -- the stage
+	for r = 0, 2 do
+		block(gen.parent, V(14, 0.6 + r * 0.5, 1.4), V(cx + 6, y + 0.4 + r * 0.25, cz - 4 + r * 4), rgb(150, 70, 70), M.Fabric, { CanCollide = false })
+	end
+	MapKit.bulb(gen.parent, V(cx, y + 14, cz), 26)
+	gen:zone(cx, cz, R + 2)
+	gen:container(cx - 8, cz + 4, "Locker", 90)
+	gen:container(cx + 8, cz - 8, "AmmoCrate", 0)
+	gen:lootAt(cx, cz + 6)
+	gen:lootAt(cx - 10, cz - 6)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.slab(-120, -120, 120, 120, M.Sand, 0)
+	local y = gen:flat()
+	-- the boardwalk deck over everything, with railings and lifebuoys round the edge
+	block(parent, V(240, 0.6, 240), V(0, y + 0.3, 0), rgb(150, 112, 76), M.WoodPlanks)
+	for i = -10, 10 do
+		block(parent, V(240, 0.05, 0.15), V(0, y + 0.62, i * 11), rgb(100, 72, 48), M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+	end
+	y += 0.6
+	gen.flatY = y
+	gen.groundFn = function()
+		return y
+	end
+	for t = -118, 118, 4 do
+		for _, p in { { t, 118 }, { t, -118 }, { 118, t }, { -118, t } } do
+			block(parent, V(0.4, 3.4, 0.4), V(p[1], y + 1.7, p[2]), rgb(240, 240, 236), M.Metal)
+		end
+	end
+	for _, r in { { 0, 118, 240, 0.3 }, { 0, -118, 240, 0.3 }, { 118, 0, 0.3, 240 }, { -118, 0, 0.3, 240 } } do
+		block(parent, V(r[3], 0.35, r[4]), V(r[1], y + 3.2, r[2]), rgb(70, 170, 230), M.Metal)
+		block(parent, V(r[3], 0.25, r[4]), V(r[1], y + 1.6, r[2]), rgb(240, 240, 236), M.Metal, { CanCollide = false })
+	end
+
+	ferrisWheel(gen, -55, 35, y)
+	carousel(gen, 40, 55, y)
+	bigTop(gen, 55, -55, y)
+
+	-- game stalls in a row: shops you can walk into, and open-fronted booths
+	for i, x in { -90, -60, -30, 0 } do
+		gen:house(V(x, y, -100), math.pi, { kind = "shop", w = 22, d = 14 })
+		assert(i)
+	end
+	for i = 0, 7 do
+		local x = -95 + i * 13
+		local z = 96
+		local cf = CFrame.new(x, y, z)
+		block(parent, V(9, 3.4, 3), cf * CFrame.new(0, 1.7, 0), COLORS[i % #COLORS + 1], M.WoodPlanks)
+		block(parent, V(9.4, 0.4, 3.6), cf * CFrame.new(0, 3.6, 0), rgb(250, 248, 240), M.Fabric)
+		for k = 0, 4 do
+			block(parent, V(9.4 / 5, 0.5, 4.2), cf * CFrame.new(-3.76 + k * 1.88, 7.6, -0.4) * CFrame.Angles(0.35, 0, 0), k % 2 == 0 and COLORS[i % #COLORS + 1] or rgb(250, 248, 240), M.Fabric, { CanCollide = false })
+		end
+		for _, px in { -4.3, 4.3 } do
+			block(parent, V(0.3, 7.2, 0.3), cf * CFrame.new(px, 3.6, -1.8), rgb(240, 240, 236), M.Metal)
+		end
+		gen:zone(x, z, 5)
+		if i % 3 == 0 then
+			gen:container(x, z - 3, "Drawer", 180)
+		end
+	end
+
+	-- the bumper-car arena: a low fenced rink with cars parked in it
+	local ax, az = -58, -50
+	for _, e in { { 0, -16, 32, 1 }, { 0, 16, 32, 1 }, { -16, 0, 1, 32 }, { 16, 0, 1, 32 } } do
+		block(parent, V(e[3], 3, e[4]), V(ax + e[1], y + 1.5, az + e[2]), rgb(70, 170, 230), M.Metal)
+	end
+	for i = 1, 6 do
+		block(parent, V(3.4, 1.6, 2.6), V(ax - 8 + (i % 3) * 8, y + 0.9, az - 6 + math.floor(i / 3) * 10), COLORS[i % #COLORS + 1], M.SmoothPlastic, { CanCollide = false })
+	end
+	gen:zone(ax, az, 18)
+	gen:lootAt(ax, az)
+
+	-- coaster arches along the east side (decor only), and light strings between poles
+	for i = 0, 9 do
+		local z = -85 + i * 17
+		local h = 8 + math.sin(i * 0.7) * 6
+		block(parent, V(1, h + 4, 1), V(100, y + (h + 4) / 2, z - 3), rgb(236, 70, 90), M.Metal)
+		block(parent, V(1, h + 4, 1), V(100, y + (h + 4) / 2, z + 3), rgb(236, 70, 90), M.Metal)
+		block(parent, V(1, 0.8, 18), V(100, y + h + 4, z), rgb(60, 60, 66), M.Metal, { CanCollide = false })
+		gen:zone(100, z, 5)
+	end
+	for x = -100, 100, 40 do
+		block(parent, V(0.5, 14, 0.5), V(x, y + 7, 0), rgb(240, 240, 236), M.Metal)
+		gen:zone(x, 0, 2)
+	end
+	for x = -100, 60, 40 do
+		gen:lights(V(x, y + 13, 0), V(x + 40, y + 13, 0), 12, COLORS[math.floor((x + 100) / 40) % #COLORS + 1], 2.2)
+	end
+	gen:scatter({ "Barrel_1" }, 14, -110, -110, 110, 110, 0.8, 1, 0, 3)
+	gen:car(100, -100, 0.6, "CarVan_1")
+	for _, p in { { -20, 60 }, { 20, -20 }, { 70, 10 }, { -80, 70 } } do
+		block(parent, V(2.6, 3, 2.6), V(p[1], y + 1.5, p[2]), rgb(250, 248, 240), M.SmoothPlastic) -- bins
+		gen:zone(p[1], p[2], 3)
+	end
+	MapKit.fog(parent, V(0, 3, 0), V(160, 0, 160))
+
+	return gen:finish({
+		start = { V(100, 3, 100), V(96, 3, 102), V(104, 3, 96), V(92, 3, 98) },
+		extraction = V(-104, 0, -100),
+		lantern = V(0, 0, 20),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002C"><Properties><string name="Name">GoldenVineyard</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- GOLDEN VINEYARD: rolling hills of vine rows and orchard trees, a stone farmhouse, a big barn,
+-- a wine cellar, a windmill, hay bales, tractors and stone walls. Warm golden hour.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "GoldenVineyard",
+	name = "Golden Vineyard",
+	hilly = true,
+	lighting = { sky = "larkspur", clouds = 0.3, cloudDensity = 0.45, cloudColor = { 255, 236, 206 }, wind = { 6, 0, 2 }, clock = 17.7, brightness = 3.2, ambient = { 116, 106, 92 }, outdoor = { 168, 154, 130 }, fog = 0.18, haze = 0.9, fogColor = { 240, 216, 170 }, tint = { 255, 240, 214 }, saturation = 0.24, contrast = 0.1, shift = { 255, 212, 160 } },
+}
+
+local function baseHeight(x, z)
+	return math.noise(x / 60, z / 60, 5.5) * 7 + math.noise(x / 22, z / 22, 1.3) * 1.6 + 5
+end
+
+local function windmill(gen, x, z, y)
+	local M = Enum.Material
+	for i = 0, 5 do
+		block(gen.parent, V(1, 16 - i * 1.8, 16 - i * 1.8), V(x, y + 2 + i * 3.4, z), i % 2 == 0 and rgb(236, 226, 206) or rgb(214, 200, 176), M.Brick, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(x, y + 2 + i * 3.4, z) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	block(gen.parent, V(1.2, 12, 12), V(x, y + 22.5, z), rgb(120, 70, 50), M.WoodPlanks, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(x, y + 22.5, z) * CFrame.Angles(0, 0, math.pi / 2) })
+	for i = 0, 3 do
+		local a = i * math.pi / 2 + 0.4
+		local tip = V(x, y + 20 + math.sin(a) * 14, z - 6.4 + math.cos(a) * 14)
+		gen:pipe(V(x, y + 20, z - 6.4), tip, 0.35, rgb(150, 104, 66), M.Wood)
+		block(gen.parent, V(0.2, 5, 11), CFrame.new((V(x, y + 20, z - 6.4) + tip) / 2) * CFrame.Angles(a, 0, 0), rgb(240, 236, 222), M.Fabric, { CanCollide = false })
+	end
+	gen:zone(x, z, 12)
+	gen:container(x + 9, z, "Toolbox", 90)
+	gen:lootAt(x - 9, z)
+end
+
+local function tractor(gen, x, z, yaw)
+	local y = gen:ground(x, z)
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
+	block(gen.parent, V(6, 2.6, 3.6), cf * CFrame.new(0, 2.4, 0), rgb(60, 130, 70), Enum.Material.Metal)
+	block(gen.parent, V(2.6, 3, 3), cf * CFrame.new(-1.6, 4.6, 0), rgb(70, 140, 80), Enum.Material.Metal)
+	for _, s in { -2, 2 } do
+		block(gen.parent, V(3.4, 3.4, 1), cf * CFrame.new(-2, 1.7, s) * CFrame.Angles(0, 0, math.pi / 2), rgb(30, 30, 32), Enum.Material.Rubber, { Shape = Enum.PartType.Cylinder })
+		block(gen.parent, V(2, 2, 0.8), cf * CFrame.new(2.4, 1, s * 1.1) * CFrame.Angles(0, 0, math.pi / 2), rgb(30, 30, 32), Enum.Material.Rubber, { Shape = Enum.PartType.Cylinder })
+	end
+	gen:zone(x, z, 5)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("forest")
+	MapKit.heightfield(-120, -120, 120, 120, 6, baseHeight, function(x, z)
+		return math.noise(x / 30, z / 30, 1) > 0.1 and M.Grass or M.LeafyGrass
+	end)
+	gen:rolling()
+	local function pad(cx, cz, w, d)
+		local y = baseHeight(cx, cz)
+		MapKit.clearAbove(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, y)
+		MapKit.slab(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, M.Ground, y, 16)
+		return y
+	end
+
+	-- the estate in the middle: farmhouse, barn, cellar, windmill
+	local fy = pad(0, 20, 44, 40)
+	gen:house(V(0, fy, 8), 0, { kind = "house", w = 28, d = 22, roof = "crossGable", color = rgb(226, 206, 170) })
+	local by = pad(-60, 10, 40, 38)
+	gen:house(V(-60, by, 0), 0, { kind = "garage", w = 34, d = 26, color = rgb(170, 70, 56) })
+	local cy = pad(60, 14, 34, 30)
+	gen:building({ 46, 4, 76, 26 }, cy, { color = rgb(160, 150, 136), inner = rgb(206, 196, 178), material = M.Slate, h = 9 })
+	local wy = pad(90, -60, 24, 24)
+	windmill(gen, 90, -60, wy)
+
+	-- vine rows over the hills
+	local posts = 0
+	for row = 0, 11 do
+		local z = -100 + row * 9
+		for x = -98, 98, 5 do
+			if gen:free(x, z, 3) and posts < 520 and not (x > -78 and x < -42 and z > -12 and z < 28) then
+				local y = gen:ground(x, z)
+				block(parent, V(0.3, 4, 0.3), V(x, y + 2, z), rgb(110, 80, 56), M.Wood, { CanCollide = false })
+				block(parent, V(1.8, 3.2, 1.4), V(x + 2.5, y + 1.8, z), rgb(70, 140, 56), M.LeafyGrass, { CanCollide = false, CanQuery = false })
+				if x % 15 == 0 then
+					block(parent, V(0.8, 0.8, 0.8), V(x + 2.5, y + 3.4, z), rgb(110, 40, 120), M.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
+				end
+				posts += 1
+			end
+		end
+	end
+	-- the orchard: rows of round-crowned trees
+	for i = 0, 5 do
+		for j = 0, 4 do
+			local x, z = 20 + i * 12, -90 + j * 12
+			if gen:free(x, z, 4) then
+				MapKit.prop(parent, "Bush_" .. rng:NextInteger(1, 2), CFrame.new(x, gen:ground(x, z), z), 2.2)
+				gen:zone(x, z, 3)
+			end
+		end
+	end
+	-- hay bales, stone walls, tractors, barrels
+	for _ = 1, 16 do
+		local x, z = gen:open(-108, -108, 108, 108, 6)
+		if x then
+			local y = gen:ground(x, z)
+			block(parent, V(3.4, 2.6, 2.6), CFrame.new(x, y + 1.3, z) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), rgb(226, 190, 90), M.Fabric)
+			gen:zone(x, z, 3)
+		end
+	end
+	for _ = 1, 8 do
+		local x, z = gen:open(-108, -108, 100, 100, 8)
+		if x then
+			local yaw = rng:NextNumber(0, 3.14)
+			for k = 0, 5 do
+				local px, pz = x + math.cos(yaw) * k * 3.2, z + math.sin(yaw) * k * 3.2
+				block(parent, V(3.4, 1.8, 1.2), CFrame.new(px, gen:ground(px, pz) + 0.8, pz) * CFrame.Angles(0, -yaw, 0), rgb(150, 146, 138), M.Rock)
+			end
+			gen:zone(x, z, 8)
+		end
+	end
+	tractor(gen, -30, -40, 0.7)
+	tractor(gen, 40, 50, 2.4)
+	gen:car(10, 90, 0.4, "CarVan_1")
+	gen:scatter({ "Barrel_1" }, 8, -108, -108, 108, 108, 0.8, 1, 0, 3)
+	gen:scatter({ "Pine_1", "Pine_2" }, 30, -112, -112, 112, 112, 0.5, 0.8, 0.4, 4) -- tall slim cypress-like trees
+	gen:scatter({ "Rock_1", "Rock_2", "Bush_1" }, 30, -112, -112, 112, 112, 0.8, 1.4, 0.4, 3)
+	MapKit.tallGrass(parent, V(-90, gen:ground(-90, 70), 70), V(30, 0, 40), rng, MapKit.ground)
+	MapKit.tallGrass(parent, V(90, gen:ground(90, 70), 70), V(26, 0, 36), rng, MapKit.ground)
+	for _ = 1, 20 do
+		local x, z = gen:open(-108, -108, 108, 108, 3)
+		if x then
+			gen:flowers(V(x, 0, z), rng:NextNumber(2, 5))
+		end
+	end
+	MapKit.ridge(baseHeight, 7)
+
+	return gen:finish({
+		start = { V(100, 3, 100), V(96, 3, 102), V(104, 3, 96), V(92, 3, 98) },
+		extraction = V(-104, 0, -100),
+		lantern = V(0, 0, 40),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- HOLLOW PINES: a lakeside logging valley above the coast. A creek with a plank bridge, a lake with
 -- a dock and rowboat, a campground round a fire, a gas station and shop on the logging road, a
 -- sawmill, a ranger station and lookout, cabins, wrecks along the road, dense pine forest, flowers
@@ -7795,7 +8394,7 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002A"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">LarkspurStreet</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- LARKSPUR STREET: an overgrown suburban street. Weatherboard houses you can enter, yards
 -- gone to tall grass, wrecked cars, power poles, a corner store. Warm golden afternoon.
 local MapKit = require(script.Parent.MapKit)
@@ -7940,7 +8539,426 @@ end
 
 return Map
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002B"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">LighthousePoint</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- LIGHTHOUSE POINT: a storm-lashed headland: cliffs to the sea, a tall striped lighthouse with
+-- the keeper's house, a foghorn station, concrete bunkers, a wooden stair down to a jetty, sea
+-- stacks and a wrecked ship on the rocks. Grey, windy dusk.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "LighthousePoint",
+	name = "Lighthouse Point",
+	hilly = true,
+	lighting = { sky = "cannery", clouds = 0.9, cloudDensity = 0.85, cloudColor = { 170, 176, 188 }, wind = { 18, 0, 8 }, clock = 18.0, brightness = 1.9, ambient = { 92, 98, 112 }, outdoor = { 128, 136, 152 }, fog = 0.38, haze = 1.6, fogColor = { 170, 182, 200 }, tint = { 226, 234, 248 }, saturation = 0.04, contrast = 0.14, shift = { 255, 214, 180 } },
+}
+
+local LX, LZ = 40, -30
+
+local function smooth(a, b, t)
+	t = math.clamp((t - a) / (b - a), 0, 1)
+	return t * t * (3 - 2 * t)
+end
+
+local function height(x, z)
+	local d = math.sqrt(x * x + z * z) / 105
+	local h = 22 * (1 - smooth(0.5, 0.92, d)) - 5
+	h += math.noise(x / 30, z / 30, 2.2) * 3.5 * (1 - smooth(0.7, 1, d))
+	h += 8 * math.exp(-(((x - LX) ^ 2 + (z - LZ) ^ 2) / 700)) -- the hill under the lighthouse
+	return h
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.water(-120, -120, 120, 120, 0.4, 14)
+	MapKit.heightfield(-120, -120, 120, 120, 6, height, function(x, z, h)
+		if h < 1.5 then
+			return M.Sand
+		end
+		local slope = math.abs(height(x + 6, z) - h) + math.abs(height(x, z + 6) - h)
+		if slope > 6 then
+			return M.Rock
+		end
+		return math.noise(x / 28, z / 28, 1) > 0.2 and M.LeafyGrass or M.Grass
+	end)
+	gen:rolling()
+	local function pad(cx, cz, w, d)
+		local y = height(cx, cz)
+		MapKit.clearAbove(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, y)
+		MapKit.slab(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, M.Ground, y, 16)
+		return y
+	end
+
+	-- the lighthouse: tall tapered stripes, a gallery, a lamp room with a real light
+	local ly = pad(LX, LZ, 26, 26)
+	for i = 0, 9 do
+		local r = 13 - i * 0.7
+		block(parent, V(4.4, r, r), V(LX, ly + 2.2 + i * 4.4, LZ), i % 2 == 0 and rgb(236, 236, 232) or rgb(200, 56, 48), M.Concrete, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(LX, ly + 2.2 + i * 4.4, LZ) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	local top = ly + 46
+	block(parent, V(1, 16, 16), V(LX, top, LZ), rgb(40, 44, 52), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(LX, top, LZ) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(parent, V(7, 6.4, 6.4), V(LX, top + 3.6, LZ), rgb(255, 232, 150), M.Glass, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(LX, top + 3.6, LZ) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.3, CanCollide = false })
+	block(parent, V(2, 8.4, 8.4), V(LX, top + 7.4, LZ), rgb(200, 56, 48), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(LX, top + 7.4, LZ) * CFrame.Angles(0, 0, math.pi / 2) })
+	local lamp = block(parent, V(2, 2, 2), V(LX, top + 3.6, LZ), rgb(255, 240, 180), M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+	local beam = Instance.new("SpotLight")
+	beam.Range = 110
+	beam.Angle = 40
+	beam.Brightness = 3
+	beam.Color = rgb(255, 236, 170)
+	beam.Face = Enum.NormalId.Front
+	beam.Parent = lamp
+	local glow = Instance.new("PointLight")
+	glow.Range = 60
+	glow.Brightness = 1.5
+	glow.Color = rgb(255, 230, 160)
+	glow.Parent = lamp
+	block(parent, V(5, 8, 0.4), V(LX, ly + 4, LZ - 6.6), rgb(90, 60, 44), M.WoodPlanks) -- the door
+	gen:zone(LX, LZ, 14)
+
+	-- the keeper's house and foghorn station beside it, then two bunkers on the cliffs
+	gen:house(V(LX - 30, pad(LX - 30, LZ + 8, 30, 30), LZ - 6), 0, { kind = "house", w = 22, d = 18, roof = "gable", color = rgb(236, 232, 222) })
+	local fy = pad(10, -70, 26, 22)
+	gen:building({ -2, -80, 22, -62 }, fy, { color = rgb(150, 152, 150), inner = rgb(210, 208, 200), material = M.Concrete, h = 9 })
+	local b1 = pad(-70, 30, 30, 26)
+	gen:building({ -82, 20, -58, 40 }, b1, { color = rgb(110, 116, 106), inner = rgb(180, 180, 170), material = M.Concrete, h = 8 })
+	local b2 = pad(45, 45, 30, 26)
+	gen:building({ 33, 35, 57, 55 }, b2, { color = rgb(110, 116, 106), inner = rgb(180, 180, 170), material = M.Concrete, h = 8 })
+
+	-- the jetty and the long stair down to it
+	local jx, jz = -58, -52
+	for i = 0, 7 do
+		block(parent, V(4, 0.4, 3), V(jx - i * 3.2, 1.2, jz), rgb(130, 96, 66), M.WoodPlanks)
+		if i % 2 == 0 then
+			block(parent, V(0.5, 4, 0.5), V(jx - i * 3.2, -0.8, jz - 1.4), rgb(80, 60, 44), M.Wood)
+			block(parent, V(0.5, 4, 0.5), V(jx - i * 3.2, -0.8, jz + 1.4), rgb(80, 60, 44), M.Wood)
+		end
+	end
+	gen:zone(jx - 8, jz, 12)
+	gen:container(jx + 4, jz + 5, "Toolbox", 0)
+
+	-- a wreck on the rocks, sea stacks, and a radar dish
+	local wx, wz = 100, 20
+	block(parent, V(30, 9, 9), CFrame.new(wx, 2, wz) * CFrame.Angles(0, 0.4, 0.32), rgb(120, 54, 44), M.CorrodedMetal)
+	block(parent, V(7, 6, 7), CFrame.new(wx - 4, 8, wz + 1) * CFrame.Angles(0, 0.4, 0.32), rgb(200, 196, 186), M.CorrodedMetal)
+	gen:zone(wx, wz, 16)
+	for i = 1, 8 do
+		local a = i / 8 * math.pi * 2 + 0.5
+		local x, z = math.cos(a) * 112, math.sin(a) * 112
+		MapKit.prop(parent, "Boulder_1", CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), rng:NextNumber(2.4, 3.6))
+	end
+	local ry = height(-30, -40)
+	block(parent, V(0.8, 10, 0.8), V(-30, ry + 5, -40), rgb(150, 150, 150), M.Metal)
+	block(parent, V(10, 1, 10), CFrame.new(-30, ry + 10.5, -40) * CFrame.Angles(0.6, 0, 0), rgb(220, 220, 216), M.Metal)
+	gen:zone(-30, -40, 6)
+
+	gen:scatter({ "Pine_1", "DeadTree_1", "Bush_1", "Bush_2" }, 50, -100, -100, 100, 100, 0.6, 1.0, 0.4, 4)
+	gen:scatter({ "Rock_1", "Rock_2", "Boulder_1" }, 36, -105, -105, 105, 105, 0.8, 1.5, 0.5, 3)
+	gen:scatter({ "Barrel_1", "Rubble_1" }, 12, -80, -80, 80, 80, 0.8, 1.0, 0, 3)
+	gen:car(20, 40, 0.4, "CarVan_1")
+	MapKit.tallGrass(parent, V(-30, gen:ground(-30, 60), 60), V(40, 0, 30), rng, MapKit.ground)
+	MapKit.tallGrass(parent, V(30, gen:ground(30, -80), -80), V(30, 0, 24), rng, MapKit.ground)
+	MapKit.fog(parent, V(0, 4, 0), V(220, 0, 220))
+	MapKit.fog(parent, V(-30, 6, 30), V(120, 0, 120))
+
+	return gen:finish({
+		start = { V(-40, 3, 55), V(-36, 3, 57), V(-44, 3, 51), V(-32, 3, 53) },
+		extraction = V(-62, 0, -52),
+		lantern = V(LX - 12, 0, LZ),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">MapGen</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- Shared scaffolding for the encounter maps: keeps track of what is placed where, so each map
+-- only has to describe its scenery. Records loot, containers and doorways from every building,
+-- avoids placing props inside buildings, and assembles the data table MapService expects
+-- (spawns, extraction, lantern, supply spots, loot, containers, edge spawns, patrols, doorways).
+local MapKit = require(script.Parent.MapKit)
+
+local V = Vector3.new
+local Gen = {}
+Gen.__index = Gen
+
+function Gen.new(parent, rng)
+	return setmetatable({ parent = parent, rng = rng, zones = {}, loot = {}, containers = {}, doors = {}, groundFn = nil }, Gen)
+end
+
+local function rgb(r, g, b)
+	return Color3.fromRGB(r, g, b)
+end
+Gen.rgb = rgb
+
+-- Keep-out circles ------------------------------------------------------------------------------
+
+function Gen:zone(x, z, r)
+	table.insert(self.zones, { x, z, r })
+end
+
+function Gen:free(x, z, pad)
+	pad = pad or 0
+	for _, zone in self.zones do
+		local dx, dz = x - zone[1], z - zone[2]
+		if dx * dx + dz * dz < (zone[3] + pad) ^ 2 then
+			return false
+		end
+	end
+	return true
+end
+
+-- Call once the terrain is filled: waits for it to become queryable (a fresh fill is not for a
+-- few physics steps), then reads the real surface height of flat ground.
+function Gen:flat()
+	task.wait(0.35)
+	local y = MapKit.ground(0, 0)
+	self.flatY = y
+	self.groundFn = function()
+		return y
+	end
+	return y
+end
+
+-- Same for rolling ground: every ground query is a ray cast against the terrain.
+function Gen:rolling()
+	task.wait(0.35)
+	self.groundFn = nil
+end
+
+function Gen:flowers(center, radius, color)
+	local colors = { rgb(240, 90, 110), rgb(255, 208, 60), rgb(250, 250, 250), rgb(180, 110, 230), rgb(255, 140, 60), rgb(110, 170, 250) }
+	color = color or colors[self.rng:NextInteger(1, #colors)]
+	for _ = 1, 14 do
+		local a, r = self.rng:NextNumber(0, 6.28), self.rng:NextNumber(0, radius)
+		local x, z = center.X + math.cos(a) * r, center.Z + math.sin(a) * r
+		local y = self:ground(x, z)
+		MapKit.block(self.parent, V(0.18, 0.9, 0.18), V(x, y + 0.45, z), rgb(70, 130, 60), Enum.Material.Grass, { CanCollide = false, CanQuery = false })
+		MapKit.block(self.parent, V(0.55, 0.55, 0.55), V(x, y + 1, z), color, Enum.Material.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
+	end
+end
+
+function Gen:ground(x, z)
+	if self.groundFn then
+		return self.groundFn(x, z)
+	end
+	return MapKit.ground(x, z)
+end
+
+-- A random free point in a rectangle (nil after many failed tries).
+function Gen:open(x0, z0, x1, z1, pad)
+	for _ = 1, 40 do
+		local x, z = self.rng:NextNumber(x0, x1), self.rng:NextNumber(z0, z1)
+		if self:free(x, z, pad or 3) then
+			return x, z
+		end
+	end
+	return nil
+end
+
+-- Buildings ----------------------------------------------------------------------------------------
+
+local function record(self, result)
+	for _, d in result.doorways or {} do
+		table.insert(self.doors, d)
+	end
+	for _, c in result.containers or {} do
+		table.insert(self.containers, c)
+	end
+	for _, l in result.loot or {} do
+		table.insert(self.loot, l)
+	end
+end
+
+-- A generated house / shop / apartment / garage / chapel / cabin (see MapKit.house).
+function Gen:house(origin, yaw, style)
+	local r = MapKit.house(self.parent, origin, yaw, self.rng, style)
+	record(self, r)
+	local cf = CFrame.new(origin) * CFrame.Angles(0, yaw, 0)
+	local mid = (cf * CFrame.new(0, 0, 11)).Position
+	self:zone(mid.X, mid.Z, 20)
+	return r
+end
+
+-- A multi-room building (see MapKit.building). rect = { x0, z0, x1, z1 }.
+function Gen:building(rect, y, style)
+	local r = MapKit.building(self.parent, rect, y, self.rng, style)
+	record(self, r)
+	self:zone((rect[1] + rect[3]) / 2, (rect[2] + rect[4]) / 2, math.max(rect[3] - rect[1], rect[4] - rect[2]) / 2 + 3)
+	return r
+end
+
+-- Scenery ---------------------------------------------------------------------------------------
+
+-- Scatter props over an area: names = { "Pine_1", ... }, scale = { min, max }.
+function Gen:scatter(names, count, x0, z0, x1, z1, smin, smax, sink, pad)
+	local placed = 0
+	for _ = 1, count * 3 do
+		if placed >= count then
+			break
+		end
+		local x, z = self.rng:NextNumber(x0, x1), self.rng:NextNumber(z0, z1)
+		if self:free(x, z, pad or 2) then
+			local y = self:ground(x, z) - (sink or 0)
+			MapKit.prop(self.parent, names[self.rng:NextInteger(1, #names)], CFrame.new(x, y, z) * CFrame.Angles(0, self.rng:NextNumber(0, 6.28), 0), self.rng:NextNumber(smin or 0.8, smax or 1.2))
+			placed += 1
+		end
+	end
+end
+
+function Gen:car(x, z, yaw, name)
+	MapKit.prop(self.parent, name or ({ "CarSedan_1", "CarSedan_2", "CarVan_1" })[self.rng:NextInteger(1, 3)], CFrame.new(x, self:ground(x, z), z) * CFrame.Angles(0, yaw or self.rng:NextNumber(0, 6.28), 0))
+	self:zone(x, z, 5)
+end
+
+function Gen:block(size, pos, color, material, props)
+	return MapKit.block(self.parent, size, pos, color, material, props)
+end
+
+-- A cylinder log / pipe / pole between two points.
+function Gen:pipe(a, b, radius, color, material)
+	local mid = (a + b) / 2
+	return MapKit.block(self.parent, V((b - a).Magnitude, radius * 2, radius * 2), CFrame.lookAt(mid, b) * CFrame.Angles(0, math.pi / 2, 0), color, material or Enum.Material.Metal, { Shape = Enum.PartType.Cylinder })
+end
+
+function Gen:crate(x, z, size, color)
+	size = size or 3.6
+	local y = self:ground(x, z)
+	MapKit.block(self.parent, V(size, size, size), CFrame.new(x, y + size / 2, z) * CFrame.Angles(0, self.rng:NextNumber(0, 1.57), 0), color or rgb(150, 108, 70), Enum.Material.WoodPlanks)
+	self:zone(x, z, size)
+end
+
+function Gen:container(x, z, kind, yaw)
+	table.insert(self.containers, { pos = V(x, self:ground(x, z), z), type = kind or "Toolbox", yaw = yaw or 0 })
+end
+
+function Gen:lootAt(x, z)
+	table.insert(self.loot, V(x, self:ground(x, z), z))
+end
+
+-- Edges ---------------------------------------------------------------------------------------------
+
+-- A fence round the whole map: posts and rails (chain-link look), gaps for the sea beyond.
+function Gen:fence(color, height, step)
+	height = height or 7
+	step = step or 6
+	local E = 117
+	for t = -E, E, step do
+		for _, side in { { t, E }, { t, -E }, { E, t }, { -E, t } } do
+			MapKit.block(self.parent, V(0.5, height, 0.5), V(side[1], self:ground(side[1], side[2]) + height / 2, side[2]), color or rgb(120, 124, 128), Enum.Material.Metal)
+		end
+	end
+	for _, rail in { { 0, E, 240, 0.3 }, { 0, -E, 240, 0.3 }, { E, 0, 0.3, 240 }, { -E, 0, 0.3, 240 } } do
+		for _, h in { 1.2, height - 0.6 } do
+			MapKit.block(self.parent, V(math.max(rail[3], 0.3), 0.3, math.max(rail[4], 0.3)), V(rail[1], h, rail[2]), color or rgb(120, 124, 128), Enum.Material.Metal)
+		end
+		MapKit.block(self.parent, V(math.max(rail[3], 0.2), height - 1.4, math.max(rail[4], 0.2)), V(rail[1], height / 2 + 0.2, rail[2]), color or rgb(160, 164, 168), Enum.Material.Metal, { Transparency = 0.7 })
+	end
+end
+
+-- A string of bulbs between two points (festival / camp lights).
+function Gen:lights(a, b, count, color, sag)
+	for i = 0, count do
+		local k = i / count
+		local p = a:Lerp(b, k) - V(0, math.sin(k * math.pi) * (sag or 1.2), 0)
+		local bulb = MapKit.block(self.parent, V(0.6, 0.6, 0.6), p, color or rgb(255, 214, 140), Enum.Material.Neon, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
+		if i % 3 == 1 then
+			local l = Instance.new("PointLight")
+			l.Range = 14
+			l.Brightness = 0.9
+			l.Color = color or rgb(255, 214, 140)
+			l.Parent = bulb
+		end
+	end
+end
+
+function Gen:sign(x, z, yaw, text, color)
+	local y = self:ground(x, z)
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
+	MapKit.block(self.parent, V(0.4, 7, 0.4), cf * CFrame.new(0, 3.5, 0), rgb(96, 70, 48), Enum.Material.Wood)
+	local board = MapKit.block(self.parent, V(7, 2, 0.3), cf * CFrame.new(0, 6.2, 0), color or rgb(46, 96, 62), Enum.Material.WoodPlanks)
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.Parent = board
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = text
+		label.TextColor3 = rgb(250, 244, 220)
+		label.Parent = gui
+	end
+end
+
+-- Assembling the map data ----------------------------------------------------------------------------
+
+-- spec: { start = {Vector3...}, extraction, lantern }
+function Gen:finish(spec)
+	local rng = self.rng
+	local loot = table.clone(self.loot)
+	-- top up with loose-item spots in open ground, spread across the map
+	local want = 22
+	for _ = 1, 60 do
+		if #loot >= want then
+			break
+		end
+		local x, z = self:open(-108, -108, 108, 108, 4)
+		if x then
+			table.insert(loot, V(x, 0, z))
+		end
+	end
+	local supply = {}
+	for i = 1, #loot, math.max(1, math.floor(#loot / 10)) do
+		table.insert(supply, loot[i])
+	end
+	local containers = self.containers
+	if #containers < 8 then
+		for _ = 1, 8 - #containers do
+			local x, z = self:open(-100, -100, 100, 100, 3)
+			if x then
+				table.insert(containers, { pos = V(x, 0, z), type = ({ "Toolbox", "AmmoCrate", "Locker", "Drawer" })[rng:NextInteger(1, 4)], yaw = rng:NextInteger(0, 3) * 90 })
+			end
+		end
+	end
+	local edge = {}
+	for _, p in { { -105, -105 }, { 105, -105 }, { 105, 105 }, { -105, 105 }, { 0, -110 }, { 0, 110 }, { 110, 0 }, { -110, 0 } } do
+		table.insert(edge, V(p[1], 0, p[2]))
+	end
+	local patrols = {}
+	for _ = 1, 6 do
+		local route = {}
+		for _ = 1, 3 + rng:NextInteger(0, 1) do
+			local x, z = self:open(-100, -100, 100, 100, 5)
+			if x then
+				table.insert(route, V(x, 0, z))
+			end
+		end
+		if #route >= 2 then
+			table.insert(patrols, route)
+		end
+	end
+	return {
+		StartSpawns = spec.start,
+		ExtractionPos = spec.extraction,
+		LanternPos = spec.lantern or V(0, 0, 0),
+		SupplyCandidates = supply,
+		LootSpots = loot,
+		ContainerSpots = containers,
+		EdgeSpawns = edge,
+		PatrolRoutes = patrols,
+		Doorways = self.doors,
+	}
+end
+
+return Gen
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">MapKit</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared building blocks for the encounter maps: parts, volumes, walls, lights, terrain,
 -- grass, props (sculpted meshes when loaded, part fallbacks otherwise) and houses.
 local CollectionService = game:GetService("CollectionService")
@@ -9055,8 +10073,793 @@ end
 
 return MapKit
 ]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">OldTownMarket</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- OLD TOWN MARKET: a cobbled square with a fountain and a clock tower, ringed by tall shops,
+-- flats and a chapel, market stalls under awnings, bunting between the roofs and narrow alleys.
+-- Sunny afternoon.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "OldTownMarket",
+	name = "Old Town Market",
+	lighting = { sky = "ferry", clouds = 0.3, cloudDensity = 0.45, cloudColor = { 255, 255, 252 }, wind = { 4, 0, 2 }, clock = 14.6, brightness = 3.3, ambient = { 116, 112, 106 }, outdoor = { 164, 158, 148 }, fog = 0.14, haze = 0.6, fogColor = { 228, 226, 214 }, tint = { 255, 246, 232 }, saturation = 0.22, contrast = 0.1, shift = { 255, 226, 190 } },
+}
+
+local COLORS = { rgb(214, 70, 60), rgb(240, 190, 60), rgb(70, 150, 200), rgb(110, 180, 110), rgb(180, 100, 190), rgb(240, 140, 60) }
+
+local function stall(gen, x, z, yaw, color)
+	local y = gen.flatY
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
+	local M = Enum.Material
+	block(gen.parent, V(6.4, 3, 2.4), cf * CFrame.new(0, 1.5, 0), rgb(150, 104, 66), M.WoodPlanks)
+	for k = 0, 5 do
+		block(gen.parent, V(1.1, 0.4, 4.6), cf * CFrame.new(-2.75 + k * 1.1, 7.2, -0.6) * CFrame.Angles(0.3, 0, 0), k % 2 == 0 and color or rgb(250, 248, 240), M.Fabric, { CanCollide = false })
+	end
+	for _, px in { -3, 3 } do
+		block(gen.parent, V(0.3, 7, 0.3), cf * CFrame.new(px, 3.5, -2.2), rgb(110, 76, 50), M.Wood)
+	end
+	-- goods on the counter: crates of colourful fruit
+	for k = -1, 1 do
+		block(gen.parent, V(1.5, 0.9, 1.5), cf * CFrame.new(k * 2, 3.4, 0), COLORS[(k + 4) % #COLORS + 1], M.SmoothPlastic, { CanCollide = false })
+	end
+	gen:zone(x, z, 5)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("suburb")
+	MapKit.slab(-120, -120, 120, 120, M.Cobblestone, 0)
+	local y = gen:flat()
+
+	-- the square: a paler paved area, a big fountain, a clock tower on the north side
+	block(parent, V(80, 0.2, 80), V(0, y + 0.1, 0), rgb(196, 188, 170), M.Pavement, { CanCollide = false })
+	block(parent, V(1.4, 20, 20), V(0, y + 0.7, 0), rgb(200, 196, 186), M.Marble, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 0.7, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(parent, V(0.6, 18, 18), V(0, y + 1.3, 0), rgb(70, 150, 190), M.Glass, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 1.3, 0) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.35, CanCollide = false })
+	for i = 1, 3 do
+		block(parent, V(2.4, 9 - i * 2.2, 9 - i * 2.2), V(0, y + 1.5 + i * 2.4, 0), rgb(214, 210, 200), M.Marble, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 1.5 + i * 2.4, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	gen:zone(0, 0, 12)
+	local tx, tz = 0, 34
+	block(parent, V(9, 30, 9), V(tx, y + 15, tz), rgb(190, 176, 150), M.Brick)
+	block(parent, V(10.4, 5, 10.4), V(tx, y + 32.5, tz), rgb(214, 204, 180), M.Brick)
+	for _, f in { { 0, -5.3 }, { 0, 5.3 }, { -5.3, 0 }, { 5.3, 0 } } do
+		local face = block(parent, V(f[1] == 0 and 4.2 or 0.2, 4.2, f[2] == 0 and 4.2 or 0.2), V(tx + f[1], y + 32.5, tz + f[2]), rgb(250, 248, 238), M.SmoothPlastic, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+		face.CFrame = CFrame.new(face.Position) * (f[1] == 0 and CFrame.Angles(math.pi / 2, 0, 0) or CFrame.Angles(0, 0, 0)) * CFrame.Angles(0, 0, 0)
+		face.Size = f[1] == 0 and V(0.2, 4.2, 4.2) or V(0.2, 4.2, 4.2)
+		face.CFrame = CFrame.new(tx + f[1], y + 32.5, tz + f[2]) * CFrame.Angles(0, f[1] == 0 and math.pi / 2 or 0, 0)
+	end
+	for i = 1, 4 do
+		block(parent, V(11 - i * 2.4, 1.6, 11 - i * 2.4), V(tx, y + 35.8 + i * 1.5, tz), rgb(70, 110, 100), M.Metal)
+	end
+	gen:zone(tx, tz, 9)
+	gen:container(tx + 7, tz - 3, "Locker", 0)
+
+	-- the ring of buildings facing the square (a mix of shops, flats, houses and a chapel)
+	local kinds = { "shop", "apartment", "house", "shop", "apartment", "garage" }
+	local function row(fixed, along, yaw, skipMiddle)
+		for i, t in { -52, -18, 18, 52 } do
+			if not (skipMiddle and math.abs(t) == 18) then
+				local kind = kinds[(i + math.floor(math.abs(fixed) / 10)) % #kinds + 1]
+				local pos = along == "x" and V(t, y, fixed) or V(fixed, y, t)
+				gen:house(pos, yaw, { kind = kind, w = 26, d = 22 })
+			end
+		end
+	end
+	row(-66, "x", math.pi) -- south side, facing the square (+Z)
+	row(66, "x", 0, true) -- north side (front faces -Z); the chapel takes the middle
+	row(66, "z", math.pi / 2) -- east side, facing -X
+	row(-66, "z", -math.pi / 2) -- west side, facing +X
+	gen:house(V(0, y, 68), 0, { kind = "chapel" })
+
+	-- market stalls across the square, bunting overhead, planters and carts
+	local n = 0
+	for gx = -28, 28, 14 do
+		for gz = -28, 28, 14 do
+			if (math.abs(gx) > 8 or math.abs(gz) > 8) and not (math.abs(gx) < 12 and gz > 24) then
+				n += 1
+				stall(gen, gx + rng:NextNumber(-2, 2), gz + rng:NextNumber(-2, 2), rng:NextInteger(0, 3) * math.pi / 2, COLORS[n % #COLORS + 1])
+			end
+		end
+	end
+	for _, side in { -1, 1 } do
+		gen:lights(V(-60, y + 16, side * 40), V(60, y + 16, side * 40), 18, COLORS[(side + 3) % #COLORS + 1], 2.6)
+	end
+	for _ = 1, 24 do
+		local x, z = gen:open(-108, -108, 108, 108, 3)
+		if x then
+			block(parent, V(2.2, 2.2, 2.2), V(x, y + 1.1, z), rgb(150, 104, 66), M.WoodPlanks)
+			block(parent, V(1.8, 2.2, 1.8), V(x, y + 2.8, z), rgb(60, 140, 60), M.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
+			gen:zone(x, z, 2.5)
+		end
+	end
+	gen:car(-100, 20, 1.57, "CarSedan_2")
+	gen:car(100, -30, -1.57, "CarVan_1")
+	gen:car(20, -100, 0, "CarSedan_1")
+	gen:scatter({ "Barrel_1", "Rubble_1" }, 26, -112, -112, 112, 112, 0.8, 1.1, 0, 3)
+	for _, p in { { -40, 0 }, { 40, 0 }, { 0, -40 } } do
+		MapKit.lamp(parent, V(p[1], y, p[2]), false)
+	end
+	MapKit.tallGrass(parent, V(-100, y, -100), V(22, 0, 22), rng, nil, 0.8)
+	MapKit.tallGrass(parent, V(100, y, 100), V(22, 0, 22), rng, nil, 0.8)
+	gen:fence(rgb(110, 100, 88), 8, 6)
+
+	return gen:finish({
+		start = { V(-100, 3, -100), V(-96, 3, -102), V(-104, 3, -96), V(-92, 3, -98) },
+		extraction = V(104, 0, 104),
+		lantern = V(0, 0, -20),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">Powerworks</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- POWERWORKS: a decommissioned power station: two steaming cooling towers, a turbine hall and
+-- control building, a transformer yard behind a fence, lattice pylons with sagging wires, a
+-- coal conveyor and hazard-striped lanes. Hazy yellow-green afternoon.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "Powerworks",
+	name = "Powerworks",
+	lighting = { sky = "cannery", clouds = 0.55, cloudDensity = 0.6, cloudColor = { 236, 238, 214 }, wind = { 8, 0, 3 }, clock = 14.2, brightness = 2.8, ambient = { 108, 114, 98 }, outdoor = { 150, 156, 134 }, fog = 0.34, haze = 1.8, fogColor = { 214, 222, 190 }, tint = { 244, 250, 230 }, saturation = 0.08, contrast = 0.14, shift = { 255, 236, 190 } },
+}
+
+local function coolingTower(gen, x, z, y)
+	local M = Enum.Material
+	for i = 0, 11 do
+		local t = i / 11
+		local r = 17 - 5.5 * math.sin(t * math.pi * 0.85) + 2.2 * t
+		block(gen.parent, V(3, r * 2, r * 2), V(x, y + 1.5 + i * 3, z), rgb(176, 174, 166), M.Concrete, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(x, y + 1.5 + i * 3, z) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	local steam = Instance.new("ParticleEmitter")
+	steam.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	steam.Rate = 12
+	steam.Lifetime = NumberRange.new(8, 12)
+	steam.Speed = NumberRange.new(4, 7)
+	steam.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 8), NumberSequenceKeypoint.new(1, 30) })
+	steam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	steam.Color = ColorSequence.new(rgb(244, 246, 240))
+	steam.Acceleration = Vector3.new(3, 1, 1)
+	steam.Parent = block(gen.parent, V(1, 1, 1), V(x, y + 35, z), rgb(255, 255, 255), M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	gen:zone(x, z, 19)
+	gen:lootAt(x + 21, z)
+end
+
+local function pylon(gen, x, z, y, h)
+	local steel = rgb(150, 154, 158)
+	for _, o in { { -2.4, -2.4 }, { 2.4, -2.4 }, { -2.4, 2.4 }, { 2.4, 2.4 } } do
+		gen:pipe(V(x + o[1] * 1.6, y, z + o[2] * 1.6), V(x + o[1] * 0.4, y + h, z + o[2] * 0.4), 0.3, steel)
+	end
+	for k = 1, 5 do
+		local yy = y + h * k / 6
+		local half = 3.8 - k * 0.55
+		block(gen.parent, V(half * 2, 0.3, 0.3), V(x, yy, z - half), steel, Enum.Material.Metal, { CanCollide = false })
+		block(gen.parent, V(half * 2, 0.3, 0.3), V(x, yy, z + half), steel, Enum.Material.Metal, { CanCollide = false })
+	end
+	block(gen.parent, V(1, 1, 22), V(x, y + h, z), steel, Enum.Material.Metal, { CanCollide = false })
+	block(gen.parent, V(1, 1, 16), V(x, y + h - 5, z), steel, Enum.Material.Metal, { CanCollide = false })
+	gen:zone(x, z, 4)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.slab(-120, -120, 120, 120, M.Concrete, 0)
+	for _ = 1, 6 do
+		local x, z = rng:NextNumber(-95, 95), rng:NextNumber(-95, 95)
+		MapKit.slab(x - 14, z - 12, x + 14, z + 12, M.Pebble, 0.04)
+	end
+	local y = gen:flat()
+
+	coolingTower(gen, -62, 62, y)
+	coolingTower(gen, -62, 18, y)
+	-- turbine hall and control building, joined by a pipe bridge
+	gen:building({ -30, 40, 28, 78 }, y, { color = rgb(120, 128, 134), inner = rgb(196, 198, 190), material = M.Concrete, h = 16 })
+	gen:building({ 40, 50, 74, 74 }, y, { color = rgb(168, 150, 120), inner = rgb(226, 220, 204), material = M.Brick, h = 10 })
+	gen:pipe(V(28, y + 9, 60), V(40, y + 9, 62), 1.4, rgb(196, 70, 54))
+	-- a big smokestack
+	for i = 0, 7 do
+		block(parent, V(5, 9 - i * 0.6, 9 - i * 0.6), V(100, y + 2.5 + i * 5, 90), i % 2 == 0 and rgb(206, 200, 190) or rgb(200, 56, 48), M.Concrete, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(100, y + 2.5 + i * 5, 90) * CFrame.Angles(0, 0, math.pi / 2) })
+	end
+	gen:zone(100, 90, 8)
+
+	-- the transformer yard: a grid of transformers in a fenced compound
+	local tx0, tz0 = 30, -90
+	for i = 0, 3 do
+		for j = 0, 2 do
+			local x, z = tx0 + i * 16, tz0 + j * 20
+			block(parent, V(7, 6, 5), V(x, y + 3, z), rgb(120, 130, 120), M.Metal)
+			for k = -2, 2 do
+				block(parent, V(0.6, 2.4, 0.6), V(x + k * 1.3, y + 7.2, z), rgb(236, 226, 206), M.SmoothPlastic)
+			end
+			block(parent, V(7.4, 0.5, 5.4), V(x, y + 0.3, z), rgb(236, 190, 40), M.SmoothPlastic, { CanCollide = false })
+			gen:zone(x, z, 6)
+		end
+	end
+	for _, e in { { 54, -90 - 14, 62, 0.4 }, { 54, -90 + 54, 62, 0.4 }, { 24, -90 + 20, 0.4, 70 }, { 84, -90 + 20, 0.4, 70 } } do
+		block(parent, V(e[3], 5, e[4]), V(e[1], y + 2.5, e[2]), rgb(150, 154, 158), M.Metal, { Transparency = 0.55 })
+	end
+	gen:container(30, -70, "Locker", 90)
+	gen:container(76, -100, "Toolbox", 0)
+	gen:lootAt(54, -70)
+	table.insert(gen.doors, { hinge = V(24, y, -80), width = 6, dir = V(1, 0, 0) })
+
+	-- pylons marching across the map with sagging wires
+	local pylons = {}
+	for i = 0, 4 do
+		local p = V(-100 + i * 50, 0, -40)
+		pylon(gen, p.X, p.Z, y, 30)
+		table.insert(pylons, p)
+	end
+	for i = 1, #pylons - 1 do
+		for _, dz in { -10, 0, 10 } do
+			local a, b = V(pylons[i].X, y + 30, pylons[i].Z + dz), V(pylons[i + 1].X, y + 30, pylons[i + 1].Z + dz)
+			for k = 0, 9 do
+				local p0 = a:Lerp(b, k / 10) - V(0, math.sin(k / 10 * math.pi) * 3, 0)
+				local p1 = a:Lerp(b, (k + 1) / 10) - V(0, math.sin((k + 1) / 10 * math.pi) * 3, 0)
+				gen:pipe(p0, p1, 0.12, rgb(40, 40, 44)).CanCollide = false
+			end
+		end
+	end
+
+	-- the coal conveyor and pile
+	gen:pipe(V(-20, y + 3, 24), V(30, y + 12, 24), 1.2, rgb(70, 74, 78))
+	for _, x in { -10, 10, 30 } do
+		block(parent, V(0.8, 12, 0.8), V(x, y + 6, 24), rgb(90, 94, 98), M.Metal)
+	end
+	for i = 1, 4 do
+		block(parent, V(18 - i * 2, 7 - i, 16 - i * 2), V(-40, y + 3 - i * 0.2, -4), rgb(30, 30, 32), M.Slate, { Shape = Enum.PartType.Ball })
+	end
+	gen:zone(-40, -4, 14)
+
+	-- hazard-striped lanes, drums, crates, wrecks, lamp posts
+	for i = -5, 5 do
+		block(parent, V(4, 0.1, 1.2), V(-100 + i * 2.4, y + 0.1, 0), rgb(i % 2 == 0 and 236 or 40, i % 2 == 0 and 190 or 40, i % 2 == 0 and 40 or 44), M.SmoothPlastic, { CanCollide = false, CanQuery = false })
+	end
+	gen:scatter({ "Barrel_1", "Rubble_1" }, 30, -108, -108, 108, 108, 0.8, 1.1, 0, 3)
+	for _ = 1, 8 do
+		local x, z = gen:open(-108, -108, 108, 108, 6)
+		if x then
+			gen:crate(x, z, 4, rgb(120, 130, 110))
+		end
+	end
+	gen:car(-96, -90, 0.8, "CarVan_1")
+	gen:car(90, 40, 2.0, "CarSedan_2")
+	for x = -100, 100, 40 do
+		MapKit.lamp(parent, V(x, y, 8), false)
+	end
+	MapKit.tallGrass(parent, V(-96, y, 96), V(30, 0, 22), rng, nil, 0.8)
+	MapKit.tallGrass(parent, V(96, y, -20), V(24, 0, 36), rng, nil, 0.8)
+	MapKit.fog(parent, V(-62, 4, 40), V(140, 0, 140))
+	gen:fence(rgb(120, 124, 118), 7, 6)
+
+	return gen:finish({
+		start = { V(100, 3, -100), V(96, 3, -102), V(104, 3, -96), V(92, 3, -98) },
+		extraction = V(-104, 0, 100),
+		lantern = V(0, 0, 0),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">SaltmarshFlats</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- SALTMARSH FLATS: tidal mud flats, shallow pools you wade through, long boardwalks on stilts,
+-- fishermen's huts, wrecked boats and reed beds to hide in. Grey-green morning fog.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "SaltmarshFlats",
+	name = "Saltmarsh Flats",
+	lighting = { sky = "cannery", clouds = 0.6, cloudDensity = 0.6, cloudColor = { 236, 240, 236 }, wind = { 7, 0, 3 }, clock = 7.6, brightness = 2.7, ambient = { 100, 112, 106 }, outdoor = { 142, 156, 148 }, fog = 0.5, haze = 1.5, fogColor = { 204, 218, 206 }, tint = { 240, 250, 240 }, saturation = 0.1, contrast = 0.08, shift = { 255, 232, 200 } },
+}
+
+local function boat(gen, x, z, yaw, color)
+	local y = gen:ground(x, z)
+	local cf = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, 0.12)
+	block(gen.parent, V(14, 2.4, 4.4), cf * CFrame.new(0, 1.2, 0), color, Enum.Material.WoodPlanks)
+	MapKit.wedge(gen.parent, V(4.4, 2.4, 3.4), cf * CFrame.new(8.6, 1.2, 0) * CFrame.Angles(0, -math.pi / 2, 0), color, Enum.Material.WoodPlanks)
+	block(gen.parent, V(4, 3, 3.4), cf * CFrame.new(-2.5, 3.6, 0), rgb(236, 230, 214), Enum.Material.WoodPlanks)
+	block(gen.parent, V(0.4, 9, 0.4), cf * CFrame.new(2, 6, 0), rgb(110, 76, 50), Enum.Material.Wood)
+	gen:zone(x, z, 9)
+	gen:container(x + 4, z + 3, "Toolbox", 0)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("coast")
+	MapKit.slab(-120, -120, 120, 120, M.Mud, 0)
+	for _ = 1, 9 do -- low sandbars
+		local x, z = rng:NextNumber(-95, 95), rng:NextNumber(-95, 95)
+		MapKit.slab(x - 13, z - 9, x + 13, z + 9, M.Sand, 0.05)
+	end
+	local y = gen:flat()
+
+	-- tidal pools you wade through
+	for _ = 1, 8 do
+		local x, z = gen:open(-88, -88, 88, 88, 18)
+		if x then
+			local w, d = rng:NextNumber(16, 28), rng:NextNumber(14, 24)
+			MapKit.clearAbove(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2)
+			MapKit.slab(x - w / 2, z - d / 2, x + w / 2, z + d / 2, M.Mud, y - 2.2, 4)
+			MapKit.water(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 0.6, 2.4)
+			MapKit.volume(parent, V(w, 6, d), V(x, y, z), "Shallows")
+			gen:zone(x, z, math.max(w, d) / 2 + 1)
+		end
+	end
+
+	-- boardwalks on stilts: east-west and north-south, with rails
+	local function boardwalk(a, b)
+		local len = (b - a).Magnitude
+		local dir = (b - a).Unit
+		local mid = (a + b) / 2
+		local cf = CFrame.lookAt(mid, mid + dir)
+		block(parent, V(5, 0.4, len), cf * CFrame.new(0, 0.6, 0) + V(0, y, 0), rgb(150, 112, 76), M.WoodPlanks)
+		for t = 0, len, 8 do
+			for _, side in { -2.3, 2.3 } do
+				local p = cf * CFrame.new(side, 0, -len / 2 + t)
+				block(parent, V(0.4, 3.4, 0.4), p + V(0, y - 0.9, 0), rgb(90, 66, 46), M.Wood)
+				block(parent, V(0.3, 0.3, 8), p * CFrame.new(0, 0, 4) + V(0, y + 2, 0), rgb(110, 76, 50), M.Wood, { CanCollide = false })
+			end
+		end
+	end
+	boardwalk(V(-110, 0, -20), V(110, 0, -20))
+	boardwalk(V(28, 0, -108), V(28, 0, 108))
+	boardwalk(V(-70, 0, 20), V(-70, 0, 105))
+
+	-- stilt huts on platforms
+	for _, h in { { -48, 48 }, { 62, 42 }, { -36, -72 }, { 70, -66 } } do
+		block(parent, V(32, 1, 28), V(h[1], y + 0.5, h[2] + 11), rgb(130, 98, 68), M.WoodPlanks)
+		for _, sx in { -14, 14 } do
+			for _, sz in { -2, 24 } do
+				block(parent, V(0.8, 3, 0.8), V(h[1] + sx, y + 0.5, h[2] + sz), rgb(90, 66, 46), M.Wood)
+			end
+		end
+		gen:house(V(h[1], y + 1, h[2]), 0, { cabin = true })
+		MapKit.lamp(parent, V(h[1] + 12, y + 1, h[2] - 5), false)
+	end
+
+	-- wrecked fishing boats half sunk in the mud
+	boat(gen, -88, -60, 0.6, rgb(70, 130, 170))
+	boat(gen, 90, 8, 2.2, rgb(196, 90, 60))
+	boat(gen, -10, 70, 1.4, rgb(210, 190, 90))
+	boat(gen, 4, -75, 3.4, rgb(90, 150, 110))
+
+	-- the lookout: four legs, a platform, a ladder
+	for _, o in { { -3, -3 }, { 3, -3 }, { -3, 3 }, { 3, 3 } } do
+		block(parent, V(0.8, 22, 0.8), V(-96 + o[1], y + 11, 92 + o[2]), rgb(96, 74, 56), M.Wood)
+	end
+	block(parent, V(10, 0.8, 10), V(-96, y + 22, 92), rgb(120, 90, 64), M.WoodPlanks)
+	block(parent, V(10, 5, 10), V(-96, y + 25, 92), rgb(140, 110, 80), M.WoodPlanks, { Transparency = 0.1 })
+	gen:zone(-96, 92, 8)
+
+	-- fish racks and crab pots
+	for _ = 1, 10 do
+		local x, z = gen:open(-100, -100, 100, 100, 6)
+		if x then
+			block(parent, V(0.4, 4, 0.4), V(x - 2, y + 2, z), rgb(96, 70, 48), M.Wood)
+			block(parent, V(0.4, 4, 0.4), V(x + 2, y + 2, z), rgb(96, 70, 48), M.Wood)
+			block(parent, V(4.4, 0.3, 0.3), V(x, y + 3.8, z), rgb(110, 80, 56), M.Wood)
+			for i = -1, 1 do
+				block(parent, V(0.5, 1.8, 0.2), V(x + i * 1.2, y + 2.8, z), rgb(190, 180, 170), M.SmoothPlastic, { CanCollide = false })
+			end
+			gen:zone(x, z, 3)
+		end
+	end
+
+	-- reeds, reeds, reeds
+	for _ = 1, 9 do
+		local x, z = gen:open(-100, -100, 100, 100, 6)
+		if x then
+			MapKit.tallGrass(parent, V(x, y, z), V(rng:NextNumber(18, 30), 0, rng:NextNumber(14, 24)), rng, nil, 1.1)
+		end
+	end
+	gen:scatter({ "Rock_1", "Rock_2", "Bush_1", "DeadTree_1" }, 40, -108, -108, 108, 108, 0.7, 1.3, 0.3)
+	for _, f in { { V(-20, 3, 20), V(60, 0, 200) }, { V(40, 3, -50), V(80, 0, 80) }, { V(-60, 3, -40), V(80, 0, 80) } } do
+		MapKit.fog(parent, f[1], f[2])
+	end
+
+	return gen:finish({
+		start = { V(-100, 3, 100), V(-96, 3, 102), V(-104, 3, 96), V(-92, 3, 98) },
+		extraction = V(104, 0, -100),
+		lantern = V(0, 0, 0),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">VerdantGardens</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- VERDANT GARDENS: an abandoned botanical garden grown wild: a hedge maze, two glasshouses full
+-- of planters, a fountain plaza, gazebo, statues, flower beds and a orangery cafe. Bright and green.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "VerdantGardens",
+	name = "Verdant Gardens",
+	lighting = { sky = "ferry", clouds = 0.35, cloudDensity = 0.5, cloudColor = { 255, 255, 255 }, wind = { 5, 0, 3 }, clock = 13.0, brightness = 3.3, ambient = { 112, 120, 112 }, outdoor = { 160, 168, 156 }, fog = 0.14, haze = 0.5, fogColor = { 214, 232, 236 }, tint = { 252, 255, 246 }, saturation = 0.22, contrast = 0.08, shift = { 255, 238, 214 } },
+}
+
+local HEDGE = rgb(52, 118, 46)
+
+-- A square hedge maze (recursive backtracker). Returns the centre cell position.
+local function maze(gen, x0, z0, n, cell)
+	local rng = gen.rng
+	local y = gen.flatY
+	local open = {} -- open[i][j] = { N, S, E, W } removed walls
+	for i = 1, n do
+		open[i] = {}
+		for j = 1, n do
+			open[i][j] = { visited = false, E = false, S = false }
+		end
+	end
+	local function carve(i, j)
+		open[i][j].visited = true
+		local dirs = { { 1, 0, "S" }, { -1, 0, "N" }, { 0, 1, "E" }, { 0, -1, "W" } }
+		for k = #dirs, 2, -1 do
+			local r = rng:NextInteger(1, k)
+			dirs[k], dirs[r] = dirs[r], dirs[k]
+		end
+		for _, d in dirs do
+			local ni, nj = i + d[1], j + d[2]
+			if ni >= 1 and ni <= n and nj >= 1 and nj <= n and not open[ni][nj].visited then
+				if d[3] == "S" then
+					open[i][j].S = true
+				elseif d[3] == "N" then
+					open[ni][nj].S = true
+				elseif d[3] == "E" then
+					open[i][j].E = true
+				else
+					open[ni][nj].E = true
+				end
+				carve(ni, nj)
+			end
+		end
+	end
+	carve(1, 1)
+	local function wall(x, z, w, d)
+		block(gen.parent, V(w, 6, d), V(x, y + 3, z), HEDGE, Enum.Material.LeafyGrass)
+	end
+	local size = n * cell
+	-- outer walls with an entrance on the south-west corner
+	wall(x0 + size / 2, z0, size, 1.4)
+	wall(x0 + size / 2, z0 + size, size, 1.4)
+	wall(x0, z0 + size / 2 + cell / 2, 1.4, size - cell)
+	wall(x0 + size, z0 + size / 2, 1.4, size)
+	for i = 1, n do
+		for j = 1, n do
+			local cx, cz = x0 + (j - 0.5) * cell, z0 + (i - 0.5) * cell
+			if not open[i][j].E and j < n then
+				wall(cx + cell / 2, cz, 1.4, cell + 1.4)
+			end
+			if not open[i][j].S and i < n then
+				wall(cx, cz + cell / 2, cell + 1.4, 1.4)
+			end
+		end
+	end
+	gen:zone(x0 + size / 2, z0 + size / 2, size * 0.72)
+	local mid = V(x0 + (math.floor(n / 2) + 0.5) * cell, y, z0 + (math.floor(n / 2) + 0.5) * cell)
+	-- a statue and a chest at the heart of it
+	block(gen.parent, V(2.4, 1.4, 2.4), mid + V(0, 0.7, 0), rgb(200, 196, 188), Enum.Material.Marble)
+	block(gen.parent, V(1.2, 3, 1.2), mid + V(0, 2.9, 0), rgb(220, 216, 208), Enum.Material.Marble)
+	block(gen.parent, V(1.6, 1.6, 1.6), mid + V(0, 5, 0), rgb(220, 216, 208), Enum.Material.Marble, { Shape = Enum.PartType.Ball })
+	gen:container(mid.X + 3, mid.Z, "AmmoCrate", 0)
+	gen:lootAt(mid.X, mid.Z + 3)
+	return mid
+end
+
+local function glasshouse(gen, cx, cz, w, d, yaw)
+	local y = gen.flatY
+	local cf = CFrame.new(cx, y, cz) * CFrame.Angles(0, yaw, 0)
+	local frame = rgb(236, 238, 236)
+	local glass = rgb(150, 200, 210)
+	local H = 11
+	block(gen.parent, V(w, 0.6, d), cf * CFrame.new(0, 0.3, 0), rgb(150, 150, 146), Enum.Material.Concrete)
+	-- long walls: glass panels between frame posts
+	for _, sz in { -d / 2, d / 2 } do
+		block(gen.parent, V(w, H, 0.3), cf * CFrame.new(0, H / 2, sz), glass, Enum.Material.Glass, { Transparency = 0.55 })
+		for x = -w / 2, w / 2, 6 do
+			block(gen.parent, V(0.4, H + 3, 0.4), cf * CFrame.new(x, (H + 3) / 2, sz), frame, Enum.Material.Metal)
+		end
+	end
+	-- end walls with a doorway in the middle
+	for _, sx in { -w / 2, w / 2 } do
+		for _, off in { -d / 2 + (d / 2 - 3) / 2, d / 2 - (d / 2 - 3) / 2 } do
+			block(gen.parent, V(0.3, H, d / 2 - 3), cf * CFrame.new(sx, H / 2, off), glass, Enum.Material.Glass, { Transparency = 0.55 })
+		end
+		block(gen.parent, V(0.3, H - 8, 6), cf * CFrame.new(sx, 8 + (H - 8) / 2, 0), glass, Enum.Material.Glass, { Transparency = 0.55 })
+	end
+	-- a pitched glass roof
+	MapKit.wedge(gen.parent, V(w + 0.6, 4.5, d / 2 + 0.3), cf * CFrame.new(0, H + 2.25, -d / 4), glass, Enum.Material.Glass)
+	MapKit.wedge(gen.parent, V(w + 0.6, 4.5, d / 2 + 0.3), cf * CFrame.new(0, H + 2.25, d / 4) * CFrame.Angles(0, math.pi, 0), glass, Enum.Material.Glass)
+	for _, mesh in gen.parent:GetChildren() do
+		if mesh:IsA("WedgePart") and mesh.Material == Enum.Material.Glass then
+			mesh.Transparency = 0.55
+		end
+	end
+	-- planters of lush leaves
+	for i = -2, 2 do
+		for _, sz in { -d / 2 + 3, d / 2 - 3 } do
+			block(gen.parent, V(5, 1.6, 2.4), cf * CFrame.new(i * 7, 1, sz), rgb(150, 100, 70), Enum.Material.Brick)
+			block(gen.parent, V(4.2, 3, 2.4), cf * CFrame.new(i * 7, 3, sz), rgb(60, 140, 60), Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false })
+		end
+	end
+	MapKit.bulb(gen.parent, cf.Position + V(0, H - 1, 0), 22)
+	gen:zone(cx, cz, math.max(w, d) / 2 + 3)
+	gen:container(cx + 6, cz + 2, "Toolbox", 0)
+	gen:container(cx - 8, cz - 2, "Drawer", 90)
+	gen:lootAt(cx, cz)
+	gen:lootAt(cx + 12, cz + 3)
+	table.insert(gen.doors, { hinge = (cf * CFrame.new(-w / 2, 0, -3)).Position, width = 6, dir = cf.LookVector })
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("suburb")
+	MapKit.slab(-120, -120, 120, 120, M.Grass, 0)
+	-- paved paths: a cross and a plaza
+	MapKit.slab(-120, -5, 120, 5, M.Pavement, 0.1)
+	MapKit.slab(-5, -120, 5, 120, M.Pavement, 0.1)
+	MapKit.slab(-20, -20, 20, 20, M.Pavement, 0.1)
+	local y = gen:flat()
+
+	-- the fountain
+	block(parent, V(1.6, 16, 16), V(0, y + 0.8, 0), rgb(196, 192, 184), M.Marble, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 0.8, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(parent, V(0.8, 14.4, 14.4), V(0, y + 1.5, 0), rgb(70, 150, 190), M.Glass, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 1.5, 0) * CFrame.Angles(0, 0, math.pi / 2), Transparency = 0.35, CanCollide = false })
+	block(parent, V(7, 3, 3), V(0, y + 3.5, 0), rgb(210, 206, 198), M.Marble, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 3.5, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(parent, V(5, 2.2, 2.2), V(0, y + 6.5, 0), rgb(210, 206, 198), M.Marble, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(0, y + 6.5, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	local spray = Instance.new("ParticleEmitter")
+	spray.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	spray.Rate = 22
+	spray.Lifetime = NumberRange.new(1.2, 1.8)
+	spray.Speed = NumberRange.new(6, 9)
+	spray.SpreadAngle = Vector2.new(25, 25)
+	spray.Acceleration = Vector3.new(0, -14, 0)
+	spray.Size = NumberSequence.new(0.5, 0.2)
+	spray.Transparency = NumberSequence.new(0.4, 1)
+	spray.Color = ColorSequence.new(rgb(200, 230, 255))
+	spray.Parent = block(parent, V(1, 1, 1), V(0, y + 8, 0), rgb(255, 255, 255), M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	gen:zone(0, 0, 11)
+	for a = 0, 3 do -- benches round the plaza
+		local ang = a * math.pi / 2 + math.pi / 4
+		block(parent, V(4.4, 0.4, 1.2), CFrame.new(math.cos(ang) * 14, y + 1.4, math.sin(ang) * 14) * CFrame.Angles(0, -ang + math.pi / 2, 0), rgb(150, 104, 66), M.WoodPlanks)
+		gen:zone(math.cos(ang) * 14, math.sin(ang) * 14, 3)
+	end
+
+	-- hedge maze in the south-west, glasshouses north-east and south-east
+	maze(gen, -105, -105, 8, 7.5)
+	glasshouse(gen, 62, 62, 40, 22, 0)
+	glasshouse(gen, 62, -62, 40, 22, 0)
+
+	-- the gazebo: eight posts and a pointed roof
+	local gx, gz = -62, 62
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		block(parent, V(0.6, 8, 0.6), V(gx + math.cos(a) * 6, y + 4, gz + math.sin(a) * 6), rgb(244, 242, 236), M.Wood)
+	end
+	block(parent, V(14, 0.8, 14), V(gx, y + 8.4, gz), rgb(244, 242, 236), M.Wood)
+	for i = 1, 4 do
+		block(parent, V(14 - i * 3, 1.2, 14 - i * 3), V(gx, y + 8.8 + i * 1.1, gz), rgb(70, 130, 110), M.Metal)
+	end
+	gen:zone(gx, gz, 9)
+	gen:lootAt(gx, gz)
+
+	-- the orangery cafe: a shop building with a courtyard
+	gen:house(V(-60, y, -60), 0, { kind = "shop", w = 28, d = 20 })
+	gen:house(V(100, y, 0), math.pi / 2, { kind = "house", w = 22, d = 20 })
+
+	-- statues, urns, flower beds
+	for _ = 1, 8 do
+		local x, z = gen:open(-108, -108, 108, 108, 8)
+		if x then
+			block(parent, V(2.2, 1.4, 2.2), V(x, y + 0.7, z), rgb(200, 196, 188), M.Marble)
+			block(parent, V(1, 3.6, 1), V(x, y + 3.2, z), rgb(222, 218, 210), M.Marble)
+			block(parent, V(1.4, 1.4, 1.4), V(x, y + 5.6, z), rgb(222, 218, 210), M.Marble, { Shape = Enum.PartType.Ball })
+			gen:zone(x, z, 2.6)
+		end
+	end
+	for _ = 1, 40 do
+		local x, z = gen:open(-108, -108, 108, 108, 3)
+		if x then
+			gen:flowers(V(x, y, z), rng:NextNumber(2, 5))
+		end
+	end
+	gen:scatter({ "Bush_1", "Bush_2" }, 70, -112, -112, 112, 112, 1.0, 1.8, 0, 3)
+	gen:scatter({ "Pine_1", "Pine_2", "DeadTree_1" }, 18, -112, -112, 112, 112, 0.7, 1.0, 0.4, 5)
+	MapKit.tallGrass(parent, V(-40, y, 100), V(50, 0, 20), rng, nil, 0.9)
+	MapKit.tallGrass(parent, V(40, y, -100), V(50, 0, 20), rng, nil, 0.9)
+	gen:fence(rgb(36, 60, 44), 8, 4)
+
+	return gen:finish({
+		start = { V(100, 3, -100), V(96, 3, -102), V(104, 3, -96), V(92, 3, -98) },
+		extraction = V(-104, 0, 100),
+		lantern = V(0, 0, -30),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">WhiteoutDepot</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+-- WHITEOUT DEPOT: a snowbound railway depot: three tracks with parked freight and a locomotive,
+-- a platform with a canopy and station house, a signal tower, a water tower and coal shed.
+-- Snow falls all the time. Cold blue morning.
+local MapKit = require(script.Parent.MapKit)
+local Gen = require(script.Parent.MapGen)
+local V, rgb = Vector3.new, Gen.rgb
+local block = MapKit.block
+
+local Map = {
+	id = "WhiteoutDepot",
+	name = "Whiteout Depot",
+	lighting = { sky = "pines", clouds = 0.85, cloudDensity = 0.8, cloudColor = { 232, 238, 246 }, wind = { 12, 0, 6 }, clock = 10.2, brightness = 2.5, ambient = { 110, 118, 132 }, outdoor = { 150, 160, 176 }, fog = 0.5, haze = 1.9, fogColor = { 226, 234, 246 }, tint = { 226, 238, 255 }, saturation = -0.05, contrast = 0.1, shift = { 232, 238, 255 } },
+}
+
+local function track(gen, z, y)
+	local M = Enum.Material
+	for _, s in { -1.1, 1.1 } do
+		block(gen.parent, V(236, 0.35, 0.3), V(0, y + 0.75, z + s), rgb(100, 100, 104), M.Metal, { CanCollide = false })
+	end
+	for x = -116, 116, 3 do
+		block(gen.parent, V(0.8, 0.4, 3.8), V(x, y + 0.45, z), rgb(70, 56, 46), M.Wood, { CanCollide = false })
+	end
+	block(gen.parent, V(236, 0.5, 5.6), V(0, y + 0.2, z), rgb(150, 150, 154), M.Pebble, { CanCollide = false })
+end
+
+local function boxcar(gen, x, z, y, color)
+	local M = Enum.Material
+	block(gen.parent, V(24, 11, 8.4), V(x, y + 7.2, z), color, M.CorrodedMetal)
+	block(gen.parent, V(24.6, 0.6, 9), V(x, y + 12.9, z), rgb(60, 60, 64), M.Metal, { CanCollide = false })
+	block(gen.parent, V(24, 1.2, 8), V(x, y + 1.6, z), rgb(50, 50, 54), M.Metal)
+	for _, wx in { -9, -6, 6, 9 } do
+		for _, wz in { -4, 4 } do
+			block(gen.parent, V(2.6, 2.6, 0.6), V(x + wx, y + 1.3, z + wz), rgb(36, 36, 40), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(x + wx, y + 1.3, z + wz) * CFrame.Angles(0, math.pi / 2, 0), CanCollide = false })
+		end
+	end
+	-- a sliding door standing open on the south side, with a ramp of snow up to it
+	block(gen.parent, V(7, 9, 0.3), V(x + 3, y + 7, z - 4.3), rgb(40, 38, 36), M.Metal, { CanCollide = false })
+	gen:zone(x, z, 13)
+end
+
+function Map.build(parent, rng)
+	local M = Enum.Material
+	local gen = Gen.new(parent, rng)
+	MapKit.outskirts("forest")
+	MapKit.slab(-120, -120, 120, 120, M.Snow, 0)
+	local y = gen:flat()
+
+	for _, z in { -34, 0, 34 } do
+		track(gen, z, y)
+		for x = -112, 112, 14 do
+			gen:zone(x, z, 5)
+		end
+	end
+
+	-- freight: boxcars, a tank car and a locomotive on the middle track, more on the others
+	local colors = { rgb(150, 56, 46), rgb(70, 100, 76), rgb(120, 84, 56), rgb(70, 86, 120), rgb(170, 150, 110) }
+	for i = 0, 3 do
+		boxcar(gen, -88 + i * 26, 0, y, colors[i % #colors + 1])
+	end
+	block(parent, V(22, 9, 9), V(30, y + 6.5, 0), rgb(60, 60, 64), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(30, y + 6.5, 0) * CFrame.Angles(0, 0, 0) })
+	gen:zone(30, 0, 12)
+	-- the locomotive
+	block(parent, V(20, 8, 8.6), V(62, y + 5.6, 0), rgb(30, 30, 34), M.Metal)
+	block(parent, V(7, 5.6, 8.6), V(54, y + 12, 0), rgb(30, 30, 34), M.Metal)
+	block(parent, V(1.8, 4.5, 1.8), V(68, y + 12, 0), rgb(236, 180, 40), M.Metal, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(68, y + 12, 0) * CFrame.Angles(0, 0, math.pi / 2) })
+	block(parent, V(0.3, 3, 2.8), V(57.6, y + 12.4, -4.35), rgb(70, 110, 130), M.Glass, { Transparency = 0.3 })
+	local steam = Instance.new("ParticleEmitter")
+	steam.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	steam.Rate = 14
+	steam.Lifetime = NumberRange.new(4, 7)
+	steam.Speed = NumberRange.new(3, 5)
+	steam.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 9) })
+	steam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	steam.Color = ColorSequence.new(rgb(240, 242, 246))
+	steam.Acceleration = Vector3.new(2, 1, 0)
+	steam.Parent = block(parent, V(1, 1, 1), V(68, y + 15, 0), rgb(255, 255, 255), M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	gen:zone(62, 0, 12)
+	for i = 0, 2 do
+		boxcar(gen, -60 + i * 28, 34, y, colors[(i + 2) % #colors + 1])
+	end
+	boxcar(gen, 70, -34, y, colors[1])
+	boxcar(gen, 44, -34, y, colors[3])
+
+	-- the platform between the tracks' north side, with a canopy and benches, and the station house
+	block(parent, V(110, 1, 10), V(-30, y + 0.5, 56), rgb(176, 176, 170), M.Concrete)
+	for x = -80, 20, 20 do
+		block(parent, V(0.8, 9, 0.8), V(x, y + 4.5, 56), rgb(70, 76, 84), M.Metal)
+	end
+	block(parent, V(104, 0.6, 12), V(-30, y + 9.3, 56), rgb(60, 110, 90), M.Metal)
+	for x = -72, 12, 28 do
+		block(parent, V(4.4, 0.4, 1.2), V(x, y + 1.7, 56), rgb(130, 90, 60), M.WoodPlanks)
+	end
+	gen:zone(-30, 56, 14)
+	gen:building({ -70, 64, -30, 90 }, y, { color = rgb(150, 70, 56), inner = rgb(224, 218, 204), material = M.Brick, h = 10 })
+	gen:house(V(20, y, 82), math.pi, { kind = "garage", w = 26, d = 20 })
+	gen:house(V(60, y, 76), math.pi, { kind = "house", w = 22, d = 18 })
+
+	-- water tower, signal gantry, coal shed
+	for _, o in { { -5, -5 }, { 5, -5 }, { -5, 5 }, { 5, 5 } } do
+		block(parent, V(0.8, 22, 0.8), V(85 + o[1], y + 11, 60 + o[2]), rgb(96, 76, 60), M.Wood)
+	end
+	block(parent, V(13, 8, 13), V(85, y + 25, 60), rgb(130, 96, 70), M.WoodPlanks, { Shape = Enum.PartType.Cylinder, CFrame = CFrame.new(85, y + 25, 60) * CFrame.Angles(0, 0, math.pi / 2) })
+	MapKit.wedge(parent, V(14, 3, 7), CFrame.new(85, y + 31, 56.5), rgb(70, 60, 56), M.WoodPlanks)
+	MapKit.wedge(parent, V(14, 3, 7), CFrame.new(85, y + 31, 63.5) * CFrame.Angles(0, math.pi, 0), rgb(70, 60, 56), M.WoodPlanks)
+	gen:zone(85, 60, 9)
+	for i, x in { -40, 10 } do
+		block(parent, V(1, 14, 1), V(x, y + 7, -17), rgb(70, 76, 84), M.Metal)
+		block(parent, V(1, 1, 36), V(x, y + 14, 0), rgb(70, 76, 84), M.Metal, { CanCollide = false })
+		for k, z in { -34, 0, 34 } do
+			local lamp = block(parent, V(1.2, 1.2, 1.2), V(x, y + 13, z), k == 2 and rgb(255, 60, 50) or rgb(80, 255, 120), M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+			local l = Instance.new("PointLight")
+			l.Range = 16
+			l.Color = lamp.Color
+			l.Parent = lamp
+		end
+		assert(i)
+	end
+	for x = 80, 100, 7 do -- coal pile
+		block(parent, V(14, 5, 12), V(x, y + 2, -80), rgb(30, 30, 32), M.Slate, { Shape = Enum.PartType.Ball })
+	end
+	gen:zone(90, -80, 14)
+	gen:container(76, -70, "Toolbox", 90)
+
+	-- snowdrifts, snowy pines, drums and a stranded truck
+	for _ = 1, 28 do
+		local x, z = gen:open(-110, -110, 110, 110, 5)
+		if x then
+			block(parent, V(rng:NextNumber(8, 16), rng:NextNumber(2, 4.5), rng:NextNumber(5, 10)), CFrame.new(x, y + 0.4, z) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), rgb(246, 250, 255), M.Snow, { Shape = Enum.PartType.Ball })
+		end
+	end
+	gen:scatter({ "Pine_1", "Pine_2" }, 46, -112, -112, 112, 112, 0.8, 1.3, 0.4, 4)
+	gen:scatter({ "Barrel_1", "Rock_1" }, 20, -108, -108, 108, 108, 0.8, 1.1, 0, 3)
+	gen:car(-100, 60, 0.4, "CarVan_1")
+	gen:car(94, -20, 2.4, "CarSedan_1")
+	for x = -100, 100, 40 do
+		MapKit.lamp(parent, V(x, y, 18), false)
+	end
+	MapKit.tallGrass(parent, V(-90, y, -88), V(36, 0, 24), rng, nil, 0.7)
+	MapKit.tallGrass(parent, V(40, y, -100), V(40, 0, 18), rng, nil, 0.7)
+	-- falling snow: one big emitter above the whole depot
+	local snow = Instance.new("ParticleEmitter")
+	snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	snow.Rate = 500
+	snow.Lifetime = NumberRange.new(7, 9)
+	snow.Speed = NumberRange.new(6, 9)
+	snow.EmissionDirection = Enum.NormalId.Bottom
+	snow.SpreadAngle = Vector2.new(15, 15)
+	snow.Size = NumberSequence.new(0.35)
+	snow.LightEmission = 0.5
+	snow.Color = ColorSequence.new(rgb(255, 255, 255))
+	snow.Acceleration = Vector3.new(4, -1, 2)
+	snow.Parent = block(parent, V(236, 1, 236), V(0, y + 48, 0), rgb(255, 255, 255), M.SmoothPlastic, { Transparency = 1, CanCollide = false, CanQuery = false })
+	MapKit.fog(parent, V(0, 3, 0), V(200, 0, 200))
+	gen:fence(rgb(110, 116, 124), 6, 8)
+
+	return gen:finish({
+		start = { V(100, 3, -100), V(96, 3, -102), V(104, 3, -96), V(92, 3, -98) },
+		extraction = V(-104, 0, 100),
+		lantern = V(0, 0, 20),
+	})
+end
+
+return Map
+]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="Folder" referent="RBX00000042"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX0000002D"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX0000004D"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">ActionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Every non-gun player action, validated server-side. The client only sends intent:
 --   Action("Quiet")                     Quieting from behind / with a Tide Spike, else shove
 --   Action("Throw", {dir, item})        bottle / flare pot / fog pot / salt bomb
@@ -9881,7 +11684,7 @@ end
 
 return ActionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002E"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">AnalyticsHelper</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Thin wrapper over AnalyticsService so we can see (Creator Hub > Analytics) where Scrip is
 -- earned and spent and which products sell. Never throws: analytics must not break gameplay.
 local AnalyticsService = game:GetService("AnalyticsService")
@@ -9925,7 +11728,7 @@ end
 
 return AnalyticsHelper
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000002F"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">AntiCheatService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Lightweight movement sanity checks. Roblox lets clients simulate their own character, so
 -- speed hacks are possible; we detect impossible displacement and pull the player back.
 -- PvE-only design keeps the stakes low (docs/02-technical-architecture.md section 2.4).
@@ -10001,7 +11804,7 @@ end
 
 return AntiCheatService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000030"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">AssetService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Loads the sculpted mesh packs (Config/AssetIds) once at server start and hands out clones.
 -- Sources, in order: ServerStorage > Assets > <Pack> (imported in Studio), then
 -- InsertService:LoadAsset(id) for uploaded packs. Missing packs => built-in fallbacks.
@@ -10288,7 +12091,7 @@ end
 
 return AssetService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000031"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">CharacterService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Spawns crew characters (never the player's Roblox avatar), and owns health, downed state,
 -- revives and bleed-out. Health is our own "HP" attribute: the Humanoid is never damaged.
 --
@@ -10902,7 +12705,7 @@ end
 
 return CharacterService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000032"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">CommerceService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Developer product receipts. Rules that matter:
 --   * Idempotent: a receipt (PurchaseId) is granted exactly once, even if Roblox retries.
 --   * Only report PurchaseGranted once the grant is saved (or we're in memory-only Studio mode).
@@ -11015,7 +12818,7 @@ end
 
 return CommerceService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000033"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">CosmeticsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Wardrobe (server side): who owns which outfit, buying outfits with Scrip, equipping,
 -- the Supporter game pass, and the colours a crew member should be dressed in.
 -- Cosmetic only: nothing here touches stats.
@@ -11150,7 +12953,7 @@ end
 
 return CosmeticsService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000034"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">EnemyService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Hushed. Server-simulated, one state machine per enemy:
 --   Patrol -> (notice) -> Investigate -> Search -> Patrol
 --   any    -> (suspicion >= 1 or shot) -> Chase -> (lost sight) -> Search
@@ -12478,7 +14281,7 @@ end
 
 return EnemyService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000035"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">HomebaseService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian as a homebase that persists between crossings:
 --   * Repairs bought with Scrip (earned only by playing) unlock permanent bonuses and change
 --     how the ferry looks (deck lights, generator, radio mast, sick bay, armory rack).
@@ -12791,7 +14594,7 @@ end
 
 return HomebaseService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000036"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">InventoryService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: items, reserve ammo, two weapon slots (long gun + sidearm, with magazines)
 -- and Salvage (run currency). Server-owned; replicated to the owner as player attributes:
 --   Inv_<item>, Cap_<item>, W_long, W_longMag, W_sidearm, W_sidearmMag, Salvage
@@ -13121,7 +14924,7 @@ end
 
 return InventoryService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000037"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000042"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Leaderboards:
 --   * leaderstats (Roblox's player list): Wins and Best Pall for everyone in the server
 --   * a global top 10 (most wins) on the Meridian's board, from an OrderedDataStore
@@ -13297,7 +15100,7 @@ end
 
 return LeaderboardService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000038"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000043"><Properties><string name="Name">LootService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Scavenging: searchable containers (drawers, lockers, toolboxes, ammo crates) that open
 -- with a short animation, and loose items that glint in the fog. Loot is rolled from
 -- Config/Loot tables (free, never paid). What doesn't fit your satchel is dropped on the
@@ -13571,7 +15374,7 @@ end
 
 return LootService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000039"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000044"><Properties><string name="Name">MapService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Builds the grey-box world in code so the project is fully self-contained:
 --   * The Meridian (ferry hideout deck) far from the encounter
 --   * the encounter maps (src/server/Maps/*), one loaded at a time
@@ -13627,7 +15430,11 @@ MapService.ContainerSpots = {}
 MapService.EdgeSpawns = {}
 MapService.PatrolRoutes = {}
 MapService.Doorways = {}
-MapService.MapIds = { "CanneryRow", "LarkspurStreet", "HollowPines" }
+MapService.MapIds = {
+	"CanneryRow", "LarkspurStreet", "HollowPines",
+	"SaltmarshFlats", "CinderQuarry", "DryDockYard", "VerdantGardens", "FunfairPier",
+	"GoldenVineyard", "WhiteoutDepot", "OldTownMarket", "LighthousePoint", "Powerworks",
+}
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
 local MapKit = require(MapsFolder:WaitForChild("MapKit"))
@@ -14848,7 +16655,7 @@ end
 
 return MapService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003A"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">MatchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Crossing director (the roguelike run):
 --   Ferry      no crossing; pick crew, shop, repairs. Tide chart -> start a crossing.
 --   Planning   at the Meridian mid-crossing: workbench, crafting, choose the next route.
@@ -15861,7 +17668,7 @@ end
 
 return MatchService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003B"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">PerceptionService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- How the Hushed sense players.
 --   Sight: range + field-of-view cone + line-of-sight raycasts, scaled by stance, cover (reeds),
 --          light (lamp pools, your torch), movement and fog.
@@ -16066,7 +17873,7 @@ end
 
 return PerceptionService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003C"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">PlayerDataService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Persistent player data (tokens, stats, purchase receipts) in a DataStore.
 -- Stage 9 replaces this with ProfileStore (session locking); the API stays the same.
 -- In Studio without "Enable Studio Access to API Services", it falls back to memory only.
@@ -16436,7 +18243,7 @@ end
 
 return PlayerDataService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003D"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">QuestService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Quest board: daily and weekly challenges (Config/Quests). The same picks for everyone that
 -- day / week; progress from encounters; rewards (Scrip + Materials) pay out on completion.
 -- Published to the client as the JSON attribute "Quests".
@@ -16620,7 +18427,7 @@ end
 
 return QuestService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003E"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Daily login streak (claimed automatically when you join each UTC day) and the Logbook:
 -- torn pages placed on missions; reading one keeps it, and every few pages pays out.
 local HttpService = game:GetService("HttpService")
@@ -16755,7 +18562,7 @@ end
 
 return RewardsService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000003F"><Properties><string name="Name">SpinService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">SpinService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Lucky Spin: one free spin per UTC day, extra spins from Spin tokens (Robux or won).
 -- The server picks the prize; the client only animates to it. Odds: Config/Spin (shown in UI).
 local Players = game:GetService("Players")
@@ -16940,7 +18747,7 @@ end
 
 return SpinService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000040"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">WeaponService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Guns and the bow, fully server-authoritative:
 --   * equip/holster (long gun on the back, sidearm on the hip; models replicate to everyone)
 --   * fire: client sends only aim direction + whether it's aiming; the server applies spread
@@ -17456,7 +19263,7 @@ end
 
 return WeaponService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000041"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000004C"><Properties><string name="Name">WorkbenchService</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian's workbench, used between encounters (Planning phase) with Salvage found in
 -- the run: weapon parts, satchel upgrades, and your character's other perks.
 -- Upgrades last for the current crossing only (roguelike), like everything in the satchel.
@@ -17575,7 +19382,7 @@ return WorkbenchService
 </Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX00000069"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000068"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000067"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX00000051"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000045"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="StarterPlayer" referent="RBX00000074"><Properties><string name="Name">StarterPlayer</string><bool name="EnableMouseLockOption">false</bool><bool name="LoadCharacterAppearance">false</bool><float name="CharacterJumpPower">0</float></Properties><Item class="StarterPlayerScripts" referent="RBX00000073"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX00000072"><Properties><string name="Name">Client</string></Properties><Item class="Folder" referent="RBX0000005C"><Properties><string name="Name">Controllers</string></Properties><Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">ActionController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Input bindings (keyboard/mouse, gamepad, touch buttons) -> intents sent to the server.
 --
 --   Keyboard/mouse                     Gamepad (Xbox names; PlayStation in brackets)
@@ -18049,7 +19856,7 @@ end
 
 return ActionController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000046"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000051"><Properties><string name="Name">AnimationController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Locomotion for custom realistic rigs that don't carry Roblox's default "Animate" script:
 -- blends idle / walk / run (and crouch variants) by speed using the animation IDs in
 -- Config/Rigs.Animations. Characters with an Animate script (the placeholder mannequin,
@@ -18125,7 +19932,7 @@ end
 
 return AnimationController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000047"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000052"><Properties><string name="Name">CameraController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Over-the-shoulder camera: spring-smoothed focus and offset, spherecast collision that snaps
 -- in and eases out, per-state framing (explore / crouch / sprint / aim / takedown), shoulder
 -- swap, and mouse / gamepad / touch look.
@@ -18560,7 +20367,7 @@ end
 
 return CameraController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000048"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">EffectsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client-only feedback: Tide Sense highlights, knockback, hit flash, low-health grade,
 -- takedown framing, Squall lightning, and hiding your own revive prompt.
 local Lighting = game:GetService("Lighting")
@@ -18852,7 +20659,7 @@ end
 
 return EffectsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000049"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">EnemyAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural animation for the Hushed (no animation assets needed). Drives each enemy's
 -- Motor6D skeleton from its replicated velocity, State and Gait:
 --   shamble (Drifter)   uneven, dragging steps, arms hanging and swaying
@@ -19186,7 +20993,7 @@ end
 
 return EnemyAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004A"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">GraphicsController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Graphics presets. Roblox decides the core render quality per device (from the player's
 -- graphics slider); these presets layer extra effects on top and decide how many costly
 -- things run:
@@ -19460,7 +21267,7 @@ end
 
 return GraphicsController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004B"><Properties><string name="Name">ListenController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">ListenController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Listen mode (hold L, or hold R3 on a controller): you stop, crouch low and strain to hear.
 -- The world greys out and everything making noise near you shows as a silhouette through
 -- walls: pale for the Hushed, amber for people, red when they are hunting you. A soft tick
@@ -19662,7 +21469,7 @@ end
 
 return ListenController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004C"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">MovementController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Stances, speed states with acceleration, wading, aim-facing (strafe while aiming), and the
 -- dodge / sprint-dive movement. Poses are drawn by PlayerAnimator.
 local Players = game:GetService("Players")
@@ -20093,7 +21900,7 @@ end
 
 return MovementController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004D"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">PlayerAnimator</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Procedural full-body animation for every crew character (replaces Roblox's default
 -- Animate script, so movement doesn't look like a Roblox avatar). Runs on each client for
 -- all characters from replicated velocity + attributes:
@@ -21004,7 +22811,7 @@ end
 
 return PlayerAnimator
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004E"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">SoundController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- All client-side audio:
 --   ambience     wind + sea + low drone, mixed by where you are (ferry vs encounter)
 --   music        a tension loop that swells when Hushed are suspicious of / hunting you,
@@ -21238,7 +23045,7 @@ end
 
 return SoundController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000004F"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">UIController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Owns the ScreenGui and routes server notifications to the UI modules.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21650,7 +23457,7 @@ end
 
 return UIController
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000050"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">WeaponController</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Client side of the gun system: input -> server intents, plus instant local feedback
 -- (muzzle flash, recoil kick, crosshair bloom) so shooting feels responsive. The server
 -- decides every hit (WeaponService).
@@ -21944,7 +23751,7 @@ end
 return WeaponController
 ]]></ProtectedString></Properties></Item>
 </Item>
-<Item class="LocalScript" referent="RBX00000052"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="LocalScript" referent="RBX0000005D"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- AFTERTIDE client bootstrap.
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -22015,7 +23822,7 @@ if player.Character then
 	task.spawn(bindCharacter, player.Character)
 end
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000053"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000005E"><Properties><string name="Name">State</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Shared client-side state for controllers and UI.
 local State = {
 	character = nil,
@@ -22048,7 +23855,7 @@ end
 
 return State
 ]]></ProtectedString></Properties></Item>
-<Item class="Folder" referent="RBX00000066"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX00000054"><Properties><string name="Name">Buttons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="Folder" referent="RBX00000071"><Properties><string name="Name">UI</string></Properties><Item class="ModuleScript" referent="RBX0000005F"><Properties><string name="Name">Buttons</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Button names for the player's controller: PlayStation symbols on PlayStation, Xbox letters
 -- otherwise. Used by the guide, the controls card and hints.
 local UserInputService = game:GetService("UserInputService")
@@ -22072,7 +23879,7 @@ end
 
 return Buttons
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000055"><Properties><string name="Name">Callouts</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000060"><Properties><string name="Name">Callouts</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- What the Harbour Watch and the Tidebound say: a speech bubble over the speaker (hover above
 -- their head, fades out) and a subtitle at the bottom with an arrow showing where it came from.
 local Players = game:GetService("Players")
@@ -22212,7 +24019,7 @@ end
 
 return Callouts
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000056"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000061"><Properties><string name="Name">CharacterSelect</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The crew cabins: pick a character and ONE starting perk. Shows ability, loadout, innate perk.
 local Players = game:GetService("Players")
 
@@ -22348,7 +24155,7 @@ end
 
 return CharacterSelect
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000057"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000062"><Properties><string name="Name">Chart</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The tide chart: choose the next encounter route (type, conditions, bonus).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22455,7 +24262,7 @@ end
 
 return Chart
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000058"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000063"><Properties><string name="Name">Diagnostics</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- F2 diagnostics: what the game is actually doing on your machine, so problems can be fixed
 -- from facts instead of guesses. Shows client + server warnings/errors, the animator's
 -- state, the last keys / actions received, open menus, and the asset-fitting report.
@@ -22584,7 +24391,7 @@ end
 
 return Diagnostics
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000059"><Properties><string name="Name">Guide</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000064"><Properties><string name="Name">Guide</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- First-time help on the Meridian, so a new player knows exactly how to start:
 --   * a small "Captain's orders" card (3 steps) until you've set sail once
 --   * a gold guide line on the deck from you to the SET SAIL chart table
@@ -22773,7 +24580,7 @@ end
 
 return Guide
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005A"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000065"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The HUD, designed to stay out of the way (survival-game minimal, not a Roblox overlay):
 --   top        compass bar with objective / teammate markers and distances; one-line objective
 --   bottom-right  fading cluster: segmented health, weapon + ammo pips, throwable;
@@ -23356,7 +25163,7 @@ end
 
 return HUD
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005B"><Properties><string name="Name">Logbook</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000066"><Properties><string name="Name">Logbook</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Logbook: torn pages found on missions (lore), and the daily streak calendar.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -23469,7 +25276,7 @@ end
 
 return Logbook
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005C"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000067"><Properties><string name="Name">Quartermaster</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Quartermaster (Meridian store, Scrip): unlock guns, set your holster / backpack loadout,
 -- and buy kits for your next crossing. Everyone starts with the revolver and a signature long gun.
 local HttpService = game:GetService("HttpService")
@@ -23645,7 +25452,7 @@ end
 
 return QM
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005D"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000068"><Properties><string name="Name">Quests</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The quest board: today's three challenges and this week's two, with progress.
 -- Data comes from the server as the JSON attribute "Quests" (QuestService).
 local HttpService = game:GetService("HttpService")
@@ -23730,7 +25537,7 @@ end
 
 return Quests
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005E"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000069"><Properties><string name="Name">Repairs</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Meridian projects board: permanent homebase upgrades built with Scrip + Materials (both
 -- earned from missions) or a Shipwright's Crew token, plus the armory once it's built.
 local HttpService = game:GetService("HttpService")
@@ -23851,7 +25658,7 @@ end
 
 return Repairs
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX0000005F"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006A"><Properties><string name="Name">Results</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- End-of-encounter debrief.
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -23923,7 +25730,7 @@ end
 
 return Results
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000060"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006B"><Properties><string name="Name">Satchel</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The satchel: everything you carry, throwable selection, field crafting and run aids.
 local Players = game:GetService("Players")
 
@@ -24090,7 +25897,7 @@ end
 
 return Satchel
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000061"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006C"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Settings: view (first / third person, field of view), text and menu size, graphics preset,
 -- look sensitivity, reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
@@ -24260,7 +26067,7 @@ end
 
 return Settings
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000062"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006D"><Properties><string name="Name">Shop</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Purser's Office ledger: the in-world shop, in three tabs.
 --   SUPPLIES   run aids (tokens) and the one-time Starter Pack. Fixed contents, never random.
 --   WARDROBE   outfits for each crew member: equip, buy with Scrip, or buy with Robux.
@@ -24577,7 +26384,7 @@ end
 
 return Shop
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000063"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006E"><Properties><string name="Name">Spin</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The Lucky Spin screen: a prize reel that rolls to the prize the server picked.
 -- One free spin a day (00:00 UTC reset); extra spins are Spin tokens (won, or R$10 each).
 -- Every prize's odds are listed on this screen before you spin or buy (paid random items
@@ -24845,7 +26652,7 @@ end
 
 return Spin
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000064"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX0000006F"><Properties><string name="Name">Theme</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- Visual language for all UI: slate panels, bone text, lantern-warm accents. No default
 -- Roblox look: custom panels, Oswald (stencil-like headings) + Merriweather (logbook body).
 local Theme = {}
@@ -25029,7 +26836,7 @@ end
 
 return Theme
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX00000065"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
+<Item class="ModuleScript" referent="RBX00000070"><Properties><string name="Name">Workbench</string><ProtectedString name="Source"><![CDATA[--!nonstrict
 -- The workbench: spend Salvage (found during the crossing) on weapon parts, satchel upgrades
 -- and your character's other perks. Upgrades last for this crossing.
 local HttpService = game:GetService("HttpService")

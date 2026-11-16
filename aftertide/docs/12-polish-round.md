@@ -117,3 +117,27 @@ button automatically.
   round a fire, a gas station and shop with a canopy, a sawmill, a plank bridge over the creek, a
   radio mast, wrecks and signposts along the road, 150 pines, flowers, and a rock ridge with a tree
   line instead of concrete flood walls.
+
+# Round 6: ten new maps (13 in all)
+Built on a shared `MapGen` (records loot, containers and doorways from every building, keeps props
+out of buildings, assembles the map data), each checked in the real engine: it builds, a mission
+sets up on it (containers, supply crates, logbook pages, doors), and the scan finds nothing floating
+or lodged. Previews are in `docs/maps/`.
+
+| Map | What it is |
+|---|---|
+| Saltmarsh Flats | tidal mud, wading pools, boardwalks on stilts, stilt huts, wrecked boats, reeds |
+| Old Town Market | cobbled square, fountain, clock tower, shops/flats/chapel round it, stalls, bunting |
+| Funfair Pier | dusk amusement pier: turning ferris wheel, carousel, big top, stalls, bumper cars, lights |
+| Verdant Gardens | hedge maze, two glasshouses, fountain plaza, gazebo, statues, flower beds |
+| Golden Vineyard | rolling vine rows, farmhouse, barn, wine cellar, windmill, hay, tractors |
+| Dry Dock Yard | flooded dock with a half-built ship, two gantry cranes, catwalks, containers |
+| Cinder Quarry | terraced pit with a ramp, crusher, excavators, trucks, conveyor, site huts |
+| Whiteout Depot | snowbound railway depot, freight, locomotive, platform, water tower, falling snow |
+| Lighthouse Point | cliff headland, striped lighthouse with a beam, bunkers, jetty, wreck on the rocks |
+| Powerworks | cooling towers, turbine hall, transformer yard, pylons with wires, coal conveyor |
+
+Unlocking: Cannery Row, Larkspur Street, Saltmarsh Flats, Old Town Market and Funfair Pier are
+available from the start; the Chart Room project adds Hollow Pines, Verdant Gardens, Golden
+Vineyard and Dry Dock Yard; the Lookout Tower adds Cinder Quarry, Whiteout Depot, Lighthouse Point
+and Powerworks. Routes still pick maps at random from what the crew has unlocked.

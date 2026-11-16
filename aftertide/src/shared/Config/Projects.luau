@@ -15,14 +15,15 @@ Projects.List = {
 	{ id = "sickbay", name = "Infirmary", desc = "+15 max health and an extra Field Dressing every crossing. Unlocks Medicine Run missions.", scrip = 0, materials = 90, unlocks = { missions = { "Medicine" } } },
 	{ id = "radio", name = "Radio Room", desc = "The tide chart offers 3 routes. Unlocks Restore the Signal missions.", scrip = 0, materials = 110, requires = "generator", unlocks = { missions = { "Relay" } } },
 	{ id = "armory", name = "Armory", desc = "+1 backpack gun slot and 15% off at the Quartermaster. Unlocks Burn the Nests missions.", scrip = 0, materials = 140, requires = "workshop", unlocks = { missions = { "Nests" } } },
-	{ id = "chartroom", name = "Chart Room", desc = "Unlocks Hollow Pines and +15% Materials from every mission.", scrip = 0, materials = 170, requires = "radio", unlocks = { maps = { "HollowPines" } } },
-	{ id = "lookout", name = "Lookout Tower", desc = "Every encounter opens with a Tide Sense pulse for the whole crew: you see the Hushed through walls.", scrip = 0, materials = 220, requires = "chartroom" },
+	{ id = "chartroom", name = "Chart Room", desc = "Unlocks four more maps (Hollow Pines, Verdant Gardens, Golden Vineyard, Dry Dock Yard) and +15% Materials from every mission.", scrip = 0, materials = 170, requires = "radio", unlocks = { maps = { "HollowPines", "VerdantGardens", "GoldenVineyard", "DryDockYard" } } },
+	{ id = "lookout", name = "Lookout Tower", desc = "Every encounter opens with a Tide Sense pulse for the whole crew: you see the Hushed through walls. Also unlocks four more maps (Cinder Quarry, Whiteout Depot, Lighthouse Point, Powerworks).", scrip = 0, materials = 220, requires = "chartroom", unlocks = { maps = { "CinderQuarry", "WhiteoutDepot", "LighthousePoint", "Powerworks" } } },
 }
 
 
 -- Mission types / maps available without any project.
 Projects.BaseMissions = { "Salvage", "LanternWatch", "Drift", "Hunt", "Rescue" }
-Projects.BaseMaps = { "CanneryRow", "LarkspurStreet" }
+-- Five maps from the start; the Chart Room opens four more, the Lookout Tower the last four.
+Projects.BaseMaps = { "CanneryRow", "LarkspurStreet", "SaltmarshFlats", "OldTownMarket", "FunfairPier" }
 
 -- How Materials are earned (MatchService).
 Projects.Materials = {

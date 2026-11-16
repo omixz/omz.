@@ -54,7 +54,11 @@ MapService.ContainerSpots = {}
 MapService.EdgeSpawns = {}
 MapService.PatrolRoutes = {}
 MapService.Doorways = {}
-MapService.MapIds = { "CanneryRow", "LarkspurStreet", "HollowPines" }
+MapService.MapIds = {
+	"CanneryRow", "LarkspurStreet", "HollowPines",
+	"SaltmarshFlats", "CinderQuarry", "DryDockYard", "VerdantGardens", "FunfairPier",
+	"GoldenVineyard", "WhiteoutDepot", "OldTownMarket", "LighthousePoint", "Powerworks",
+}
 
 local MapsFolder = script.Parent.Parent:WaitForChild("Maps")
 local MapKit = require(MapsFolder:WaitForChild("MapKit"))
