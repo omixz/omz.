@@ -172,6 +172,22 @@ local GUN_POSES = {
 		reload = CFrame.new(0.1, 0.05, -1.0) * CFrame.Angles(0.9, 0.2, 0.5), -- muzzle up, cylinder open
 	},
 }
+-- The same, for your own view in first person: the gun sits low and to the right, pointing at
+-- the crosshair, and rises to just under it when you aim.
+local GUN_POSES_FP = {
+	long = {
+		ready = CFrame.new(0.3, 0.34, -0.55) * CFrame.Angles(0.04, 0.1, 0),
+		sprint = CFrame.new(0.3, 0.05, -0.5) * CFrame.Angles(-0.6, 0.5, 0.2),
+		aim = CFrame.new(0.12, 0.5, -0.55),
+		reload = CFrame.new(0.2, 0.22, -0.55) * CFrame.Angles(-0.1, 0.45, 0.75),
+	},
+	sidearm = {
+		ready = CFrame.new(0.28, 0.3, -0.6) * CFrame.Angles(0.08, 0.08, 0),
+		sprint = CFrame.new(0.3, 0.05, -0.45) * CFrame.Angles(-0.8, 0.1, 0),
+		aim = CFrame.new(0.1, 0.46, -0.75),
+		reload = CFrame.new(0.15, 0.4, -0.55) * CFrame.Angles(0.9, 0.2, 0.5),
+	},
+}
 -- where the left hand goes while reloading (grip space): magazine / loading gate / cylinder
 local RELOAD_HAND = { long = Vector3.new(0, -0.12, -0.45), sidearm = Vector3.new(-0.12, 0.25, -0.15) }
 
@@ -309,12 +325,15 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	local model = char:FindFirstChild("Weapon_" .. slot)
 	local grip = model and model.PrimaryPart
 	local weld = grip and grip:FindFirstChild("Mount")
-	local set = GUN_POSES[slot]
+	local set = (rig.fp and GUN_POSES_FP[slot]) or GUN_POSES[slot]
 	if not (torso and weld and set) then
 		return false
 	end
 	local now = os.clock()
 	local pose = set.ready
+	if rig.fp and not reloading and a < 0.5 and not sprinting then
+		pose = pose * CFrame.Angles(pitch * 0.6, 0, 0) -- the gun follows where you look
+	end
 	if reloading then
 		local wobble = math.sin(now * 6) * 0.04
 		pose = set.reload * CFrame.new(0, wobble, 0) * CFrame.Angles(wobble, 0, 0)
@@ -454,6 +473,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	rig.crouch = approach(rig.crouch, (crouched or downed) and 1 or 0, 10, dt)
 	rig.aim = approach(rig.aim, aiming and 1 or 0, 14, dt)
 	rig.ready = approach(rig.ready, armed and 1 or 0, 10, dt)
+	rig.fp = isLocal and State.firstPerson == true and not downed
 	local c, a, r = rig.crouch, rig.aim, rig.ready * (1 - rig.aim)
 
 	-- gait

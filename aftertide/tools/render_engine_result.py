@@ -40,14 +40,20 @@ def cframe(c):
     return p, R
 
 
-def main(path, out):
+def main(path, out, fp=False):
     res = json.load(open(path))
     if isinstance(res, list):
         res = res[0]
     meshes = glb_meshes()
     samples = {s["name"]: np.array(s["points"]) for s in res.get("samples", []) if isinstance(s, dict) and "points" in s}
     clouds = []
+    head_pos = None
     for p in res["pieces"]:
+        if p["name"] == "Mesh_Head_Skin":
+            head_pos = np.array(p["cframe"][0:3])
+    for p in res["pieces"]:
+        if fp and not ("Arm" in p["name"] or "Hand" in p["name"] or p["name"].startswith("Weapon_")):
+            continue
         pos, R = cframe(p["cframe"])
         size = np.array(p["size"])
         if p["name"] in samples and p.get("meshSize"):
@@ -68,6 +74,31 @@ def main(path, out):
                 R = R @ F.T
         world = local @ R.T + pos
         clouds.append((world, col))
+    if fp:
+        # the view from the eye: camera just in front of the head looking down -Z
+        eye = head_pos + np.array([0.0, 0.12, -0.3]) if head_pos is not None else np.array([0, 21.9, 0])
+        W, H = 1600, 900
+        fov = np.radians(80)
+        focal = (H / 2) / np.tan(fov / 2)
+        img = Image.new("RGB", (W, H), (90, 120, 150))
+        draw = ImageDraw.Draw(img)
+        pts = []
+        for world, col in clouds:
+            rel = world - eye
+            for q, c in zip(rel, [col] * len(rel)):
+                z = -q[2]
+                if z > 0.15:
+                    pts.append((z, W / 2 + q[0] / z * focal, H / 2 - q[1] / z * focal, c))
+        pts.sort(key=lambda t: -t[0])
+        for z, x, y, col in pts:
+            r = max(1.5, 3.0 * focal / z / 90)
+            c = tuple(int(255 * min(1, v * 1.4) ** (1 / 2.2)) for v in col)
+            draw.ellipse([x - r, y - r, x + r, y + r], fill=c)
+        draw.line([W / 2 - 14, H / 2, W / 2 + 14, H / 2], fill=(255, 255, 255))
+        draw.line([W / 2, H / 2 - 14, W / 2, H / 2 + 14], fill=(255, 255, 255))
+        img.save(out)
+        print("wrote", out, "(first person,", len(clouds), "pieces )")
+        return
     allp = np.concatenate([c[0] for c in clouds])
     lo, hi = allp.min(0), allp.max(0)
     W, H = 900, 900
@@ -91,4 +122,4 @@ def main(path, out):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], "--fp" in sys.argv)

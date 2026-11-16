@@ -128,11 +128,14 @@ function CameraController.isHoldingBreath()
 end
 
 -- Recoil: the view climbs (you pull it back down); `side` is the gun's pattern step.
+-- The kick is ONLY an offset on top of where you are aiming: it springs back to zero, so the
+-- view never drifts away from where you put it (the old code added the sideways kick to your
+-- aim permanently, which made the screen wander off with every shot).
 function CameraController.kick(degrees, side)
-	recoilPitch += math.rad(degrees) * 0.6
-	pitch += math.rad(degrees) * 0.08 -- a little permanent climb to manage
-	recoilYaw += math.rad(degrees) * ((side or 0) * 0.45 + (math.random() - 0.5) * 0.08)
-	fovPunch = math.min(fovPunch + degrees * 0.35, 4)
+	local steady = State.firstPerson and 0.8 or 1
+	recoilPitch = math.min(recoilPitch + math.rad(degrees) * 0.45 * steady, math.rad(9))
+	recoilYaw = math.clamp(recoilYaw + math.rad(degrees) * ((side or 0) * 0.3 + (math.random() - 0.5) * 0.05) * steady, -math.rad(5), math.rad(5))
+	fovPunch = math.min(fovPunch + degrees * 0.25, 3)
 end
 
 local function sensitivity()
@@ -220,18 +223,15 @@ local function update(dt)
 		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
 		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
 	end
-	if recoilYaw ~= 0 then
-		local step = recoilYaw * math.min(1, dt * 12)
-		yaw += step
-		recoilYaw -= step
-	end
-	recoilPitch -= recoilPitch * math.min(1, dt * 9)
+	recoilYaw -= recoilYaw * math.min(1, dt * 8)
+	recoilPitch -= recoilPitch * math.min(1, dt * 8)
 	fovPunch -= fovPunch * math.min(1, dt * 10)
 	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
 	State.pitch = pitch
 
 	local takedown = os.clock() < State.takedownUntil
-	local firstPerson = State.firstPerson == true and not State.downed and not takedown
+	State.firstPerson = player:GetAttribute("Set_camera") ~= "Third"
+	local firstPerson = State.firstPerson and not State.downed and not takedown
 	if firstPerson ~= fpHidden then
 		setFirstPersonVisible(firstPerson)
 	elseif firstPerson and os.clock() > fpNext then
@@ -305,7 +305,7 @@ local function update(dt)
 	State.breath = breath.holding and "hold" or (os.clock() < breath.spentUntil and "spent" or "ready")
 	local rot = CFrame.fromEulerAnglesYXZ(
 		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
-		yaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
+		yaw + recoilYaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
 		0
 	)
 
@@ -351,7 +351,8 @@ local function update(dt)
 			camera.CFrame = CFrame.new(eye + Vector3.new(bobX, bobY * 1.2, 0)) * rot
 			camera.Focus = CFrame.new(eye)
 			local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
-			local want = weaponFov and (weaponFov + 6) or (State.sprinting and 84 or 78)
+			local baseFov = player:GetAttribute("Set_fov") or 80
+			local want = weaponFov and (weaponFov + 6) or (State.sprinting and baseFov + 6 or baseFov)
 			camera.FieldOfView += (want - camera.FieldOfView) * math.min(1, dt * 10)
 			return
 		end
@@ -365,7 +366,9 @@ function CameraController.toggleFirstPerson(on)
 		on = not State.firstPerson
 	end
 	State.firstPerson = on
-	player:SetAttribute("FirstPerson", on)
+	if Controllers and Controllers.UIController then
+		Controllers.UIController.setSetting("camera", on and "First" or "Third")
+	end
 end
 
 function CameraController.init(registry)

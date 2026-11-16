@@ -31,7 +31,7 @@ local function defaultData()
 		scrip = 0, -- homebase currency, earned only by playing
 		materials = 0, -- Meridian projects; earned from missions
 		repairs = {}, -- [repairId] = true
-		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
+		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false, camera = "First", uiSize = "Large", fov = 80 },
 		outfits = {}, -- [outfitId] = true (bought or unlocked; defaults are implicit)
 		equipped = {}, -- [charId] = outfitId
 		oneTime = {}, -- [productKey] = true (Starter Pack)
@@ -79,6 +79,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Set_graphics", data.settings.graphics)
 	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
 	player:SetAttribute("Set_reduceMotion", data.settings.reduceMotion)
+	player:SetAttribute("Set_camera", data.settings.camera or "First")
+	player:SetAttribute("Set_uiSize", data.settings.uiSize or "Large")
+	player:SetAttribute("Set_fov", data.settings.fov or 80)
 	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
 	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
 	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))

@@ -80,6 +80,7 @@ for _, sc in SCEN do
 	State.aiming = sc.aim == true
 	State.prone = sc.prone == true
 	State.crouched = sc.crouch == true
+	State.firstPerson = FP_TEST == true
 	State.pitch = 0
 	local err
 	for _ = 1, 45 do

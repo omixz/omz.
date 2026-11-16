@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -11,6 +12,7 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local HUD = require(UI:WaitForChild("HUD"))
 local Diagnostics = require(UI:WaitForChild("Diagnostics"))
 local State = require(script.Parent.Parent.State)
+local Theme = require(UI:WaitForChild("Theme"))
 local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
 local Satchel = require(UI:WaitForChild("Satchel"))
 local Shop = require(UI:WaitForChild("Shop"))
@@ -57,6 +59,10 @@ function UIController.openSpin()
 	Spin.open()
 end
 
+function UIController.setSetting(key, value)
+	Settings.setValue(key, value)
+end
+
 function UIController.toggleSettings()
 	Settings.toggle()
 end
@@ -86,6 +92,41 @@ function UIController.start()
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 
+	-- Everything is built inside one scaler: text and menus are scaled up together (bigger on big
+	-- screens and consoles, and by the "Text and menu size" setting) so nothing is tiny.
+	local UserInputService = game:GetService("UserInputService")
+	local ui = Instance.new("Frame")
+	ui.Name = "Scaler"
+	ui.BackgroundTransparency = 1
+	ui.BorderSizePixel = 0
+	ui.Size = UDim2.fromScale(1, 1)
+	ui.Parent = gui
+	local uiScale = Instance.new("UIScale")
+	uiScale.Parent = ui
+	local function applyScale()
+		local vh = Workspace.CurrentCamera.ViewportSize.Y
+		local mult = ({ Normal = 1, Large = 1.2, Huge = 1.4 })[player:GetAttribute("Set_uiSize") or "Large"] or 1.2
+		local scale = math.clamp(vh / 860, 1, 1.5) * mult * (State.gamepad and 1.12 or 1)
+		if vh < 520 then
+			scale = 1 -- phones: the screen is already small
+		end
+		scale = math.clamp(scale, 1, 2.1)
+		if math.abs(uiScale.Scale - scale) > 0.001 then
+			uiScale.Scale = scale
+			ui.Size = UDim2.fromScale(1 / scale, 1 / scale)
+			Theme.scale = scale
+		end
+	end
+	applyScale()
+	player:GetAttributeChangedSignal("Set_uiSize"):Connect(applyScale)
+	Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyScale)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			applyScale() -- picks up a switch between mouse and controller
+		end
+	end)
+
 	local function send(name, payload)
 		Controllers.ActionController.sendAction(name, payload)
 	end
@@ -100,51 +141,51 @@ function UIController.start()
 		end
 	end
 	build("HUD", function()
-		HUD.build(gui, function()
+		HUD.build(ui, function()
 			send("SecondWind")
 		end, Controllers.WeaponController)
 	end)
 	build("CharacterSelect", function()
-		CharacterSelect.build(gui)
+		CharacterSelect.build(ui)
 	end)
 	build("Satchel", function()
-		Satchel.build(gui, send)
+		Satchel.build(ui, send)
 	end)
 	build("Shop", function()
-		Shop.build(gui)
+		Shop.build(ui)
 	end)
 	build("Results", function()
-		Results.build(gui)
+		Results.build(ui)
 	end)
 	build("Chart", function()
-		Chart.build(gui, request)
+		Chart.build(ui, request)
 	end)
 	build("Workbench", function()
-		Workbench.build(gui, request)
+		Workbench.build(ui, request)
 	end)
 	build("Repairs", function()
-		Repairs.build(gui, request)
+		Repairs.build(ui, request)
 	end)
 	build("Settings", function()
-		Settings.build(gui, request)
+		Settings.build(ui, request)
 	end)
 	build("Quests", function()
-		Quests.build(gui)
+		Quests.build(ui)
 	end)
 	build("Quartermaster", function()
-		Quartermaster.build(gui, request)
+		Quartermaster.build(ui, request)
 	end)
 	build("Callouts", function()
-		Callouts.build(gui)
+		Callouts.build(ui)
 	end)
 	build("Logbook", function()
-		Logbook.build(gui)
+		Logbook.build(ui)
 	end)
 	build("Guide", function()
-		Guide.build(gui, request)
+		Guide.build(ui, request)
 	end)
 	build("Spin", function()
-		Spin.build(gui, request, Shop.prompt)
+		Spin.build(ui, request, Shop.prompt)
 	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")

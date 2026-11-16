@@ -242,6 +242,9 @@ local function saveSettings(player, settings)
 		graphics = graphics,
 		sensitivity = math.clamp(sensitivity, 0.2, 3),
 		reduceMotion = settings.reduceMotion == true,
+		camera = settings.camera == "Third" and "Third" or "First",
+		uiSize = ({ Normal = true, Large = true, Huge = true })[settings.uiSize] and settings.uiSize or "Large",
+		fov = math.clamp(math.floor(tonumber(settings.fov) or 80), 60, 110),
 	})
 end
 

@@ -16,6 +16,8 @@ Theme.Colors = {
 	ok = Color3.fromRGB(140, 180, 130),
 }
 
+Theme.minText = 14
+Theme.scale = 1 -- the UI scaler's current scale (UIController); pixel maths in the HUD divides by it
 Theme.Head = Enum.Font.Oswald
 Theme.Body = Enum.Font.Merriweather
 
@@ -35,6 +37,10 @@ local function apply(inst, defaults, props)
 	end
 	for _, child in (props and props.Children) or {} do
 		child.Parent = inst
+	end
+	-- nothing on screen is allowed to be tiny: small text is lifted to a readable minimum
+	if (inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox")) and not inst.TextScaled and inst.TextSize < Theme.minText then
+		inst.TextSize = Theme.minText
 	end
 	if parent then
 		inst.Parent = parent

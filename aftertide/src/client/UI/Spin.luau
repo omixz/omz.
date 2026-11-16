@@ -146,7 +146,7 @@ function Spin.result(data)
 	local winSlot = 34
 	fillStrip(index, winSlot)
 	strip.Position = UDim2.new(0, 0, 0, 0)
-	local center = reel.AbsoluteSize.X / 2
+	local center = reel.AbsoluteSize.X / 2 / Theme.scale
 	local jitter = Random.new():NextNumber(-TILE * 0.32, TILE * 0.32)
 	local target = -((winSlot - 1) * (TILE + GAP) + TILE / 2 - center + jitter)
 	local duration = 4.2

@@ -35,19 +35,20 @@ local function rebuild()
 	for i, option in options do
 		local def = option.type == "Finale" and Encounters.Finale or Encounters.Types[option.type]
 		local mod = modifierById(option.modifier)
-		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 124), BackgroundColor3 = C.panelHi, Parent = list })
+		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = C.panelHi, Parent = list })
 		Theme.padding(10).Parent = card
 		Theme.heading({ Text = string.upper(option.name), TextSize = 20, Size = UDim2.new(1, -170, 0, 24), Parent = card })
 		local desc = def and def.desc or ""
 		if option.type == "Salvage" then
 			desc = desc:format(def.crates)
 		end
-		Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 26), Size = UDim2.new(1, -170, 0, 34), TextSize = 13, Parent = card })
+		Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 28), Size = UDim2.new(1, -170, 0, 44), TextSize = 15, TextWrapped = true, Parent = card })
 		Theme.label({
 			Text = ("%s  ·  %s\nConditions: %s · %s%s"):format(option.mapName or "", option.factionName or "The Hushed", mod.name, mod.desc, (option.bonus or 0) > 0 and ("  ·  +" .. option.bonus .. " Salvage") or ""),
-			Position = UDim2.new(0, 0, 0, 62),
-			Size = UDim2.new(1, -170, 0, 44),
-			TextSize = 12,
+			Position = UDim2.new(0, 0, 0, 76),
+			Size = UDim2.new(1, -170, 0, 56),
+			TextSize = 14,
+			TextWrapped = true,
 			TextColor3 = C.salt,
 			Parent = card,
 		})

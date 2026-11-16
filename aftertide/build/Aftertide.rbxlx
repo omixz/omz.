@@ -7287,8 +7287,10 @@ end
 return Map
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX00000029"><Properties><string name="Name">HollowPines</string><ProtectedString name="Source"><![CDATA[--!nonstrict
--- HOLLOW PINES: forest hills above the coast. Pines, rocks, ferns, a creek, meadows of tall
--- grass, three cabins and an old ranger lookout. Misty morning.
+-- HOLLOW PINES: a lakeside logging valley above the coast. A creek with a plank bridge, a lake with
+-- a dock and rowboat, a campground round a fire, a gas station and shop on the logging road, a
+-- sawmill, a ranger station and lookout, cabins, wrecks along the road, dense pine forest, flowers
+-- and meadows of tall grass to hide in. Bright morning.
 local MapKit = require(script.Parent.MapKit)
 local C = MapKit.C
 local block = MapKit.block
@@ -7313,6 +7315,107 @@ local function baseHeight(x, z)
 end
 
 local STATION = { -106, 18, -70, 46 }
+
+-- Scenery helpers ----------------------------------------------------------------------------
+
+local function rgb(r, g, b)
+	return Color3.fromRGB(r, g, b)
+end
+
+-- A cylinder log between two points.
+local function log(parent, a, b, radius, color, material)
+	local mid = (a + b) / 2
+	local len = (b - a).Magnitude
+	return block(parent, Vector3.new(len, radius * 2, radius * 2), CFrame.lookAt(mid, b) * CFrame.Angles(0, math.pi / 2, 0), color or rgb(120, 84, 56), material or Enum.Material.Wood, { Shape = Enum.PartType.Cylinder })
+end
+
+local function tent(parent, pos, yaw, color)
+	local M = Enum.Material
+	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
+	MapKit.wedge(parent, Vector3.new(5.4, 3.4, 2.6), cf * CFrame.new(0, 1.7, -1.3), color, M.Fabric)
+	MapKit.wedge(parent, Vector3.new(5.4, 3.4, 2.6), cf * CFrame.new(0, 1.7, 1.3) * CFrame.Angles(0, math.pi, 0), color, M.Fabric)
+	block(parent, Vector3.new(2, 2.4, 0.15), cf * CFrame.new(0, 1.2, -2.62), rgb(30, 34, 38), M.Fabric, { CanCollide = false }) -- the doorway
+	block(parent, Vector3.new(5.6, 0.2, 0.2), cf * CFrame.new(0, 3.45, 0), rgb(240, 240, 236), M.Fabric, { CanCollide = false })
+	block(parent, Vector3.new(1.4, 0.5, 3), cf * CFrame.new(1.2, 0.35, 0), rgb(214, 90, 70), M.Fabric, { CanCollide = false }) -- sleeping bag
+end
+
+local function campfire(parent, pos)
+	local M = Enum.Material
+	for i = 0, 9 do
+		local a = i / 10 * math.pi * 2
+		block(parent, Vector3.new(0.9, 0.7, 0.9), CFrame.new(pos + Vector3.new(math.cos(a) * 1.7, 0.35, math.sin(a) * 1.7)) * CFrame.Angles(0, a, 0), rgb(120, 118, 112), M.Rock)
+	end
+	for i = 0, 2 do
+		local a = i / 3 * math.pi
+		log(parent, pos + Vector3.new(math.cos(a) * 1.1, 0.5, math.sin(a) * 1.1), pos + Vector3.new(-math.cos(a) * 1.1, 0.7, -math.sin(a) * 1.1), 0.22, rgb(70, 50, 36))
+	end
+	local core = block(parent, Vector3.new(1.4, 0.4, 1.4), pos + Vector3.new(0, 0.4, 0), rgb(255, 120, 40), M.Neon, { CanCollide = false })
+	local fire = Instance.new("Fire")
+	fire.Size = 6
+	fire.Heat = 8
+	fire.Color = rgb(255, 150, 50)
+	fire.SecondaryColor = rgb(255, 60, 20)
+	fire.Parent = core
+	local light = Instance.new("PointLight")
+	light.Range = 26
+	light.Brightness = 1.6
+	light.Color = rgb(255, 170, 90)
+	light.Shadows = true
+	light.Parent = core
+	MapKit.volume(parent, Vector3.new(16, 8, 16), pos + Vector3.new(0, 3, 0), "LitZone")
+end
+
+local function bench(parent, pos, yaw)
+	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
+	block(parent, Vector3.new(4.4, 0.35, 1.1), cf * CFrame.new(0, 1.4, 0), rgb(150, 104, 66), Enum.Material.WoodPlanks)
+	for _, x in { -1.8, 1.8 } do
+		block(parent, Vector3.new(0.3, 1.4, 0.9), cf * CFrame.new(x, 0.7, 0), rgb(110, 76, 50), Enum.Material.Wood)
+	end
+end
+
+local function picnic(parent, pos, yaw)
+	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
+	block(parent, Vector3.new(5, 0.3, 2.6), cf * CFrame.new(0, 2.4, 0), rgb(176, 130, 86), Enum.Material.WoodPlanks)
+	for _, z in { -2, 2 } do
+		block(parent, Vector3.new(5, 0.3, 1), cf * CFrame.new(0, 1.4, z), rgb(150, 104, 66), Enum.Material.WoodPlanks)
+	end
+	for _, x in { -2, 2 } do
+		block(parent, Vector3.new(0.3, 2.4, 4.6), cf * CFrame.new(x, 1.2, 0), rgb(110, 76, 50), Enum.Material.Wood, { CanCollide = false })
+	end
+end
+
+local function sign(parent, pos, yaw, text, color)
+	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
+	block(parent, Vector3.new(0.4, 7, 0.4), cf * CFrame.new(0, 3.5, 0), rgb(96, 70, 48), Enum.Material.Wood)
+	local board = block(parent, Vector3.new(6, 2, 0.3), cf * CFrame.new(0, 6.2, 0), color or rgb(46, 96, 62), Enum.Material.WoodPlanks)
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.Parent = board
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.Oswald
+		label.TextScaled = true
+		label.Text = text
+		label.TextColor3 = rgb(250, 244, 220)
+		label.Parent = gui
+	end
+end
+
+local function flowerPatch(parent, center, radius, rng, groundFn)
+	local colors = { rgb(240, 90, 110), rgb(255, 208, 60), rgb(250, 250, 250), rgb(180, 110, 230), rgb(255, 140, 60), rgb(110, 170, 250) }
+	local color = colors[rng:NextInteger(1, #colors)]
+	for _ = 1, 14 do
+		local a, r = rng:NextNumber(0, 6.28), rng:NextNumber(0, radius)
+		local x, z = center.X + math.cos(a) * r, center.Z + math.sin(a) * r
+		local y = groundFn(x, z)
+		block(parent, Vector3.new(0.18, 0.9, 0.18), Vector3.new(x, y + 0.45, z), rgb(70, 130, 60), Enum.Material.Grass, { CanCollide = false, CanQuery = false })
+		block(parent, Vector3.new(0.55, 0.55, 0.55), Vector3.new(x, y + 1, z), color, Enum.Material.SmoothPlastic, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
+	end
+end
 
 function Map.build(parent, rng)
 	local M = Enum.Material
@@ -7377,6 +7480,203 @@ function Map.build(parent, rng)
 	MapKit.wedge(parent, Vector3.new(13, 3, 6.5), CFrame.new(0, ly + 33, 6.75), C.roof, M.RoofShingles)
 	MapKit.wedge(parent, Vector3.new(13, 3, 6.5), CFrame.new(0, ly + 33, 13.25) * CFrame.Angles(0, math.pi, 0), C.roof, M.RoofShingles)
 
+	local extraLoot, extraContainers, extraDoors = {}, {}, {}
+	local function pad(cx, cz, w, d, material)
+		local y = baseHeight(cx, cz)
+		MapKit.clearAbove(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, y)
+		MapKit.slab(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, material or M.Ground, y, 16)
+		return y
+	end
+
+	-- the campground: tents round a fire, log benches, a cooler, a lantern line
+	do
+		local cx, cz = -18, -62
+		local y = pad(cx, cz, 34, 30, M.Mud)
+		campfire(parent, Vector3.new(cx, y, cz))
+		for i, color in { rgb(236, 120, 60), rgb(70, 140, 200), rgb(120, 190, 100), rgb(220, 70, 90) } do
+			local a = i / 4 * math.pi * 2 + 0.4
+			local p = Vector3.new(cx + math.cos(a) * 11, y, cz + math.sin(a) * 9)
+			tent(parent, p, a + math.pi / 2 + math.pi, color)
+			table.insert(extraLoot, p + Vector3.new(math.cos(a) * -3.5, 0, math.sin(a) * -3))
+		end
+		for i = 0, 3 do
+			local a = i / 4 * math.pi * 2
+			bench(parent, Vector3.new(cx + math.cos(a) * 4.6, y, cz + math.sin(a) * 4.6), a + math.pi / 2)
+		end
+		block(parent, Vector3.new(2.4, 1.6, 1.4), Vector3.new(cx + 6, y + 0.8, cz - 6), rgb(70, 130, 200), Enum.Material.SmoothPlastic) -- cooler
+		block(parent, Vector3.new(2.5, 0.3, 1.5), Vector3.new(cx + 6, y + 1.7, cz - 6), rgb(240, 240, 236), Enum.Material.SmoothPlastic)
+		table.insert(extraContainers, { pos = Vector3.new(cx + 8, y, cz + 4), type = "AmmoCrate", yaw = 0 })
+		table.insert(extraContainers, { pos = Vector3.new(cx - 10, y, cz + 8), type = "Toolbox", yaw = 90 })
+		picnic(parent, Vector3.new(cx - 2, y, cz + 11), 0)
+		-- a string of lanterns between two poles
+		for _, px in { cx - 13, cx + 13 } do
+			block(parent, Vector3.new(0.4, 9, 0.4), Vector3.new(px, y + 4.5, cz - 12), rgb(96, 70, 48), M.Wood)
+		end
+		for i = 0, 8 do
+			local k = i / 8
+			local bulb = block(parent, Vector3.new(0.7, 0.7, 0.7), Vector3.new(cx - 13 + 26 * k, y + 8.6 - math.sin(k * math.pi) * 1.5, cz - 12), rgb(255, 214, 140), M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+			if i % 3 == 1 then
+				local l = Instance.new("PointLight")
+				l.Range = 14
+				l.Color = rgb(255, 200, 120)
+				l.Parent = bulb
+			end
+		end
+		sign(parent, Vector3.new(cx + 18, y, cz + 16), -0.6, "CAMP BRINEWAKE", rgb(46, 96, 62))
+	end
+
+	-- the gas station and shop on the logging road
+	local store
+	do
+		local cx, cz = 25, 82
+		local y = pad(cx, cz, 46, 50, M.Ground)
+		store = MapKit.house(parent, Vector3.new(cx, y, cz + 6), 0, rng, { kind = "shop", w = 26, d = 18 })
+		-- canopy over two pumps, on four posts, with a lit sign
+		local canopyZ = cz - 12
+		for _, px in { cx - 10, cx + 10 } do
+			for _, pz in { canopyZ - 4, canopyZ + 4 } do
+				block(parent, Vector3.new(0.9, 11, 0.9), Vector3.new(px, y + 5.5, pz), rgb(236, 236, 232), M.Metal)
+			end
+		end
+		block(parent, Vector3.new(24, 0.8, 12), Vector3.new(cx, y + 11.4, canopyZ), rgb(214, 60, 52), M.SmoothPlastic)
+		block(parent, Vector3.new(24.4, 0.5, 12.4), Vector3.new(cx, y + 10.9, canopyZ), rgb(250, 250, 246), M.SmoothPlastic)
+		for _, px in { cx - 5, cx + 5 } do
+			block(parent, Vector3.new(1.6, 4, 1.2), Vector3.new(px, y + 2, canopyZ), rgb(226, 60, 52), M.Metal)
+			block(parent, Vector3.new(1.2, 1, 0.1), Vector3.new(px, y + 3.2, canopyZ - 0.62), rgb(120, 240, 150), M.Neon, { CanCollide = false })
+			MapKit.bulb(parent, Vector3.new(px, y + 10, canopyZ), 18)
+		end
+		sign(parent, Vector3.new(cx - 22, y, cz - 18), 0.4, "GAS · SHOP", rgb(196, 60, 48))
+		MapKit.prop(parent, "CarSedan_1", CFrame.new(cx + 2, y, canopyZ - 1) * CFrame.Angles(0, math.pi / 2, 0))
+		MapKit.prop(parent, "CarVan_1", CFrame.new(cx - 18, y, cz + 8) * CFrame.Angles(0, 0.3, 0), 1.1)
+		for _, d in store.doorways do
+			table.insert(extraDoors, d)
+		end
+		for _, c in store.containers do
+			table.insert(extraContainers, c)
+		end
+		for _, l in store.loot do
+			table.insert(extraLoot, l)
+		end
+		table.insert(extraContainers, { pos = Vector3.new(cx + 16, y, canopyZ + 6), type = "Toolbox", yaw = 180 })
+	end
+
+	-- the lake: sandy beach, a dock, a rowboat, picnic tables
+	do
+		local cx, cz = 82, 88
+		local gy = baseHeight(cx, cz)
+		local terrain = workspace.Terrain
+		terrain:FillCylinder(CFrame.new(cx, gy + 1, cz), 12, 20, M.Air) -- carve the basin
+		terrain:FillCylinder(CFrame.new(cx, gy - 1.6, cz), 1.2, 20, M.Sand) -- the beach
+		terrain:FillCylinder(CFrame.new(cx, gy - 2, cz), 4.2, 14.5, M.Air) -- clear the middle
+		terrain:FillCylinder(CFrame.new(cx, gy - 4.4, cz), 1.2, 15, M.Mud) -- the lake bed
+		terrain:FillCylinder(CFrame.new(cx, gy - 2.6, cz), 2.4, 14.5, M.Water) -- the water, just under the beach
+		-- the dock
+		for i = 0, 5 do
+			block(parent, Vector3.new(3.4, 0.35, 2.6), Vector3.new(cx - 18 + i * 2.7, gy - 0.5, cz), rgb(150, 112, 76), M.WoodPlanks)
+		end
+		for i = 0, 3 do
+			for _, dz in { -1.4, 1.4 } do
+				block(parent, Vector3.new(0.4, 3.4, 0.4), Vector3.new(cx - 17 + i * 4.4, gy - 2, cz + dz), rgb(90, 66, 46), M.Wood)
+			end
+		end
+		-- the rowboat
+		local boat = Vector3.new(cx - 9, gy - 1.2, cz + 8)
+		block(parent, Vector3.new(7, 1.2, 2.8), CFrame.new(boat) * CFrame.Angles(0, 0.35, 0), rgb(214, 80, 60), M.WoodPlanks)
+		block(parent, Vector3.new(2, 1.2, 2.2), CFrame.new(boat + Vector3.new(4, 0.2, 1.4)) * CFrame.Angles(0, 0.35, 0), rgb(214, 80, 60), M.WoodPlanks)
+		block(parent, Vector3.new(6, 0.3, 2.2), CFrame.new(boat + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0.35, 0), rgb(240, 226, 190), M.WoodPlanks, { CanCollide = false })
+		picnic(parent, Vector3.new(cx - 24, gy + 0.5, cz - 8), 1.2)
+		picnic(parent, Vector3.new(cx - 26, gy + 0.5, cz + 12), 1.8)
+		sign(parent, Vector3.new(cx - 30, gy + 0.5, cz), 1.57, "LAKE · NO SWIMMING", rgb(40, 110, 150))
+		table.insert(extraLoot, Vector3.new(cx - 14, gy, cz))
+		table.insert(extraLoot, Vector3.new(cx - 26, gy + 0.5, cz + 2))
+		table.insert(extraContainers, { pos = Vector3.new(cx - 28, gy + 0.5, cz - 14), type = "Locker", yaw = 90 })
+	end
+
+	-- the sawmill: an open shed over a saw table, log stacks, a crane arm
+	do
+		local cx, cz = 94, -50
+		local y = pad(cx, cz, 30, 26, M.Ground)
+		for _, px in { cx - 11, cx, cx + 11 } do
+			for _, pz in { cz - 7, cz + 7 } do
+				block(parent, Vector3.new(1, 11, 1), Vector3.new(px, y + 5.5, pz), rgb(104, 76, 52), M.Wood)
+			end
+		end
+		MapKit.wedge(parent, Vector3.new(26, 4, 8.5), CFrame.new(cx, y + 13, cz - 4.2), rgb(150, 70, 56), M.CorrodedMetal)
+		MapKit.wedge(parent, Vector3.new(26, 4, 8.5), CFrame.new(cx, y + 13, cz + 4.2) * CFrame.Angles(0, math.pi, 0), rgb(150, 70, 56), M.CorrodedMetal)
+		block(parent, Vector3.new(9, 2.2, 3), Vector3.new(cx - 2, y + 1.1, cz), rgb(226, 170, 50), M.Metal) -- the saw table
+		local blade = block(parent, Vector3.new(0.2, 3.4, 3.4), Vector3.new(cx - 2, y + 3.2, cz), rgb(196, 200, 204), M.Metal, { Shape = Enum.PartType.Cylinder, CanCollide = false })
+		blade.CFrame = CFrame.new(cx - 2, y + 3.2, cz) * CFrame.Angles(0, 0, 0)
+		for i = 0, 3 do -- log pile
+			for j = 0, 3 - i do
+				log(parent, Vector3.new(cx + 6 - 6, y + 0.9 + i * 1.5, cz - 10.5 + j * 1.5 + i * 0.75), Vector3.new(cx + 6 + 6, y + 0.9 + i * 1.5, cz - 10.5 + j * 1.5 + i * 0.75), 0.8, rgb(150, 100, 66))
+			end
+		end
+		for i = 0, 5 do -- sawdust and cut planks
+			block(parent, Vector3.new(3, 0.25, 0.7), Vector3.new(cx - 9, y + 0.15 + i * 0.28, cz + 11), rgb(220, 186, 130), M.WoodPlanks)
+		end
+		sign(parent, Vector3.new(cx - 18, y, cz - 16), 0.2, "RIDGE SAWMILL", rgb(120, 74, 40))
+		table.insert(extraLoot, Vector3.new(cx - 8, y, cz + 4))
+		table.insert(extraLoot, Vector3.new(cx + 8, y, cz + 9))
+		table.insert(extraContainers, { pos = Vector3.new(cx + 12, y, cz + 10), type = "Toolbox", yaw = 180 })
+		table.insert(extraContainers, { pos = Vector3.new(cx - 13, y, cz + 9), type = "Drawer", yaw = 90 })
+	end
+
+	-- a plank bridge over the creek
+	do
+		local bz = -6
+		local x0, x1 = creekX(bz) - 14, creekX(bz) + 14
+		local y0, y1 = baseHeight(x0, bz), baseHeight(x1, bz)
+		local deckY = math.max(y0, y1) + 0.5
+		for x = x0, x1, 2 do
+			block(parent, Vector3.new(2.05, 0.4, 7), Vector3.new(x + 1, deckY, bz), rgb(150, 108, 72), M.WoodPlanks)
+		end
+		for _, dz in { -3.4, 3.4 } do
+			block(parent, Vector3.new(x1 - x0, 0.3, 0.3), Vector3.new((x0 + x1) / 2, deckY + 2.8, bz + dz), rgb(110, 76, 50), M.Wood)
+			block(parent, Vector3.new(x1 - x0, 0.3, 0.3), Vector3.new((x0 + x1) / 2, deckY + 1.4, bz + dz), rgb(110, 76, 50), M.Wood)
+			for x = x0, x1, 7 do
+				block(parent, Vector3.new(0.4, 3.2, 0.4), Vector3.new(x + 1, deckY + 1.4, bz + dz), rgb(96, 70, 48), M.Wood)
+			end
+		end
+		for _, x in { creekX(bz) - 4, creekX(bz) + 4 } do
+			block(parent, Vector3.new(1.2, deckY - baseHeight(x, bz) + 2, 1.2), Vector3.new(x, (deckY + baseHeight(x, bz) - 2) / 2, bz - 2.8), rgb(90, 66, 46), M.Wood)
+			block(parent, Vector3.new(1.2, deckY - baseHeight(x, bz) + 2, 1.2), Vector3.new(x, (deckY + baseHeight(x, bz) - 2) / 2, bz + 2.8), rgb(90, 66, 46), M.Wood)
+		end
+	end
+
+	-- a radio mast on the north ridge, wrecks and signposts along the logging road
+	do
+		local mx, mz = -100, -92
+		local my = baseHeight(mx, mz)
+		for _, o in { { -1.2, -1.2 }, { 1.2, -1.2 }, { -1.2, 1.2 }, { 1.2, 1.2 } } do
+			block(parent, Vector3.new(0.3, 34, 0.3), Vector3.new(mx + o[1], my + 17, mz + o[2]), rgb(196, 60, 52), M.Metal)
+		end
+		for i = 1, 7 do
+			block(parent, Vector3.new(3, 0.2, 0.2), Vector3.new(mx, my + i * 4.6, mz - 1.2), rgb(236, 236, 232), M.Metal, { CanCollide = false })
+		end
+		local beacon = block(parent, Vector3.new(1, 1, 1), Vector3.new(mx, my + 34.5, mz), rgb(255, 60, 50), M.Neon, { Shape = Enum.PartType.Ball, CanCollide = false })
+		local bl = Instance.new("PointLight")
+		bl.Color = rgb(255, 60, 50)
+		bl.Range = 30
+		bl.Parent = beacon
+		local road = {
+			{ Vector3.new(-48, 0, 92), "CarSedan_2", 0.5 }, { Vector3.new(-10, 0, 66), "CarSedan_1", 2.7 }, { Vector3.new(14, 0, 40), "CarVan_1", 1.0 },
+			{ Vector3.new(50, 0, 6), "CarSedan_2", 0.2 }, { Vector3.new(66, 0, -22), "CarSedan_1", 3.0 }, { Vector3.new(-58, 0, 70), "CarVan_1", 2.2 },
+		}
+		for _, v in road do
+			MapKit.prop(parent, v[2], CFrame.new(v[1].X, g(v[1].X, v[1].Z), v[1].Z) * CFrame.Angles(0, v[3], 0))
+		end
+		sign(parent, Vector3.new(-38, g(-38, 88), 88), 0.4, "NORTH: CAMP · SAWMILL", rgb(46, 96, 62))
+		sign(parent, Vector3.new(36, g(36, 12), 12), -0.5, "LAKE 2 MI", rgb(40, 110, 150))
+	end
+
+	-- wildflowers in the meadows
+	for _ = 1, 26 do
+		local x, z = rng:NextNumber(-105, 105), rng:NextNumber(-105, 105)
+		if math.abs(x - creekX(z)) > 10 then
+			flowerPatch(parent, Vector3.new(x, 0, z), rng:NextNumber(2.5, 5), rng, g)
+		end
+	end
+
 	-- forest
 	local function clear(x, z)
 		if math.abs(x - creekX(z)) < 9 then
@@ -7387,30 +7687,36 @@ function Map.build(parent, rng)
 				return false
 			end
 		end
+		-- the camp, gas station, lake, sawmill and bridge keep their space
+		for _, area in { { -18, -62, 24 }, { 25, 82, 32 }, { 82, 88, 30 }, { 94, -50, 24 }, { creekX(-6), -6, 20 }, { -100, -92, 6 } } do
+			if (Vector3.new(x, 0, z) - Vector3.new(area[1], 0, area[2])).Magnitude < area[3] then
+				return false
+			end
+		end
 		return true
 	end
 	local placed = 0
-	while placed < 70 do
+	while placed < 150 do
 		local x, z = rng:NextNumber(-115, 115), rng:NextNumber(-115, 115)
 		if clear(x, z) and not (z > 70 and x < -20) then -- keep the south-west meadow open
 			MapKit.prop(parent, rng:NextNumber() < 0.85 and ("Pine_" .. rng:NextInteger(1, 2)) or "DeadTree_1", CFrame.new(x, g(x, z) - 0.5, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.75, 1.15))
 			placed += 1
 		end
 	end
-	for _ = 1, 22 do
+	for _ = 1, 34 do
 		local x, z = rng:NextNumber(-115, 115), rng:NextNumber(-115, 115)
 		if clear(x, z) then
 			MapKit.prop(parent, rng:NextNumber() < 0.2 and "Boulder_1" or ("Rock_" .. rng:NextInteger(1, 2)), CFrame.new(x, g(x, z) - 0.6, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.7, 1.2))
 		end
 	end
-	for _ = 1, 30 do
+	for _ = 1, 60 do
 		local x, z = rng:NextNumber(-115, 115), rng:NextNumber(-115, 115)
 		if clear(x, z) then
 			MapKit.prop(parent, "Bush_" .. rng:NextInteger(1, 2), CFrame.new(x, g(x, z), z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.8, 1.4))
 		end
 	end
 	-- fallen logs
-	for _ = 1, 6 do
+	for _ = 1, 14 do
 		local x, z = rng:NextNumber(-100, 100), rng:NextNumber(-100, 100)
 		if clear(x, z) then
 			MapKit.prop(parent, "DeadTree_1", CFrame.new(x, g(x, z) + 0.6, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0) * CFrame.Angles(0, 0, math.rad(88)), 0.55)
@@ -7421,12 +7727,26 @@ function Map.build(parent, rng)
 	MapKit.tallGrass(parent, Vector3.new(-30, 0, 20), Vector3.new(24, 0, 30), rng, g)
 	MapKit.tallGrass(parent, Vector3.new(10, 0, -100), Vector3.new(50, 0, 20), rng, g)
 	MapKit.shortGrass(parent, Vector3.new(0, 0, 0), Vector3.new(230, 0, 230), 260, rng, g, true)
-	MapKit.floodWall(parent, baseHeight, { height = 16, color = Color3.fromRGB(110, 108, 100) })
+	-- the edge of the valley is a wooded rock ridge, not a wall: a cliff of rock with a tree line
+	MapKit.ridge(baseHeight, 5)
+	for i = 1, 90 do
+		local edge = rng:NextInteger(1, 4)
+		local t = rng:NextNumber(-114, 114)
+		local x = edge == 1 and 114 or (edge == 2 and -114 or t)
+		local z = edge == 3 and 114 or (edge == 4 and -114 or t)
+		if edge <= 2 then
+			x += rng:NextNumber(-5, 5)
+		else
+			z += rng:NextNumber(-5, 5)
+		end
+		MapKit.prop(parent, "Pine_" .. rng:NextInteger(1, 2), CFrame.new(x, g(x, z) - 0.5, z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(1.0, 1.5))
+		assert(i)
+	end
 	for _, f in { { Vector3.new(-15, 6, 0), Vector3.new(40, 0, 220) }, { Vector3.new(60, 8, 60), Vector3.new(80, 0, 80) }, { Vector3.new(-60, 8, -60), Vector3.new(80, 0, 80) } } do
 		MapKit.fog(parent, f[1], f[2])
 	end
 
-	return {
+	local data = {
 		StartSpawns = { Vector3.new(-62, 0, 100), Vector3.new(-58, 0, 102), Vector3.new(-54, 0, 100), Vector3.new(-66, 0, 102) },
 		ExtractionPos = Vector3.new(70, 0, -104),
 		LanternPos = Vector3.new(0, 0, 32),
@@ -7436,7 +7756,12 @@ function Map.build(parent, rng)
 			Vector3.new(-80, 0, 0), Vector3.new(-50, 0, -70), Vector3.new(0, 0, -60), Vector3.new(60, 0, -90), Vector3.new(90, 0, 60),
 			Vector3.new(-90, 0, 70), Vector3.new(20, 0, 100), Vector3.new(-30, 0, -100), Vector3.new(100, 0, -40),
 		},
-		ContainerSpots = containers,
+		ContainerSpots = (function()
+			for _, c in extraContainers do
+				table.insert(containers, c)
+			end
+			return containers
+		end)(),
 		EdgeSpawns = {
 			Vector3.new(-105, 0, -105), Vector3.new(105, 0, -105), Vector3.new(105, 0, 105), Vector3.new(-20, 0, -110),
 			Vector3.new(110, 0, 0), Vector3.new(-110, 0, 0), Vector3.new(40, 0, 110), Vector3.new(-110, 0, -60),
@@ -7449,8 +7774,23 @@ function Map.build(parent, rng)
 			{ Vector3.new(creekX(-60), 0, -60), Vector3.new(creekX(0), 0, 0), Vector3.new(creekX(60), 0, 60) },
 			{ Vector3.new(80, 0, -80), Vector3.new(100, 0, 40) },
 		},
-		Doorways = doorways,
+		Doorways = (function()
+			for _, d in extraDoors do
+				table.insert(doorways, d)
+			end
+			return doorways
+		end)(),
 	}
+	for _, l in extraLoot do
+		table.insert(data.LootSpots, l)
+	end
+	for _, spot in { Vector3.new(-18, 0, -62), Vector3.new(25, 0, 72), Vector3.new(80, 0, 80), Vector3.new(94, 0, -50) } do
+		table.insert(data.SupplyCandidates, spot)
+	end
+	table.insert(data.PatrolRoutes, { Vector3.new(-18, 0, -48), Vector3.new(-5, 0, -20), Vector3.new(20, 0, 30), Vector3.new(25, 0, 62) })
+	table.insert(data.PatrolRoutes, { Vector3.new(60, 0, 80), Vector3.new(80, 0, 70), Vector3.new(95, 0, 60) })
+	table.insert(data.PatrolRoutes, { Vector3.new(94, 0, -34), Vector3.new(80, 0, -70), Vector3.new(60, 0, -95) })
+	return data
 end
 
 return Map
@@ -12382,6 +12722,9 @@ local function saveSettings(player, settings)
 		graphics = graphics,
 		sensitivity = math.clamp(sensitivity, 0.2, 3),
 		reduceMotion = settings.reduceMotion == true,
+		camera = settings.camera == "Third" and "Third" or "First",
+		uiSize = ({ Normal = true, Large = true, Huge = true })[settings.uiSize] and settings.uiSize or "Large",
+		fov = math.clamp(math.floor(tonumber(settings.fov) or 80), 60, 110),
 	})
 end
 
@@ -15756,7 +16099,7 @@ local function defaultData()
 		scrip = 0, -- homebase currency, earned only by playing
 		materials = 0, -- Meridian projects; earned from missions
 		repairs = {}, -- [repairId] = true
-		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false },
+		settings = { graphics = "Auto", sensitivity = 1, reduceMotion = false, camera = "First", uiSize = "Large", fov = 80 },
 		outfits = {}, -- [outfitId] = true (bought or unlocked; defaults are implicit)
 		equipped = {}, -- [charId] = outfitId
 		oneTime = {}, -- [productKey] = true (Starter Pack)
@@ -15804,6 +16147,9 @@ local function publishTokens(player, data)
 	player:SetAttribute("Set_graphics", data.settings.graphics)
 	player:SetAttribute("Set_sensitivity", data.settings.sensitivity)
 	player:SetAttribute("Set_reduceMotion", data.settings.reduceMotion)
+	player:SetAttribute("Set_camera", data.settings.camera or "First")
+	player:SetAttribute("Set_uiSize", data.settings.uiSize or "Large")
+	player:SetAttribute("Set_fov", data.settings.fov or 80)
 	player:SetAttribute("Outfits", HttpService:JSONEncode(data.outfits))
 	player:SetAttribute("EquippedOutfits", HttpService:JSONEncode(data.equipped))
 	player:SetAttribute("OneTime", HttpService:JSONEncode(data.oneTime))
@@ -17909,11 +18255,14 @@ function CameraController.isHoldingBreath()
 end
 
 -- Recoil: the view climbs (you pull it back down); `side` is the gun's pattern step.
+-- The kick is ONLY an offset on top of where you are aiming: it springs back to zero, so the
+-- view never drifts away from where you put it (the old code added the sideways kick to your
+-- aim permanently, which made the screen wander off with every shot).
 function CameraController.kick(degrees, side)
-	recoilPitch += math.rad(degrees) * 0.6
-	pitch += math.rad(degrees) * 0.08 -- a little permanent climb to manage
-	recoilYaw += math.rad(degrees) * ((side or 0) * 0.45 + (math.random() - 0.5) * 0.08)
-	fovPunch = math.min(fovPunch + degrees * 0.35, 4)
+	local steady = State.firstPerson and 0.8 or 1
+	recoilPitch = math.min(recoilPitch + math.rad(degrees) * 0.45 * steady, math.rad(9))
+	recoilYaw = math.clamp(recoilYaw + math.rad(degrees) * ((side or 0) * 0.3 + (math.random() - 0.5) * 0.05) * steady, -math.rad(5), math.rad(5))
+	fovPunch = math.min(fovPunch + degrees * 0.25, 3)
 end
 
 local function sensitivity()
@@ -18001,18 +18350,15 @@ local function update(dt)
 		yaw -= padLook.X * SENS_PAD * dt * sensitivity() * aimSlow
 		pitch += padLook.Y * SENS_PAD * 0.7 * dt * sensitivity() * aimSlow
 	end
-	if recoilYaw ~= 0 then
-		local step = recoilYaw * math.min(1, dt * 12)
-		yaw += step
-		recoilYaw -= step
-	end
-	recoilPitch -= recoilPitch * math.min(1, dt * 9)
+	recoilYaw -= recoilYaw * math.min(1, dt * 8)
+	recoilPitch -= recoilPitch * math.min(1, dt * 8)
 	fovPunch -= fovPunch * math.min(1, dt * 10)
 	pitch = math.clamp(pitch, PITCH_MIN, PITCH_MAX)
 	State.pitch = pitch
 
 	local takedown = os.clock() < State.takedownUntil
-	local firstPerson = State.firstPerson == true and not State.downed and not takedown
+	State.firstPerson = player:GetAttribute("Set_camera") ~= "Third"
+	local firstPerson = State.firstPerson and not State.downed and not takedown
 	if firstPerson ~= fpHidden then
 		setFirstPersonVisible(firstPerson)
 	elseif firstPerson and os.clock() > fpNext then
@@ -18086,7 +18432,7 @@ local function update(dt)
 	State.breath = breath.holding and "hold" or (os.clock() < breath.spentUntil and "spent" or "ready")
 	local rot = CFrame.fromEulerAnglesYXZ(
 		pitch + recoilPitch + math.sin(t * 1.3) * sway + math.sin(t * 0.9) * aimSway,
-		yaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
+		yaw + recoilYaw + math.sin(t * 0.7) * sway + math.sin(t * 0.45) * aimSway * 1.4,
 		0
 	)
 
@@ -18132,7 +18478,8 @@ local function update(dt)
 			camera.CFrame = CFrame.new(eye + Vector3.new(bobX, bobY * 1.2, 0)) * rot
 			camera.Focus = CFrame.new(eye)
 			local weaponFov = State.aiming and Controllers and Controllers.WeaponController.aimFov()
-			local want = weaponFov and (weaponFov + 6) or (State.sprinting and 84 or 78)
+			local baseFov = player:GetAttribute("Set_fov") or 80
+			local want = weaponFov and (weaponFov + 6) or (State.sprinting and baseFov + 6 or baseFov)
 			camera.FieldOfView += (want - camera.FieldOfView) * math.min(1, dt * 10)
 			return
 		end
@@ -18146,7 +18493,9 @@ function CameraController.toggleFirstPerson(on)
 		on = not State.firstPerson
 	end
 	State.firstPerson = on
-	player:SetAttribute("FirstPerson", on)
+	if Controllers and Controllers.UIController then
+		Controllers.UIController.setSetting("camera", on and "First" or "Third")
+	end
 end
 
 function CameraController.init(registry)
@@ -19918,6 +20267,22 @@ local GUN_POSES = {
 		reload = CFrame.new(0.1, 0.05, -1.0) * CFrame.Angles(0.9, 0.2, 0.5), -- muzzle up, cylinder open
 	},
 }
+-- The same, for your own view in first person: the gun sits low and to the right, pointing at
+-- the crosshair, and rises to just under it when you aim.
+local GUN_POSES_FP = {
+	long = {
+		ready = CFrame.new(0.3, 0.34, -0.55) * CFrame.Angles(0.04, 0.1, 0),
+		sprint = CFrame.new(0.3, 0.05, -0.5) * CFrame.Angles(-0.6, 0.5, 0.2),
+		aim = CFrame.new(0.12, 0.5, -0.55),
+		reload = CFrame.new(0.2, 0.22, -0.55) * CFrame.Angles(-0.1, 0.45, 0.75),
+	},
+	sidearm = {
+		ready = CFrame.new(0.28, 0.3, -0.6) * CFrame.Angles(0.08, 0.08, 0),
+		sprint = CFrame.new(0.3, 0.05, -0.45) * CFrame.Angles(-0.8, 0.1, 0),
+		aim = CFrame.new(0.1, 0.46, -0.75),
+		reload = CFrame.new(0.15, 0.4, -0.55) * CFrame.Angles(0.9, 0.2, 0.5),
+	},
+}
 -- where the left hand goes while reloading (grip space): magazine / loading gate / cylinder
 local RELOAD_HAND = { long = Vector3.new(0, -0.12, -0.45), sidearm = Vector3.new(-0.12, 0.25, -0.15) }
 
@@ -20055,12 +20420,15 @@ local function poseGun(char, rig, J, slot, a, sprinting, reloading, drawK, pitch
 	local model = char:FindFirstChild("Weapon_" .. slot)
 	local grip = model and model.PrimaryPart
 	local weld = grip and grip:FindFirstChild("Mount")
-	local set = GUN_POSES[slot]
+	local set = (rig.fp and GUN_POSES_FP[slot]) or GUN_POSES[slot]
 	if not (torso and weld and set) then
 		return false
 	end
 	local now = os.clock()
 	local pose = set.ready
+	if rig.fp and not reloading and a < 0.5 and not sprinting then
+		pose = pose * CFrame.Angles(pitch * 0.6, 0, 0) -- the gun follows where you look
+	end
 	if reloading then
 		local wobble = math.sin(now * 6) * 0.04
 		pose = set.reload * CFrame.new(0, wobble, 0) * CFrame.Angles(wobble, 0, 0)
@@ -20200,6 +20568,7 @@ local function animate(char, rig, dt, serverNow, isLocal)
 	rig.crouch = approach(rig.crouch, (crouched or downed) and 1 or 0, 10, dt)
 	rig.aim = approach(rig.aim, aiming and 1 or 0, 14, dt)
 	rig.ready = approach(rig.ready, armed and 1 or 0, 10, dt)
+	rig.fp = isLocal and State.firstPerson == true and not downed
 	local c, a, r = rig.crouch, rig.aim, rig.ready * (1 - rig.aim)
 
 	-- gait
@@ -20874,6 +21243,7 @@ return SoundController
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -20882,6 +21252,7 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local HUD = require(UI:WaitForChild("HUD"))
 local Diagnostics = require(UI:WaitForChild("Diagnostics"))
 local State = require(script.Parent.Parent.State)
+local Theme = require(UI:WaitForChild("Theme"))
 local CharacterSelect = require(UI:WaitForChild("CharacterSelect"))
 local Satchel = require(UI:WaitForChild("Satchel"))
 local Shop = require(UI:WaitForChild("Shop"))
@@ -20928,6 +21299,10 @@ function UIController.openSpin()
 	Spin.open()
 end
 
+function UIController.setSetting(key, value)
+	Settings.setValue(key, value)
+end
+
 function UIController.toggleSettings()
 	Settings.toggle()
 end
@@ -20957,6 +21332,41 @@ function UIController.start()
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 
+	-- Everything is built inside one scaler: text and menus are scaled up together (bigger on big
+	-- screens and consoles, and by the "Text and menu size" setting) so nothing is tiny.
+	local UserInputService = game:GetService("UserInputService")
+	local ui = Instance.new("Frame")
+	ui.Name = "Scaler"
+	ui.BackgroundTransparency = 1
+	ui.BorderSizePixel = 0
+	ui.Size = UDim2.fromScale(1, 1)
+	ui.Parent = gui
+	local uiScale = Instance.new("UIScale")
+	uiScale.Parent = ui
+	local function applyScale()
+		local vh = Workspace.CurrentCamera.ViewportSize.Y
+		local mult = ({ Normal = 1, Large = 1.2, Huge = 1.4 })[player:GetAttribute("Set_uiSize") or "Large"] or 1.2
+		local scale = math.clamp(vh / 860, 1, 1.5) * mult * (State.gamepad and 1.12 or 1)
+		if vh < 520 then
+			scale = 1 -- phones: the screen is already small
+		end
+		scale = math.clamp(scale, 1, 2.1)
+		if math.abs(uiScale.Scale - scale) > 0.001 then
+			uiScale.Scale = scale
+			ui.Size = UDim2.fromScale(1 / scale, 1 / scale)
+			Theme.scale = scale
+		end
+	end
+	applyScale()
+	player:GetAttributeChangedSignal("Set_uiSize"):Connect(applyScale)
+	Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyScale)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			applyScale() -- picks up a switch between mouse and controller
+		end
+	end)
+
 	local function send(name, payload)
 		Controllers.ActionController.sendAction(name, payload)
 	end
@@ -20971,51 +21381,51 @@ function UIController.start()
 		end
 	end
 	build("HUD", function()
-		HUD.build(gui, function()
+		HUD.build(ui, function()
 			send("SecondWind")
 		end, Controllers.WeaponController)
 	end)
 	build("CharacterSelect", function()
-		CharacterSelect.build(gui)
+		CharacterSelect.build(ui)
 	end)
 	build("Satchel", function()
-		Satchel.build(gui, send)
+		Satchel.build(ui, send)
 	end)
 	build("Shop", function()
-		Shop.build(gui)
+		Shop.build(ui)
 	end)
 	build("Results", function()
-		Results.build(gui)
+		Results.build(ui)
 	end)
 	build("Chart", function()
-		Chart.build(gui, request)
+		Chart.build(ui, request)
 	end)
 	build("Workbench", function()
-		Workbench.build(gui, request)
+		Workbench.build(ui, request)
 	end)
 	build("Repairs", function()
-		Repairs.build(gui, request)
+		Repairs.build(ui, request)
 	end)
 	build("Settings", function()
-		Settings.build(gui, request)
+		Settings.build(ui, request)
 	end)
 	build("Quests", function()
-		Quests.build(gui)
+		Quests.build(ui)
 	end)
 	build("Quartermaster", function()
-		Quartermaster.build(gui, request)
+		Quartermaster.build(ui, request)
 	end)
 	build("Callouts", function()
-		Callouts.build(gui)
+		Callouts.build(ui)
 	end)
 	build("Logbook", function()
-		Logbook.build(gui)
+		Logbook.build(ui)
 	end)
 	build("Guide", function()
-		Guide.build(gui, request)
+		Guide.build(ui, request)
 	end)
 	build("Spin", function()
-		Spin.build(gui, request, Shop.prompt)
+		Spin.build(ui, request, Shop.prompt)
 	end)
 	build("Diagnostics", function()
 		local dgui = Instance.new("ScreenGui")
@@ -21975,19 +22385,20 @@ local function rebuild()
 	for i, option in options do
 		local def = option.type == "Finale" and Encounters.Finale or Encounters.Types[option.type]
 		local mod = modifierById(option.modifier)
-		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 124), BackgroundColor3 = C.panelHi, Parent = list })
+		local card = Theme.panel({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = C.panelHi, Parent = list })
 		Theme.padding(10).Parent = card
 		Theme.heading({ Text = string.upper(option.name), TextSize = 20, Size = UDim2.new(1, -170, 0, 24), Parent = card })
 		local desc = def and def.desc or ""
 		if option.type == "Salvage" then
 			desc = desc:format(def.crates)
 		end
-		Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 26), Size = UDim2.new(1, -170, 0, 34), TextSize = 13, Parent = card })
+		Theme.label({ Text = desc, Position = UDim2.new(0, 0, 0, 28), Size = UDim2.new(1, -170, 0, 44), TextSize = 15, TextWrapped = true, Parent = card })
 		Theme.label({
 			Text = ("%s  ·  %s\nConditions: %s · %s%s"):format(option.mapName or "", option.factionName or "The Hushed", mod.name, mod.desc, (option.bonus or 0) > 0 and ("  ·  +" .. option.bonus .. " Salvage") or ""),
-			Position = UDim2.new(0, 0, 0, 62),
-			Size = UDim2.new(1, -170, 0, 44),
-			TextSize = 12,
+			Position = UDim2.new(0, 0, 0, 76),
+			Size = UDim2.new(1, -170, 0, 56),
+			TextSize = 14,
+			TextWrapped = true,
 			TextColor3 = C.salt,
 			Parent = card,
 		})
@@ -22498,8 +22909,8 @@ function HUD.build(gui, onSecondWind, weaponController)
 		compassTicks[deg] = t
 	end
 	compassMarkers = {}
-	objectiveLine = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 50), Size = UDim2.new(0, 520, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 13, TextColor3 = C.text, Font = Theme.Head, Parent = root })
-	locationLabel = label({ Position = UDim2.new(0, 22, 0, 18), Size = UDim2.new(0, 360, 0, 40), TextSize = 14, Font = Theme.Head, TextColor3 = C.salt, TextWrapped = true, Parent = root })
+	objectiveLine = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 54), Size = UDim2.new(0, 640, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 20, TextStrokeTransparency = 0.45, TextColor3 = C.text, Font = Theme.Head, Parent = root })
+	locationLabel = label({ Position = UDim2.new(0, 22, 0, 18), Size = UDim2.new(0, 420, 0, 48), TextSize = 16, Font = Theme.Head, TextColor3 = C.salt, TextWrapped = true, Parent = root })
 
 	-- bottom-right cluster
 	cluster = Theme.make("CanvasGroup", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -34, 1, -30), Size = UDim2.new(0, 260, 0, 120), BackgroundTransparency = 1, Parent = root })
@@ -22732,7 +23143,7 @@ local function updateIndicators(camera, active)
 	local seen = {}
 	if active and enemies and State.root then
 		local key = "Sus_" .. player.UserId
-		local viewport = camera.ViewportSize
+		local viewport = camera.ViewportSize / Theme.scale
 		local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
 		local radius = math.min(viewport.X, viewport.Y) * 0.2
 		for _, model in enemies:GetChildren() do
@@ -22802,7 +23213,7 @@ function HUD.update(dt)
 		return
 	end
 	local camera = Workspace.CurrentCamera
-	local viewport = camera.ViewportSize
+	local viewport = camera.ViewportSize / Theme.scale
 	local char = State.character
 	local R = ReplicatedStorage
 	local matchState = R:GetAttribute("MatchState")
@@ -23680,8 +24091,8 @@ end
 return Satchel
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX00000061"><Properties><string name="Name">Settings</string><ProtectedString name="Source"><![CDATA[--!nonstrict
--- Settings: graphics preset (Auto / Performance / Balanced / Cinematic), look sensitivity,
--- reduce camera motion. Saved to your profile.
+-- Settings: view (first / third person, field of view), text and menu size, graphics preset,
+-- look sensitivity, reduce camera motion. Saved to your profile.
 local Players = game:GetService("Players")
 
 local Theme = require(script.Parent.Theme)
@@ -23692,7 +24103,8 @@ local C = Theme.Colors
 local player = Players.LocalPlayer
 local backdrop, modeButtons, activeLabel, sensLabel, motionButton
 local request
-local pending = { graphics = "Auto", sensitivity = 1, reduceMotion = false }
+local pending = { graphics = "Auto", sensitivity = 1, reduceMotion = false, camera = "First", uiSize = "Large", fov = 80 }
+local camButtons, sizeButtons, fovLabel
 
 local MODES = { "Auto", "Performance", "Balanced", "Cinematic" }
 
@@ -23705,6 +24117,17 @@ local function refresh()
 	activeLabel.Text = ("Running: %s. Cinematic adds depth of field with aim focus, sun rays, a filmic grade, denser fog and rain, and shadows on every light. Best on PC and PlayStation."):format(player:GetAttribute("GraphicsMode") or "?")
 	sensLabel.Text = ("Look sensitivity  %.1f"):format(pending.sensitivity)
 	motionButton.Text = pending.reduceMotion and "REDUCE CAMERA MOTION: ON" or "REDUCE CAMERA MOTION: OFF"
+	for mode, b in camButtons do
+		local on = pending.camera == mode
+		b.BackgroundColor3 = on and C.lantern or C.panelHi
+		b.TextColor3 = on and C.backdrop or C.text
+	end
+	for mode, b in sizeButtons do
+		local on = pending.uiSize == mode
+		b.BackgroundColor3 = on and C.lantern or C.panelHi
+		b.TextColor3 = on and C.backdrop or C.text
+	end
+	fovLabel.Text = ("Field of view  %d"):format(pending.fov)
 end
 
 local function save()
@@ -23713,11 +24136,48 @@ end
 
 function Settings.build(gui, requestFn)
 	request = requestFn
-	modeButtons = {}
+	modeButtons, camButtons, sizeButtons = {}, {}, {}
 	local panel
-	backdrop, panel = Theme.modal(gui, "Settings", UDim2.new(0.92, 0, 0.8, 0), Vector2.new(620, 440))
+	backdrop, panel = Theme.modal(gui, "Settings", UDim2.new(0.92, 0, 0.9, 0), Vector2.new(720, 700))
+	panel = Theme.make("ScrollingFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = panel })
 	Theme.list(Enum.FillDirection.Vertical, 10).Parent = panel
 	Theme.heading({ LayoutOrder = 1, Text = "SETTINGS", TextSize = 28, Size = UDim2.new(1, 0, 0, 32), Parent = panel })
+	-- the view: Brinewake is played in first person; third person is an option here
+	Theme.heading({ LayoutOrder = 10, Text = "VIEW", TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 20), Parent = panel })
+	local camRow = Theme.make("Frame", { LayoutOrder = 11, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, Parent = panel })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = camRow
+	for i, entry in { { "First", "FIRST PERSON (recommended)" }, { "Third", "THIRD PERSON" } } do
+		local b = Theme.button({ LayoutOrder = i, Text = entry[2], TextSize = 14, Size = UDim2.new(0.5, -3, 1, 0), Parent = camRow })
+		camButtons[entry[1]] = b
+		b.Activated:Connect(function()
+			pending.camera = entry[1]
+			save()
+			refresh()
+		end)
+	end
+	fovLabel = Theme.heading({ LayoutOrder = 12, TextSize = 16, Size = UDim2.new(1, 0, 0, 20), Parent = panel })
+	local fovRow = Theme.make("Frame", { LayoutOrder = 13, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = panel })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = fovRow
+	for i, delta in { -5, 5 } do
+		local b = Theme.button({ LayoutOrder = i, Text = delta < 0 and "–" or "+", Size = UDim2.new(0, 60, 1, 0), Parent = fovRow })
+		b.Activated:Connect(function()
+			pending.fov = math.clamp(pending.fov + delta, 60, 110)
+			save()
+			refresh()
+		end)
+	end
+	Theme.heading({ LayoutOrder = 14, Text = "TEXT AND MENU SIZE", TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 20), Parent = panel })
+	local sizeRow = Theme.make("Frame", { LayoutOrder = 15, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, Parent = panel })
+	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = sizeRow
+	for i, mode in { "Normal", "Large", "Huge" } do
+		local b = Theme.button({ LayoutOrder = i, Text = string.upper(mode), TextSize = 14, Size = UDim2.new(1 / 3, -4, 1, 0), Parent = sizeRow })
+		sizeButtons[mode] = b
+		b.Activated:Connect(function()
+			pending.uiSize = mode
+			save()
+			refresh()
+		end)
+	end
 	Theme.heading({ LayoutOrder = 2, Text = "GRAPHICS", TextSize = 16, TextColor3 = C.salt, Size = UDim2.new(1, 0, 0, 20), Parent = panel })
 	local row = Theme.make("Frame", { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, Parent = panel })
 	Theme.list(Enum.FillDirection.Horizontal, 6).Parent = row
@@ -23748,8 +24208,25 @@ function Settings.build(gui, requestFn)
 		save()
 		refresh()
 	end)
-	local close = Theme.button({ LayoutOrder = 8, Text = "CLOSE  [P]", Size = UDim2.new(0, 160, 0, 36), Parent = panel })
+	local close = Theme.button({ LayoutOrder = 20, Text = "CLOSE  [P]", Size = UDim2.new(0, 160, 0, 36), Parent = panel })
 	close.Activated:Connect(Settings.close)
+end
+
+-- Change one setting from anywhere (the camera key): builds the full set from what is saved now.
+function Settings.setValue(key, value)
+	local current = {
+		graphics = player:GetAttribute("Set_graphics") or "Auto",
+		sensitivity = player:GetAttribute("Set_sensitivity") or 1,
+		reduceMotion = player:GetAttribute("Set_reduceMotion") == true,
+		camera = player:GetAttribute("Set_camera") or "First",
+		uiSize = player:GetAttribute("Set_uiSize") or "Large",
+		fov = player:GetAttribute("Set_fov") or 80,
+	}
+	current[key] = value
+	player:SetAttribute("Set_" .. key, value) -- immediate; the server confirms and saves
+	if request then
+		request("SaveSettings", current)
+	end
 end
 
 function Settings.toggle()
@@ -23764,6 +24241,9 @@ function Settings.toggle()
 		graphics = player:GetAttribute("Set_graphics") or "Auto",
 		sensitivity = player:GetAttribute("Set_sensitivity") or 1,
 		reduceMotion = player:GetAttribute("Set_reduceMotion") == true,
+		camera = player:GetAttribute("Set_camera") or "First",
+		uiSize = player:GetAttribute("Set_uiSize") or "Large",
+		fov = player:GetAttribute("Set_fov") or 80,
 	}
 	backdrop.Visible = true
 	State.setModal("settings", true)
@@ -24245,7 +24725,7 @@ function Spin.result(data)
 	local winSlot = 34
 	fillStrip(index, winSlot)
 	strip.Position = UDim2.new(0, 0, 0, 0)
-	local center = reel.AbsoluteSize.X / 2
+	local center = reel.AbsoluteSize.X / 2 / Theme.scale
 	local jitter = Random.new():NextNumber(-TILE * 0.32, TILE * 0.32)
 	local target = -((winSlot - 1) * (TILE + GAP) + TILE / 2 - center + jitter)
 	local duration = 4.2
@@ -24383,6 +24863,8 @@ Theme.Colors = {
 	ok = Color3.fromRGB(140, 180, 130),
 }
 
+Theme.minText = 14
+Theme.scale = 1 -- the UI scaler's current scale (UIController); pixel maths in the HUD divides by it
 Theme.Head = Enum.Font.Oswald
 Theme.Body = Enum.Font.Merriweather
 
@@ -24402,6 +24884,10 @@ local function apply(inst, defaults, props)
 	end
 	for _, child in (props and props.Children) or {} do
 		child.Parent = inst
+	end
+	-- nothing on screen is allowed to be tiny: small text is lifted to a readable minimum
+	if (inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox")) and not inst.TextScaled and inst.TextSize < Theme.minText then
+		inst.TextSize = Theme.minText
 	end
 	if parent then
 		inst.Parent = parent

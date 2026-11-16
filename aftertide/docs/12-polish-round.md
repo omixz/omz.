@@ -101,3 +101,19 @@ button automatically.
   tinks, heavy breathing after a long sprint.
 - **Pickups:** a taken item switches off its prompt and vanishes in the same instant; a second
   press can never take it twice. A partly taken stack says how many are left.
+
+# Round 5: first person, readable UI, recoil fix, Hollow Pines
+- **Recoil drift fixed.** The sideways recoil used to be added to your aim permanently, so every
+  shot pushed the screen further off target. Recoil is now only an offset that springs back to
+  zero; where you aimed is where you stay.
+- **First person is the default** and the game is built around it (Settings > VIEW switches to
+  third person; K toggles). First-person gun poses sit low and right, pointing at the crosshair,
+  and rise under it when you aim (checked with a view rendered from the eye:
+  `render_engine_result.py --fp`). Field of view is a setting.
+- **Readable UI:** everything is built inside one scaler (bigger on big screens and consoles, and
+  Settings > Text and menu size: Normal / Large / Huge), no text below 14 px before scaling, larger
+  objective line and mission cards.
+- **Hollow Pines rebuilt:** lakeside logging valley with a lake, dock and rowboat, a campground
+  round a fire, a gas station and shop with a canopy, a sawmill, a plank bridge over the creek, a
+  radio mast, wrecks and signposts along the road, 150 pines, flowers, and a rock ridge with a tree
+  line instead of concrete flood walls.

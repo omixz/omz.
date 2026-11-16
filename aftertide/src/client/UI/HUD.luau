@@ -134,8 +134,8 @@ function HUD.build(gui, onSecondWind, weaponController)
 		compassTicks[deg] = t
 	end
 	compassMarkers = {}
-	objectiveLine = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 50), Size = UDim2.new(0, 520, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 13, TextColor3 = C.text, Font = Theme.Head, Parent = root })
-	locationLabel = label({ Position = UDim2.new(0, 22, 0, 18), Size = UDim2.new(0, 360, 0, 40), TextSize = 14, Font = Theme.Head, TextColor3 = C.salt, TextWrapped = true, Parent = root })
+	objectiveLine = label({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 54), Size = UDim2.new(0, 640, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 20, TextStrokeTransparency = 0.45, TextColor3 = C.text, Font = Theme.Head, Parent = root })
+	locationLabel = label({ Position = UDim2.new(0, 22, 0, 18), Size = UDim2.new(0, 420, 0, 48), TextSize = 16, Font = Theme.Head, TextColor3 = C.salt, TextWrapped = true, Parent = root })
 
 	-- bottom-right cluster
 	cluster = Theme.make("CanvasGroup", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -34, 1, -30), Size = UDim2.new(0, 260, 0, 120), BackgroundTransparency = 1, Parent = root })
@@ -368,7 +368,7 @@ local function updateIndicators(camera, active)
 	local seen = {}
 	if active and enemies and State.root then
 		local key = "Sus_" .. player.UserId
-		local viewport = camera.ViewportSize
+		local viewport = camera.ViewportSize / Theme.scale
 		local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
 		local radius = math.min(viewport.X, viewport.Y) * 0.2
 		for _, model in enemies:GetChildren() do
@@ -438,7 +438,7 @@ function HUD.update(dt)
 		return
 	end
 	local camera = Workspace.CurrentCamera
-	local viewport = camera.ViewportSize
+	local viewport = camera.ViewportSize / Theme.scale
 	local char = State.character
 	local R = ReplicatedStorage
 	local matchState = R:GetAttribute("MatchState")
