@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#4f8a2b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Steve LIVE Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600;700&display=swap">
+<script src="/config.js"></script>
+<style>
+  /* Layout: one column like a phone app; a "grass over dirt" header band, then status, preview, setup, gift ladder. */
+  :root {
+    --bg: #f3f1ea; --surface: #ffffff; --ink: #22261c; --muted: #66705a; --line: #dcd8cb;
+    --grass: #4f8a2b; --grass-ink: #ffffff; --dirt: #7a5634; --dirt-dark: #5c3f25; --coin: #a8780a;
+    --ok: #2f9e44; --warn: #d48806; --bad: #d64545; --off: #b5b8ab;
+    --display: 'Pixelify Sans', 'Courier New', monospace;
+    --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15170f; --surface: #1f2218; --ink: #ecefe2; --muted: #a3ab92; --line: #33372a;
+      --grass: #6bb33a; --grass-ink: #0f1209; --dirt: #4a3420; --dirt-dark: #36261a; --coin: #f0c040;
+      --ok: #5ad46a; --warn: #f0b33a; --bad: #ff6b6b; --off: #555a4a;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); }
+  .band { background: var(--dirt); color: #fff; border-top: 14px solid var(--grass); }
+  .wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .band .wrap { padding-block: 20px 22px; background-image: linear-gradient(90deg, rgba(0,0,0,.08) 50%, transparent 50%), linear-gradient(rgba(0,0,0,.08) 50%, transparent 50%); background-size: 24px 24px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: 2rem; line-height: 1.1; margin: 0 0 4px; }
+  .band p { margin: 0; color: #f1e6d6; }
+  main.wrap { padding-block: 20px 48px; display: grid; gap: 26px; }
+  h2 { font-family: var(--display); font-weight: 500; font-size: 1.25rem; margin: 0 0 10px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+  .lights { display: grid; gap: 2px; }
+  .light { display: grid; grid-template-columns: 16px 1fr; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .light:last-child { border-bottom: 0; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--off); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 10px var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+  .light b { display: block; } .light small { color: var(--muted); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .btn { display: block; text-align: center; text-decoration: none; font-weight: 700; border-radius: 4px; padding: 13px 10px; border: 1px solid var(--line); color: var(--ink); background: var(--bg); font: inherit; font-weight: 700; cursor: pointer; }
+  .btn.primary { grid-column: 1 / -1; background: var(--grass); color: var(--grass-ink); border-color: var(--grass); font-size: 1.05rem; box-shadow: 0 4px 0 var(--dirt-dark); }
+  .btn.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--dirt-dark); }
+  .btn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+  .preview { position: relative; width: 100%; max-width: 360px; aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid var(--line); }
+  .preview iframe { position: absolute; top: 0; left: 0; width: 720px; height: 1280px; border: 0; transform-origin: 0 0; }
+  .preview .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #cfd3c4; padding: 20px; font-size: .95rem; }
+  label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
+  input[type="text"] { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 11px 12px; }
+  :focus-visible { outline: 3px solid var(--grass); outline-offset: 2px; }
+  .hint { color: var(--muted); font-size: .88rem; margin: 6px 0 0; }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; }
+  ol.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  ol.steps li:last-child { border-bottom: 0; }
+  ol.steps input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--grass); }
+  ol.steps .t { min-width: 0; } ol.steps b { display: block; }
+  ol.steps li.done b { text-decoration: line-through; color: var(--muted); }
+  ol.steps small { color: var(--muted); display: block; }
+  .cmd { display: flex; gap: 8px; margin-top: 8px; min-width: 0; }
+  .cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font-size: .78rem; }
+  .cmd button { font: inherit; font-weight: 700; font-size: .85rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 4px; padding: 0 12px; cursor: pointer; }
+  .progress { font-family: var(--display); color: var(--grass); }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  td { padding: 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.p { color: var(--coin); font-weight: 700; white-space: nowrap; padding-right: 14px; font-variant-numeric: tabular-nums; width: 1%; }
+  .ex { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
+  details summary { cursor: pointer; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <h1>Steve LIVE Hub</h1>
+  <p>Your private control room for the TikTok Minecraft show.</p>
+</div></div>
+
+<main class="wrap">
+  <section aria-labelledby="h-status">
+    <h2 id="h-status">Status</h2>
+    <div class="panel">
+      <div class="lights">
+        <div class="light"><span class="dot" id="d-tt"></span><div><b id="t-tt">TikTok</b><small id="s-tt">Waiting for your server address</small></div></div>
+        <div class="light"><span class="dot" id="d-mc"></span><div><b id="t-mc">Minecraft</b><small id="s-mc">Waiting for your server address</small></div></div>
+        <div class="light"><span class="dot" id="d-st"></span><div><b>Stream to TikTok</b><small id="s-st">Waiting for your server address</small></div></div>
+      </div>
+      <div class="actions">
+        <a class="btn primary" id="openHub" href="#" target="_blank" rel="noopener" aria-disabled="true">Open control panel</a>
+        <a class="btn" id="openWatch" href="#" target="_blank" rel="noopener" aria-disabled="true">Watch full screen</a>
+        <a class="btn" id="openAdv" href="#" target="_blank" rel="noopener" aria-disabled="true">Advanced</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-live">
+    <h2 id="h-live">What viewers see</h2>
+    <div class="preview" id="preview">
+      <div class="empty" id="previewEmpty">The live picture appears here once your server is running.</div>
+      <iframe id="frame" title="Live stream preview" hidden></iframe>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-server">
+    <details class="panel" id="serverBox">
+      <summary id="h-server">Server address</summary>
+      <div style="margin-top:12px">
+        <label for="addr">Your server's address</label>
+        <input type="text" id="addr" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="129-146-12-34.sslip.io">
+        <p class="hint" id="addrHint">The setup command prints this at the end. It's saved on this device.</p>
+      </div>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-setup">
+    <h2 id="h-setup">Setup <span class="progress" id="prog"></span></h2>
+    <div class="panel">
+      <ol class="steps" id="steps">
+        <li><input type="checkbox" id="s1" aria-label="Step 1 done"><div class="t"><b>Check you have a TikTok stream key</b><small>Open livecenter.tiktok.com/producer on a computer. You need a Server URL and a Stream key. No key? You can still stream from your phone with screen share.</small></div></li>
+        <li><input type="checkbox" id="s2" aria-label="Step 2 done"><div class="t"><b>Create a free Oracle Cloud account</b><small>oracle.com/cloud/free. A card is asked for to verify you; the Always Free tier isn't charged.</small></div></li>
+        <li><input type="checkbox" id="s3" aria-label="Step 3 done"><div class="t"><b>Create the server</b><small>Ubuntu, shape VM.Standard.A1.Flex, 4 OCPUs, 24 GB RAM. In the Security List, open TCP 80, 443 and 3000.</small></div></li>
+        <li><input type="checkbox" id="s4" aria-label="Step 4 done"><div class="t"><b>Run the setup command on the server</b><small>It asks your TikTok username and the Minecraft EULA, then prints your server address and password.</small>
+          <div class="cmd"><code id="cmdText">curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash</code><button type="button" id="copyCmd">Copy</button></div></div></li>
+        <li><input type="checkbox" id="s5" aria-label="Step 5 done"><div class="t"><b>Put the server address in "Server address" above</b><small>Then open the control panel, enter the password, and paste your Server URL and Stream key.</small></div></li>
+        <li><input type="checkbox" id="s6" aria-label="Step 6 done"><div class="t"><b>Press Go LIVE in TikTok LIVE Producer</b><small>All three lights above turn green when everything runs.</small></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-ladder">
+    <h2 id="h-ladder">What viewers can do</h2>
+    <div class="panel">
+      <p class="ex">Every mob is named after the viewer who sent it</p>
+      <table><tbody>
+        <tr><td class="p">100 likes</td><td>Zombie</td></tr>
+        <tr><td class="p">1–4 coins</td><td>Zombie, one per gift (a Rose)</td></tr>
+        <tr><td class="p">5–9</td><td>Skeleton archer</td></tr>
+        <tr><td class="p">10–19</td><td>Spider</td></tr>
+        <tr><td class="p">20–29</td><td>2 speedy baby zombies</td></tr>
+        <tr><td class="p">30–49</td><td>Creeper</td></tr>
+        <tr><td class="p">50–98</td><td>Witch and poison</td></tr>
+        <tr><td class="p">99–198</td><td>3 armored zombies</td></tr>
+        <tr><td class="p">199–298</td><td>TNT rain</td></tr>
+        <tr><td class="p">299–498</td><td>Vindicator gang</td></tr>
+        <tr><td class="p">499–998</td><td>Ravager</td></tr>
+        <tr><td class="p">999–1998</td><td>Boss raid</td></tr>
+        <tr><td class="p">1999+</td><td>The Warden</td></tr>
+        <tr><td class="p">Follow · Share</td><td>Zombie · Skeleton archer</td></tr>
+      </tbody></table>
+      <p class="hint">Change any row in the control panel under Advanced → Actions.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const load = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  // ---- server address: config.js (set once for you) or typed in here
+  function normalize(raw) {
+    let a = String(raw || '').trim();
+    if (!a) return '';
+    if (!/^https?:\/\//i.test(a)) a = (/^\d+\.\d+\.\d+\.\d+(:\d+)?$/.test(a) ? 'http://' : 'https://') + a;
+    try { return new URL(a).origin; } catch { return ''; }
+  }
+  const configured = normalize(window.HUB_URL || '');
+  $('addr').value = load('hubAddr', '') || (window.HUB_URL || '');
+  if (!$('addr').value) $('serverBox').open = true;
+  let base = '';
+  function applyAddress() {
+    base = normalize($('addr').value) || configured;
+    const set = (id, path) => { const el = $(id); el.href = base ? base + path : '#'; el.setAttribute('aria-disabled', base ? 'false' : 'true'); };
+    set('openHub', '/'); set('openWatch', '/minecraft'); set('openAdv', '/advanced');
+    $('addrHint').textContent = base ? `Using ${base}` : "The setup command prints this at the end. It's saved on this device.";
+    const frame = $('frame');
+    if (base && base.startsWith('https://')) {
+      if (frame.dataset.src !== base) { frame.dataset.src = base; frame.src = base + '/minecraft'; }
+      frame.hidden = false; $('previewEmpty').hidden = true;
+    } else {
+      frame.hidden = true; frame.removeAttribute('src'); delete frame.dataset.src; $('previewEmpty').hidden = false;
+      $('previewEmpty').textContent = base ? 'The preview needs your https:// server address (the sslip.io one).' : 'The live picture appears here once your server is running.';
+    }
+    poll();
+  }
+  let typing;
+  $('addr').addEventListener('input', () => { save('hubAddr', $('addr').value); clearTimeout(typing); typing = setTimeout(applyAddress, 500); });
+
+  // scale the 720x1280 stream page into the preview box
+  function fit() { const box = $('preview'); $('frame').style.transform = `scale(${box.clientWidth / 720})`; }
+  addEventListener('resize', fit); fit();
+
+  // ---- live status lights (reads the server's public, read-only /api/status)
+  const dot = (id, cls) => ($('d-' + id).className = 'dot ' + (cls || ''));
+  const ago = (ms) => { const m = Math.floor((ms || 0) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`; };
+  let pollTimer;
+  async function poll() {
+    clearTimeout(pollTimer);
+    if (!base) return;
+    try {
+      const r = await fetch(base + '/api/status', { cache: 'no-store' });
+      const s = await r.json();
+      const tt = { live: ['ok', 'Connected to your LIVE'], offline: ['warn', "Waiting: you're not live yet"], connecting: ['warn', 'Connecting…'], reconnecting: ['warn', 'Reconnecting…'], idle: ['bad', 'Not connected: set your username in the control panel'] }[s.tiktok?.state] || ['', s.tiktok?.state || '…'];
+      dot('tt', tt[0]); $('t-tt').textContent = s.tiktok?.username ? `TikTok @${s.tiktok.username}` : 'TikTok'; $('s-tt').textContent = tt[1];
+      const m = s.minecraft;
+      if (!m) { dot('mc', 'bad'); $('s-mc').textContent = 'Minecraft is starting (or off)'; }
+      else if (!m.online) { dot('mc', 'warn'); $('s-mc').textContent = `${m.bot || 'Steve'} is joining the world…`; }
+      else { dot('mc', 'ok'); $('t-mc').textContent = `Minecraft: ${m.bot} is playing`; $('s-mc').textContent = `Round ${m.round} · alive ${ago(m.alive)} · level ${m.level || 1}`; }
+      const st = { streaming: ['ok', 'Video is going out to TikTok'], 'no-key': ['bad', 'Add your stream key in the control panel'], reconnecting: ['warn', 'Connecting to TikTok…'], starting: ['warn', 'Starting…'], 'not-managed': ['', 'Not using the 24/7 streamer'] }[s.stream] || ['warn', s.stream || '…'];
+      dot('st', st[0]); $('s-st').textContent = st[1];
+    } catch {
+      dot('tt', 'bad'); dot('mc', 'bad'); dot('st', 'bad');
+      $('s-tt').textContent = $('s-mc').textContent = $('s-st').textContent = "Can't reach your server. Is it running, and is the address right?";
+    }
+    pollTimer = setTimeout(poll, 10000);
+  }
+
+  // ---- checklist
+  const done = load('steps', {});
+  const boxes = [...document.querySelectorAll('#steps input[type="checkbox"]')];
+  function renderSteps() {
+    let n = 0;
+    boxes.forEach((b) => { b.checked = !!done[b.id]; b.closest('li').classList.toggle('done', b.checked); if (b.checked) n++; });
+    $('prog').textContent = `${n}/${boxes.length}`;
+  }
+  boxes.forEach((b) => b.addEventListener('change', () => { done[b.id] = b.checked; save('steps', done); renderSteps(); }));
+  renderSteps();
+
+  $('copyCmd').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('cmdText').textContent); $('copyCmd').textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents($('cmdText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copyCmd').textContent = 'Selected'; }
+    setTimeout(() => ($('copyCmd').textContent = 'Copy'), 1800);
+  });
+
+  applyAddress();
+</script>
+</body>
+</html>
