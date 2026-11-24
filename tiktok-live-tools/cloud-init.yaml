@@ -1,0 +1,26 @@
+#cloud-config
+# ─────────────────────────────────────────────────────────────────────────────
+#  Steve LIVE: automatic server setup. No terminal needed.
+#
+#  1. Change the 3 lines in steve-live.env below (see "↑ CHANGE").
+#  2. When creating an Ubuntu server (Hetzner, DigitalOcean, Vultr, Linode,
+#     Oracle…), paste this WHOLE file into the "Cloud config" / "User data" box.
+#  3. Click Create. In ~10 minutes your hub is at  https://<server-ip-with-dashes>.sslip.io
+#     e.g. server IP 157.90.12.34  →  https://157-90-12-34.sslip.io
+#
+#  Size: at least 4 vCPU and 8 GB RAM (Minecraft + video encoding). Ubuntu 22.04 or 24.04.
+#  Progress log on the server: /var/log/steve-live-setup.log
+# ─────────────────────────────────────────────────────────────────────────────
+write_files:
+  - path: /root/steve-live.env
+    permissions: '0600'
+    content: |
+      TIKTOK_USERNAME=yourtiktokname
+      ADMIN_KEY=choose-a-hub-password-letters-and-numbers
+      ACCEPT_MINECRAFT_EULA=no
+
+#      ↑ CHANGE all 3: your TikTok username (no @), a password for your hub,
+#        and "yes" once you've read and accept https://aka.ms/MinecraftEULA
+
+runcmd:
+  - [bash, -c, "set -a; . /root/steve-live.env; set +a; curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh -o /root/setup-vm.sh && bash /root/setup-vm.sh > /var/log/steve-live-setup.log 2>&1"]
