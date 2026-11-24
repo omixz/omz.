@@ -50,7 +50,7 @@
   .btn { display: block; text-align: center; text-decoration: none; font-weight: 700; border-radius: 4px; padding: 13px 10px; border: 1px solid var(--line); color: var(--ink); background: var(--bg); font: inherit; font-weight: 700; cursor: pointer; }
   .btn.primary { grid-column: 1 / -1; background: var(--grass); color: var(--grass-ink); border-color: var(--grass); font-size: 1.05rem; box-shadow: 0 4px 0 var(--dirt-dark); }
   .btn.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--dirt-dark); }
-  .btn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+  .btn[aria-disabled="true"], .btn:disabled, .cmd button:disabled { opacity: .45; pointer-events: none; }
   .preview { position: relative; width: 100%; max-width: 360px; aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid var(--line); }
   .preview iframe { position: absolute; top: 0; left: 0; width: 720px; height: 1280px; border: 0; transform-origin: 0 0; }
   .preview .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #cfd3c4; padding: 20px; font-size: .95rem; }
@@ -62,7 +62,7 @@
   ol.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; padding: 12px 0; border-bottom: 1px dashed var(--line); }
   ol.steps li:last-child { border-bottom: 0; }
   ol.steps > li > input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--grass); }
-  ol.steps .t { min-width: 0; } ol.steps b { display: block; }
+  ol.steps .t { min-width: 0; } ol.steps .t > b { display: block; }
   ol.steps li.done b { text-decoration: line-through; color: var(--muted); }
   ol.steps small { color: var(--muted); display: block; }
   .cmd { display: flex; gap: 8px; margin-top: 8px; min-width: 0; }
@@ -136,11 +136,20 @@
             <input type="text" id="cfgPass" placeholder="Hub password (letters and numbers)" autocomplete="off" autocapitalize="off">
             <label class="chk"><input type="checkbox" id="cfgEula"> I accept the Minecraft EULA (aka.ms/MinecraftEULA)</label>
             <div class="cmd"><code id="cfgOut"></code><button type="button" id="copyCfg">Copy</button></div>
+            <button type="button" class="btn" id="dlCfg" style="width:100%">Download as file (for Oracle)</button>
             <small id="cfgMsg"></small>
           </div></div></li>
-        <li><input type="checkbox" id="s4" aria-label="Step 4 done"><div class="t"><b>Rent a server and paste the config</b><small>Any Ubuntu 24.04 server with 4 vCPU and 8 GB RAM: Hetzner (CAX21, about €11 a month), DigitalOcean, Vultr or Linode. On the create page, paste the config into "Cloud config" or "User data", then click Create. It sets itself up in about 10 minutes.</small></div></li>
-        <li><input type="checkbox" id="s5" aria-label="Step 5 done"><div class="t"><b>Put the server address in "Server address" above</b><small>Server IP 157.90.12.34 means 157-90-12-34.sslip.io. Then open the control panel, log in with your hub password, and paste your Server URL and Stream key.</small></div></li>
-        <li><input type="checkbox" id="s6" aria-label="Step 6 done"><div class="t"><b>Press Go LIVE in TikTok LIVE Producer</b><small>All three lights above turn green when everything runs.</small></div></li>
+        <li><input type="checkbox" id="s4" aria-label="Step 4 done"><div class="t"><b>Create your free server (Oracle Always Free)</b><small>
+          At cloud.oracle.com: <b>Compute → Instances → Create instance</b>.<br>
+          • <b>Image</b>: Canonical Ubuntu 24.04 &nbsp;• <b>Shape</b>: Ampere → VM.Standard.A1.Flex, <b>4 OCPUs, 24 GB</b> (the free maximum)<br>
+          • <b>Advanced options → Management → Initialization script</b>: upload the file from step 3<br>
+          • <b>Networking</b>: keep "Assign a public IPv4 address" on → <b>Create</b>.<br>
+          If it says "Out of capacity", try another availability domain or try again later. It sets itself up in about 10 minutes.<br>
+          Prefer paying? Any 4 vCPU / 8 GB Ubuntu server works (Hetzner, DigitalOcean, Vultr): paste the config into "Cloud config / User data".</small></div></li>
+        <li><input type="checkbox" id="s5" aria-label="Step 5 done"><div class="t"><b>Open the web ports (Oracle only)</b><small>On the instance page: <b>Subnet</b> link → <b>Security Lists</b> → Default Security List → <b>Add Ingress Rules</b>. Source CIDR <code>0.0.0.0/0</code>, IP protocol TCP, destination port range <code>80,443,3000</code> → Add.</small></div></li>
+        <li><input type="checkbox" id="s7" aria-label="Step 6 done"><div class="t"><b>Link your server</b><small>Copy the <b>Public IP address</b> from the instance page and paste it here. Your hub then lights up above.</small>
+          <div class="cfg"><input type="text" id="linkIp" inputmode="decimal" placeholder="Public IP, e.g. 157.90.12.34" autocomplete="off"><small id="linkMsg"></small></div></div></li>
+        <li><input type="checkbox" id="s6" aria-label="Step 7 done"><div class="t"><b>Add your stream key, then Go LIVE</b><small>Open the control panel (button at the top), log in with your hub password, paste your TikTok Server URL and Stream key, then press Go LIVE in TikTok LIVE Producer. All three lights turn green.</small></div></li>
       </ol>
     </div>
   </section>
@@ -269,7 +278,7 @@
     if (!eula) msgs.push('Without the EULA, Minecraft stays off.');
     $('cfgMsg').textContent = msgs.length ? msgs.join(' ') : 'Ready: copy it and paste it when creating your server.';
     $('cfgMsg').className = okUser && okPass ? '' : 'bad';
-    $('copyCfg').disabled = !(okUser && okPass);
+    $('copyCfg').disabled = $('dlCfg').disabled = !(okUser && okPass);
     save('cfgUser', user); save('cfgEula', eula);   // the password isn't saved
   }
   $('cfgUser').value = load('cfgUser', ''); $('cfgEula').checked = load('cfgEula', false);
@@ -282,6 +291,20 @@
     setTimeout(() => (btn.textContent = 'Copy'), 1800);
   }
   $('copyCfg').addEventListener('click', () => copyFrom($('copyCfg'), $('cfgOut')));
+  $('dlCfg').addEventListener('click', () => {
+    const blob = new Blob([$('cfgOut').textContent + '\n'], { type: 'text/yaml' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'steve-live-cloud-init.yaml';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+
+  // ---- link the server: public IP -> https://<ip-with-dashes>.sslip.io
+  $('linkIp').addEventListener('input', () => {
+    const ip = $('linkIp').value.trim();
+    if (!/^(\d{1,3})(\.\d{1,3}){3}$/.test(ip) || ip.split('.').some((n) => +n > 255)) { $('linkMsg').textContent = ip ? 'That doesn\u2019t look like an IP address yet.' : ''; return; }
+    const addr = ip.replace(/\./g, '-') + '.sslip.io';
+    $('addr').value = addr; save('hubAddr', addr); applyAddress();
+    $('linkMsg').textContent = `Linked: https://${addr}`;
+  });
 
   applyAddress();
 </script>
