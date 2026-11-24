@@ -1,0 +1,26 @@
+{
+  // Free TEST DRIVE of Steve LIVE in GitHub Codespaces: real Minecraft server,
+  // Steve, the hub and the stream page, all started automatically.
+  // For trying and testing only. GitHub's terms don't allow Codespaces for a public
+  // (production) live stream, so use a server (tiktok-live-tools/cloud-init.yaml) for that.
+  "name": "Steve LIVE test drive",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "hostRequirements": { "cpus": 2, "memory": "8gb" },
+  "secrets": {
+    "MINECRAFT_EULA": {
+      "description": "Type TRUE to accept the Minecraft EULA (needed to start the Minecraft server). Leave empty to try Castle Clash only.",
+      "documentationUrl": "https://aka.ms/MinecraftEULA"
+    },
+    "TIKTOK_USERNAME": {
+      "description": "Optional: your TikTok username (without @), so the hub can join your LIVE."
+    }
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Steve LIVE Hub", "onAutoForward": "openBrowser" }
+  },
+  "postStartCommand": "bash tiktok-live-tools/codespace-start.sh"
+}

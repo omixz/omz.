@@ -77,22 +77,37 @@ Example: `execute at {bot} run summon minecraft:zombie ~{rx} ~1 ~{rz} {CustomNam
 
 ---
 
-## 🤖 Setup: hands-free 24/7 (one time, about 15 minutes)
+## 🧪 Free test drive (GitHub Codespaces, no server needed)
+
+Try the whole thing in your browser for free: a real Minecraft server, Steve, the hub and the stream page.
+
+1. On GitHub, open this repo → **Code** → **Codespaces** → **Create codespace on main**. To be asked for the Minecraft EULA and your TikTok username, use **⋯ → New with options** instead.
+2. Wait for it to build (first time ~5–10 minutes). It starts everything by itself.
+3. Open the **Ports** tab → port **3000** ("Steve LIVE Hub"). It's private to your GitHub account. Use the test buttons, and open `/minecraft` to watch Steve.
+   Minecraft starts only once you accept [its EULA](https://aka.ms/MinecraftEULA): enter `TRUE` for MINECRAFT_EULA when creating the codespace, or run `bash tiktok-live-tools/codespace-start.sh --accept-eula` in its terminal.
+
+GitHub accounts include 120 free core-hours of Codespaces a month, about 60 hours on this 2-core machine. Stop the codespace when you're done. **This is for testing only.** GitHub's terms don't allow Codespaces to host a public ("production") stream, so for going live, use a server (below).
+
+## 🤖 Going live 24/7: a server that sets itself up
+
+Rent any small Ubuntu server and paste [`cloud-init.yaml`](cloud-init.yaml) into its **Cloud config / User data** box while creating it. The server then installs and starts everything by itself: no terminal, no commands.
 
 ### What you need
-1. **A TikTok stream key.** Open [TikTok LIVE Producer](https://livecenter.tiktok.com/producer). If your account has it, you'll see a **Server URL** and a **Stream key**. TikTok decides which accounts get this; it often depends on followers or region.
-2. **A free always-on server.** [Oracle Cloud "Always Free"](https://www.oracle.com/cloud/free/) gives you an **Ampere A1** VM with up to 4 CPUs and 24 GB of RAM at no cost, enough for Minecraft plus 720p streaming. Use **4 OCPUs and 24 GB** for Minecraft. Sign-up asks for a card to verify your identity, but Always Free resources aren't charged. Any old non-gaming PC running Linux with Docker works too.
+1. **A TikTok stream key.** Open [TikTok LIVE Producer](https://livecenter.tiktok.com/producer). If your account has it, you'll see a **Server URL** and a **Stream key**. TikTok decides which accounts get this.
+2. **A server with at least 4 vCPU and 8 GB RAM**, Ubuntu 22.04 or 24.04, from any provider whose create page has a "Cloud config" or "User data" box. For example:
+   - **Hetzner** CAX21 (4 ARM vCPU, 8 GB, about €11 a month) or a 4 vCPU / 8 GB x86 plan
+   - **DigitalOcean**, **Vultr** or **Linode**: a 4 vCPU / 8 GB plan
+   - **Oracle Cloud Always Free**: VM.Standard.A1.Flex with 4 OCPU and 24 GB, free but with a fiddly sign-up. Open TCP 80, 443 and 3000 in its Security List.
 
 ### Steps
-1. Create an **Ubuntu** VM on Oracle (shape **VM.Standard.A1.Flex**). In its *Virtual Cloud Network → Security List*, add ingress rules for **TCP 80** and **TCP 443** (your hub's https address) and **TCP 3000** (fallback).
-2. SSH into the VM and run one command. It asks for your TikTok username and the Minecraft EULA, generates the passwords, then builds and starts everything:
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash
-   ```
-   (If the repo is private, clone it first with a GitHub token, then run `bash omz/tiktok-live-tools/setup-vm.sh`.)
-3. Open the **hub** address it prints on your phone, e.g. `https://129-146-12-34.sslip.io`, a free https address that points at your server (made with [sslip.io](https://sslip.io) and [Caddy](https://caddyserver.com), no domain needed). Add it to your home screen. Enter the password it prints, then paste the Server URL and Stream key in **Setup**. The hub shows three status lights (TikTok, Minecraft, stream), a **Watch what viewers see** button, the gift ladder and test buttons. Everything else is under **Advanced settings**.
+1. Copy [`cloud-init.yaml`](cloud-init.yaml) and change its 3 lines:
+   - your TikTok username
+   - a hub password (letters and numbers only)
+   - `ACCEPT_MINECRAFT_EULA=yes`, once you've read [the EULA](https://aka.ms/MinecraftEULA)
+2. Create the server and paste the whole file into **Cloud config / User data**.
+3. After about 10 minutes, open `https://<server-ip-with-dashes>.sslip.io` (server IP `157.90.12.34` gives `https://157-90-12-34.sslip.io`). That's your **hub**, with a free https certificate and no domain needed. Log in with your hub password, then paste the Server URL and Stream key in **Setup**.
 
-Run the same command again any time to update.
+If the server has no Cloud config box, SSH in and run `curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash`. It asks the same questions. Run it again any time to update.
 
 ### What still needs you (TikTok's rules, not this tool's)
 - **Starting the LIVE.** TikTok doesn't let any tool go live for you. In LIVE Producer, press **Go LIVE**; the game feed is already arriving. While you aren't live, TikTok ignores it.

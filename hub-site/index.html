@@ -61,7 +61,7 @@
   ol.steps { list-style: none; margin: 0; padding: 0; display: grid; }
   ol.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; padding: 12px 0; border-bottom: 1px dashed var(--line); }
   ol.steps li:last-child { border-bottom: 0; }
-  ol.steps input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--grass); }
+  ol.steps > li > input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--grass); }
   ol.steps .t { min-width: 0; } ol.steps b { display: block; }
   ol.steps li.done b { text-decoration: line-through; color: var(--muted); }
   ol.steps small { color: var(--muted); display: block; }
@@ -75,6 +75,11 @@
   td.p { color: var(--coin); font-weight: 700; white-space: nowrap; padding-right: 14px; font-variant-numeric: tabular-nums; width: 1%; }
   .ex { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
   details summary { cursor: pointer; font-weight: 700; }
+  .cfg { display: grid; gap: 8px; margin-top: 8px; min-width: 0; }
+  .cfg .chk { display: flex; gap: 8px; align-items: center; font-weight: 500; font-size: .9rem; margin: 0; }
+  .cfg .chk input { width: 18px; height: 18px; accent-color: var(--grass); margin: 0; }
+  .cfg code { white-space: pre; max-height: 9em; overflow: auto; }
+  .cfg small.bad { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -124,11 +129,17 @@
     <div class="panel">
       <ol class="steps" id="steps">
         <li><input type="checkbox" id="s1" aria-label="Step 1 done"><div class="t"><b>Check you have a TikTok stream key</b><small>Open livecenter.tiktok.com/producer on a computer. You need a Server URL and a Stream key. No key? You can still stream from your phone with screen share.</small></div></li>
-        <li><input type="checkbox" id="s2" aria-label="Step 2 done"><div class="t"><b>Create a free Oracle Cloud account</b><small>oracle.com/cloud/free. A card is asked for to verify you; the Always Free tier isn't charged.</small></div></li>
-        <li><input type="checkbox" id="s3" aria-label="Step 3 done"><div class="t"><b>Create the server</b><small>Ubuntu, shape VM.Standard.A1.Flex, 4 OCPUs, 24 GB RAM. In the Security List, open TCP 80, 443 and 3000.</small></div></li>
-        <li><input type="checkbox" id="s4" aria-label="Step 4 done"><div class="t"><b>Run the setup command on the server</b><small>It asks your TikTok username and the Minecraft EULA, then prints your server address and password.</small>
-          <div class="cmd"><code id="cmdText">curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh | bash</code><button type="button" id="copyCmd">Copy</button></div></div></li>
-        <li><input type="checkbox" id="s5" aria-label="Step 5 done"><div class="t"><b>Put the server address in "Server address" above</b><small>Then open the control panel, enter the password, and paste your Server URL and Stream key.</small></div></li>
+        <li><input type="checkbox" id="s2" aria-label="Step 2 done"><div class="t"><b>Optional: free test drive</b><small>On GitHub, open your repo omixz/omz. → Code → Codespaces → Create codespace. It starts a real Minecraft server, Steve and the hub in your browser. It's for testing only; GitHub doesn't allow live streams from it.</small></div></li>
+        <li><input type="checkbox" id="s3" aria-label="Step 3 done"><div class="t"><b>Make your server config</b><small>Fill this in, then copy the result. It stays on this device.</small>
+          <div class="cfg">
+            <input type="text" id="cfgUser" placeholder="TikTok username (without @)" autocomplete="off" autocapitalize="off">
+            <input type="text" id="cfgPass" placeholder="Hub password (letters and numbers)" autocomplete="off" autocapitalize="off">
+            <label class="chk"><input type="checkbox" id="cfgEula"> I accept the Minecraft EULA (aka.ms/MinecraftEULA)</label>
+            <div class="cmd"><code id="cfgOut"></code><button type="button" id="copyCfg">Copy</button></div>
+            <small id="cfgMsg"></small>
+          </div></div></li>
+        <li><input type="checkbox" id="s4" aria-label="Step 4 done"><div class="t"><b>Rent a server and paste the config</b><small>Any Ubuntu 24.04 server with 4 vCPU and 8 GB RAM: Hetzner (CAX21, about €11 a month), DigitalOcean, Vultr or Linode. On the create page, paste the config into "Cloud config" or "User data", then click Create. It sets itself up in about 10 minutes.</small></div></li>
+        <li><input type="checkbox" id="s5" aria-label="Step 5 done"><div class="t"><b>Put the server address in "Server address" above</b><small>Server IP 157.90.12.34 means 157-90-12-34.sslip.io. Then open the control panel, log in with your hub password, and paste your Server URL and Stream key.</small></div></li>
         <li><input type="checkbox" id="s6" aria-label="Step 6 done"><div class="t"><b>Press Go LIVE in TikTok LIVE Producer</b><small>All three lights above turn green when everything runs.</small></div></li>
       </ol>
     </div>
@@ -224,7 +235,7 @@
 
   // ---- checklist
   const done = load('steps', {});
-  const boxes = [...document.querySelectorAll('#steps input[type="checkbox"]')];
+  const boxes = [...document.querySelectorAll('#steps > li > input[type="checkbox"]')];
   function renderSteps() {
     let n = 0;
     boxes.forEach((b) => { b.checked = !!done[b.id]; b.closest('li').classList.toggle('done', b.checked); if (b.checked) n++; });
@@ -233,11 +244,44 @@
   boxes.forEach((b) => b.addEventListener('change', () => { done[b.id] = b.checked; save('steps', done); renderSteps(); }));
   renderSteps();
 
-  $('copyCmd').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('cmdText').textContent); $('copyCmd').textContent = 'Copied'; }
-    catch { const r = document.createRange(); r.selectNodeContents($('cmdText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copyCmd').textContent = 'Selected'; }
-    setTimeout(() => ($('copyCmd').textContent = 'Copy'), 1800);
-  });
+  // ---- server config builder (cloud-init); nothing leaves this device
+  function buildCfg() {
+    const user = $('cfgUser').value.trim().replace(/^@/, '');
+    const pass = $('cfgPass').value.trim();
+    const eula = $('cfgEula').checked;
+    const okUser = /^[A-Za-z0-9._]{1,40}$/.test(user), okPass = /^[A-Za-z0-9]{8,64}$/.test(pass);
+    $('cfgOut').textContent = [
+      '#cloud-config',
+      '# Steve LIVE: paste into "Cloud config" / "User data" when creating an Ubuntu server.',
+      'write_files:',
+      '  - path: /root/steve-live.env',
+      "    permissions: '0600'",
+      '    content: |',
+      `      TIKTOK_USERNAME=${okUser ? user : 'yourtiktokname'}`,
+      `      ADMIN_KEY=${okPass ? pass : 'choose-a-password'}`,
+      `      ACCEPT_MINECRAFT_EULA=${eula ? 'yes' : 'no'}`,
+      'runcmd:',
+      '  - [bash, -c, "set -a; . /root/steve-live.env; set +a; curl -fsSL https://raw.githubusercontent.com/omixz/omz./main/tiktok-live-tools/setup-vm.sh -o /root/setup-vm.sh && bash /root/setup-vm.sh > /var/log/steve-live-setup.log 2>&1"]',
+    ].join('\n');
+    const msgs = [];
+    if (!okUser) msgs.push('Add your TikTok username.');
+    if (!okPass) msgs.push('Hub password: 8 or more letters and numbers.');
+    if (!eula) msgs.push('Without the EULA, Minecraft stays off.');
+    $('cfgMsg').textContent = msgs.length ? msgs.join(' ') : 'Ready: copy it and paste it when creating your server.';
+    $('cfgMsg').className = okUser && okPass ? '' : 'bad';
+    $('copyCfg').disabled = !(okUser && okPass);
+    save('cfgUser', user); save('cfgEula', eula);   // the password isn't saved
+  }
+  $('cfgUser').value = load('cfgUser', ''); $('cfgEula').checked = load('cfgEula', false);
+  ['cfgUser', 'cfgPass', 'cfgEula'].forEach((id) => $(id).addEventListener('input', buildCfg));
+  buildCfg();
+
+  async function copyFrom(btn, el) {
+    try { await navigator.clipboard.writeText(el.textContent); btn.textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected'; }
+    setTimeout(() => (btn.textContent = 'Copy'), 1800);
+  }
+  $('copyCfg').addEventListener('click', () => copyFrom($('copyCfg'), $('cfgOut')));
 
   applyAddress();
 </script>
